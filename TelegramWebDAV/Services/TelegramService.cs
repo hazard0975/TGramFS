@@ -445,6 +445,7 @@ namespace TelegramWebDAV.Services
             _currentSettings = _configManager.Load();
             StartCaptionQueueWorker();
             StartDeletionQueueWorker();
+            StartChannelMigrationQueueWorker();
         }
 
         public void SetRepository(NodeRepository repository)
@@ -643,8 +644,20 @@ namespace TelegramWebDAV.Services
                             continue;
                         }
 
-                        var targetPeer = await GetStoragePeerAsync(item.TargetChannelId);
-                        var sourcePeer = await GetStoragePeerAsync(item.SourceChannelId);
+                        TL.InputPeer? targetPeer = null;
+                        TL.InputPeer? sourcePeer = null;
+
+                        try
+                        {
+                            targetPeer = await GetStoragePeerAsync(item.TargetChannelId);
+                            sourcePeer = await GetStoragePeerAsync(item.SourceChannelId);
+                        }
+                        catch (Exception peerEx)
+                        {
+                            AppLogger.Warn("TelegramService", $"[MigrationQueue] Ошибка получения дескрипторов каналов для элемента #{item.Id}: {peerEx.Message}. Повтор через 5 секунд...");
+                            await Task.Delay(5000, token);
+                            continue;
+                        }
 
                         if (targetPeer == null || sourcePeer == null)
                         {
@@ -674,22 +687,8 @@ namespace TelegramWebDAV.Services
                                 };
 
                                 var previewUpdates = await _client.Invoke(fwdPreviewReq);
-                                if (previewUpdates is TL.Updates pUpdates)
-                                {
-                                    foreach (var update in pUpdates.updates)
-                                    {
-                                        if (update is TL.UpdateNewMessage unm && unm.message is TL.Message m)
-                                        {
-                                            newPreviewId = m.ID;
-                                            break;
-                                        }
-                                        else if (update is TL.UpdateNewChannelMessage uncm && uncm.message is TL.Message cm)
-                                        {
-                                            newPreviewId = cm.ID;
-                                            break;
-                                        }
-                                    }
-                                }
+                                newPreviewId = ExtractMessageIdFromUpdates(previewUpdates);
+                                if (newPreviewId <= 0) newPreviewId = null;
                                 await EnsurePacingDelayAsync(token);
                             }
 
@@ -704,32 +703,28 @@ namespace TelegramWebDAV.Services
                             };
 
                             var fwdUpdates = await _client.Invoke(fwdReq);
-                            if (fwdUpdates is TL.Updates updates)
-                            {
-                                foreach (var update in updates.updates)
-                                {
-                                    if (update is TL.UpdateNewMessage unm && unm.message is TL.Message m)
-                                    {
-                                        newMsgId = m.ID;
-                                        break;
-                                    }
-                                    else if (update is TL.UpdateNewChannelMessage uncm && uncm.message is TL.Message cm)
-                                    {
-                                        newMsgId = cm.ID;
-                                        break;
-                                    }
-                                }
-                            }
+                            newMsgId = ExtractMessageIdFromUpdates(fwdUpdates);
 
                             if (newMsgId > 0)
                             {
-                                // 3. Помещаем старые сообщения в очередь удаления из исходного канала
+                                // 3. Очищаем старые сообщения из исходного канала
                                 var oldIdsToDelete = new List<int> { oldMessageId };
                                 if (oldPreviewId.HasValue && oldPreviewId.Value > 0)
                                 {
                                     oldIdsToDelete.Add(oldPreviewId.Value);
                                 }
-                                _repository.EnqueuePermanentDeletion(oldIdsToDelete, new List<int>());
+
+                                _ = Task.Run(async () =>
+                                {
+                                    try
+                                    {
+                                        await DeleteFilesFromTelegramAsync(oldIdsToDelete, item.SourceChannelId);
+                                    }
+                                    catch (Exception delEx)
+                                    {
+                                        AppLogger.Warn("TelegramService", $"[MigrationQueue] Фоновая очистка старых сообщений из канала ID {item.SourceChannelId}: {delEx.Message}");
+                                    }
+                                });
 
                                 // 4. Обновляем данные файла в БД
                                 _repository.UpdateNodeTelegramData(file.Id, newMsgId, newPreviewId, item.TargetChannelId);
@@ -741,6 +736,11 @@ namespace TelegramWebDAV.Services
 
                                 _repository.DeleteChannelMigration(item.Id);
                                 AppLogger.Info("TelegramService", $"[MigrationQueue] Файл '{file.Name}' успешно перенесен: старый msg #{oldMessageId} -> новый msg #{newMsgId} в канале ID {item.TargetChannelId}.");
+                            }
+                            else
+                            {
+                                AppLogger.Warn("TelegramService", $"[MigrationQueue] Не удалось получить новый Message ID для файла '{file.Name}' при пересылке в канал ID {item.TargetChannelId}. Повтор через 5 секунд...");
+                                await Task.Delay(5000, token);
                             }
                         }
                         catch (TL.RpcException rpcEx) when (rpcEx.Code == 420) // FLOOD_WAIT_X
@@ -1294,6 +1294,7 @@ namespace TelegramWebDAV.Services
                         {
                             await GetStoragePeerAsync();
                             TriggerDeletionQueueProcessing();
+                            TriggerChannelMigrationProcessing();
                         }
                         catch (Exception ex)
                         {
