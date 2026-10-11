@@ -628,7 +628,8 @@ namespace TelegramWebDAV.Services
                             virtualSource.TgPreviewMessageId,
                             sourceChannelId,
                             targetChannelId,
-                            fullPathWithVersion
+                            fullPathWithVersion,
+                            vNode.Id
                         ));
                     }
 
@@ -718,7 +719,8 @@ namespace TelegramWebDAV.Services
                         virtualSource.TgPreviewMessageId,
                         sourceChannelId,
                         targetChannelId,
-                        fullPathWithVersion
+                        fullPathWithVersion,
+                        node.Id
                     ));
                 }
             }

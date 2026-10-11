@@ -180,19 +180,20 @@ namespace TelegramWebDAV.Database
             using (var connection = _dbManager.GetConnection())
             using (var command = connection.CreateCommand())
             {
-                command.CommandText = "SELECT version, size, tg_message_id FROM nodes WHERE parent_id = @parentId AND name = @name AND in_trash = 0 LIMIT 1;";
+                command.CommandText = "SELECT version, size, tg_message_id, inline_data FROM nodes WHERE parent_id = @parentId AND name = @name AND in_trash = 0 LIMIT 1;";
                 command.Parameters.AddWithValue("@parentId", parentId);
                 command.Parameters.AddWithValue("@name", fileName);
                 using (var reader = command.ExecuteReader())
                 {
                     if (reader.Read())
                     {
-                        long size = Convert.ToInt64(reader["size"]);
                         bool hasTg = !reader.IsDBNull(reader.GetOrdinal("tg_message_id"));
+                        bool hasInline = !reader.IsDBNull(reader.GetOrdinal("inline_data"));
                         int currentVersion = Convert.ToInt32(reader["version"]);
 
-                        // Если это пустой файл-заглушка Проводника (size <= 1 без tg_message_id), это ещё версия 1
-                        if (size <= 1 && !hasTg)
+                        // Если у узла еще нет привязанных данных в Telegram и нет локального inline_data,
+                        // значит это заготовка создаваемого файла (первичная версия 1), а не перезапись!
+                        if (!hasTg && !hasInline)
                         {
                             return Math.Max(1, currentVersion);
                         }

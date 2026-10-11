@@ -2128,10 +2128,19 @@ namespace TelegramWebDAV.Services
                         (newPreviewId.HasValue ? $", превью #{newPreviewId}" : "") +
                         (sourceChannelId != targetChannelId ? $" (канал {sourceChannelId} -> {targetChannelId})" : " (в пределах канала)"));
 
-                    // 3. Если задана новая подпись, планируем её обновление через очередь
+                    // 3. Если задана новая подпись, планируем её стандартизированное обновление через очередь
                     if (!string.IsNullOrEmpty(newCaption))
                     {
-                        _repository?.EnqueueCaptionUpdate(targetNodeId, newMsgId, newCaption);
+                        string effectiveCaption = newCaption.StartsWith("🟢") || newCaption.StartsWith("🗑️")
+                            ? newCaption
+                            : NodeRepository.FormatTelegramCaption(newCaption, newMsgId, isLatest: true);
+                        _repository?.EnqueueCaptionUpdate(targetNodeId, newMsgId, effectiveCaption);
+
+                        if (newPreviewId.HasValue && newPreviewId.Value > 0)
+                        {
+                            string previewCaption = NodeRepository.FormatTelegramCaption(newCaption, newPreviewId.Value, isLatest: true);
+                            _repository?.EnqueueCaptionUpdate(targetNodeId, newPreviewId.Value, previewCaption);
+                        }
                     }
 
                     return (newMsgId, newPreviewId);

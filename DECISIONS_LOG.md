@@ -1441,6 +1441,40 @@ _telegramService.UpdateSettings(_settings);
 4. **Валидация**:
    - Проект успешно собран через `dotnet build` (`0 Warning(s), 0 Error(s)`).
 
+---
+
+## 61. Каноническая стандартизация подписей Telegram при форвардинге и корректный расчет первой версии файлов (Root Cause First)
+
+### Проблема:
+1. При копировании файлов на виртуальном диске WinFsp в Telegram отправлялось пересыланное сообщение (`Messages_ForwardMessages`), но при последующей актуализации подписи через очередь `pending_caption_updates` исчезали системная иконка статуса `🟢`, строка идентификатора `ID: ...` и хэштег `#latest`. Подпись заменялась на голый путь к файлу.
+2. Новые файлы при копировании получали ошибочный суффикс версии `_v2` вместо `_v1`, даже если файл копировался в новую пустую папку, где файлов с таким именем ранее не существовало.
+
+### Первопричина (Root Cause Analysis):
+1. **Пропуск форматирования подписи в `ForwardFileAsync`**:
+   - Во всех остальных операциях системы (`UploadFileChunkAsync`, переименование, версионирование, миграция каналов) текст подписи формируется через канонический метод `NodeRepository.FormatTelegramCaption(...)`.
+   - В `TelegramService.ForwardFileAsync` в очередь `pending_caption_updates` ставилась переданная из `WinFspServer` строка пути как есть (`_repository?.EnqueueCaptionUpdate(targetNodeId, newMsgId, newCaption)`), стирая всю системную разметку при обработке очереди.
+2. **Некорректная проверка заготовок в `GetNextVersionForFile`**:
+   - В `NodeRepository.GetNextVersionForFile` стояло условие `if (size <= 1 && !hasTg) return Math.Max(1, currentVersion);`.
+   - Поскольку в `WinFspServer.Create` для виртуальной копии в SQLite создается запись заготовки с размером оригинала (`size > 1`), условие не срабатывало, и метод ошибочно считал заготовку уже существующей в Telegram версией файла, возвращая `currentVersion + 1 = 2`.
+
+### Принятое решение:
+1. **Каноническое форматирование подписи в `ForwardFileAsync`**:
+   - В `TelegramService.ForwardFileAsync` перед постановкой в очередь обновления подписи добавлено автоматическое форматирование:
+     `string effectiveCaption = newCaption.StartsWith("🟢") || newCaption.StartsWith("🗑️") ? newCaption : NodeRepository.FormatTelegramCaption(newCaption, newMsgId, isLatest: true);`
+   - Для связанных превью-сообщений (`newPreviewId`) также формируется стандартизированная подпись с актуальным Message ID превью.
+   - В `WinFspServer.cs` в методах `Create` и `Overwrite` в вызов `ForwardFileAsync` теперь явно передается `targetNodeId` (`vNode.Id` / `node.Id`), гарантируя привязку подписи к правильному узлу в SQLite.
+2. **Исправление вычисления версии в `GetNextVersionForFile`**:
+   - В `NodeRepository.cs` условие исправлено на `if (!hasTg && !hasInline) return Math.Max(1, currentVersion);`. Если у узла в базе еще нет привязанных данных в Telegram (`tg_message_id == null`) и нет локального `inline_data`, узел является заготовкой в процессе создания (первая версия `_v1`), а не перезаписью.
+3. **Результат**:
+   - При копировании файлов в Telegram подпись сообщения сохраняет полную каноническую разметку:
+     `🟢 /путь/файл_v1.ext`
+     `ID: 236`
+     `#latest`
+   - Имя файла сохраняет оригинальную версию `_v1` без ложных инкрементов.
+4. **Валидация**:
+   - Сборка C# проекта `dotnet build` и компиляция апплета выполнены успешно (`0 Warning(s), 0 Error(s)`).
+
+
 
 
 
