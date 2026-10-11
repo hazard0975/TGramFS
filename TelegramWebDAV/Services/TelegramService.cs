@@ -531,7 +531,7 @@ namespace TelegramWebDAV.Services
                         break;
                     }
 
-                    List<int> batch;
+                    List<(int MessageId, long ChannelId)> batch;
                     try
                     {
                         batch = _repository.GetPendingDeletions(limit: 100);
@@ -551,29 +551,41 @@ namespace TelegramWebDAV.Services
 
                     AppLogger.Info("TelegramService", $"[DeletionQueue] Фоновое перманентное удаление {batch.Count} сообщений из Telegram...");
 
-                    bool success = false;
-                    try
-                    {
-                        success = await DeleteFilesFromTelegramAsync(batch);
-                    }
-                    catch (TL.RpcException rpcEx) when (rpcEx.Code == 420) // FLOOD_WAIT_X
-                    {
-                        AppLogger.Warn("TelegramService", $"[DeletionQueue] FloodWait при удалении сообщений: пауза {rpcEx.X} сек...");
-                        await Task.Delay(Math.Max(5000, rpcEx.X * 1000), token);
-                        continue;
-                    }
-                    catch (Exception ex)
-                    {
-                        AppLogger.Debug("TelegramService", $"[DeletionQueue] Ошибка при обращении к Telegram: {ex.Message}");
-                        await Task.Delay(5000, token);
-                        continue;
-                    }
+                    var channelGroups = batch.GroupBy(x => x.ChannelId).ToDictionary(g => g.Key, g => g.Select(x => x.MessageId).ToList());
+                    bool allSuccess = true;
 
-                    if (success)
+                    foreach (var kvp in channelGroups)
                     {
                         try
                         {
-                            _repository.RemovePendingDeletions(batch);
+                            var peer = await GetStoragePeerAsync(kvp.Key != 0L ? kvp.Key : (long?)null);
+                            bool isChannel = peer is TL.InputPeerChannel;
+                            const int batchSize = 100;
+
+                            for (int i = 0; i < kvp.Value.Count; i += batchSize)
+                            {
+                                var count = Math.Min(batchSize, kvp.Value.Count - i);
+                                var subBatch = kvp.Value.GetRange(i, count).ToArray();
+                                await DeleteBatchWithBisectAsync(peer, isChannel, subBatch);
+                            }
+                        }
+                        catch (Exception ex) when (kvp.Key != 0L && (ex.Message.Contains("не найден") || ex.Message.Contains("CHANNEL_INVALID") || ex.Message.Contains("CHANNEL_PRIVATE")))
+                        {
+                            AppLogger.Info("TelegramService", $"[DeletionQueue] Канал Telegram ID {kvp.Key} уже удален или недоступен. {kvp.Value.Count} сообщений считаются очищенными.");
+                        }
+                        catch (Exception ex)
+                        {
+                            AppLogger.Error("TelegramService", $"[DeletionQueue] Ошибка удаления из канала ID {kvp.Key}: {ex.Message}", ex);
+                            allSuccess = false;
+                        }
+                    }
+
+                    if (allSuccess)
+                    {
+                        try
+                        {
+                            var allMsgIds = batch.Select(x => x.MessageId).ToList();
+                            _repository.RemovePendingDeletions(allMsgIds);
                             AppLogger.Info("TelegramService", $"[DeletionQueue] Пакет из {batch.Count} сообщений успешно очищен из очереди.");
                         }
                         catch (Exception ex)

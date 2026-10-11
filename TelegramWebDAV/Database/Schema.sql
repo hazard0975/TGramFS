@@ -69,6 +69,7 @@ CREATE INDEX IF NOT EXISTS idx_upload_progress_node_id ON upload_progress(node_i
 CREATE TABLE IF NOT EXISTS pending_deletions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     tg_message_id INTEGER NOT NULL,
+    channel_id INTEGER NOT NULL DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_pending_deletions_tg_msg ON pending_deletions(tg_message_id);

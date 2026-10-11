@@ -187,6 +187,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_pending_caption_tg_msg ON pending_caption_
 CREATE TABLE IF NOT EXISTS pending_deletions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     tg_message_id INTEGER NOT NULL,
+    channel_id INTEGER NOT NULL DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_pending_deletions_tg_msg ON pending_deletions(tg_message_id);
@@ -218,6 +219,20 @@ CREATE INDEX IF NOT EXISTS idx_pending_deletions_tg_msg ON pending_deletions(tg_
                     command.CommandText = statement;
                     command.ExecuteNonQuery();
                 }
+            }
+
+            // Миграция: убедимся, что колонка channel_id существует в таблице pending_deletions
+            try
+            {
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = "ALTER TABLE pending_deletions ADD COLUMN channel_id INTEGER NOT NULL DEFAULT 0;";
+                    command.ExecuteNonQuery();
+                }
+            }
+            catch
+            {
+                // Колонка уже существует, игнорируем ошибку
             }
         }
 

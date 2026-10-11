@@ -609,7 +609,7 @@ namespace TelegramWebDAV.Server
 
                 // 2. Собираем сообщения: файлы каналов, уничтожаемых целиком через Channels_DeleteChannel,
                 // не спамят очередь поштучного удаления сообщений
-                var tgMessageIds = new List<int>();
+                var deletionItems = new List<(int MessageId, long ChannelId)>();
                 var dbNodeIds = new List<int>();
 
                 foreach (var n in nodesToDelete)
@@ -625,7 +625,7 @@ namespace TelegramWebDAV.Server
 
                     if (n.TgMessageId.HasValue && n.TgMessageId.Value > 0)
                     {
-                        tgMessageIds.Add(n.TgMessageId.Value);
+                        deletionItems.Add((n.TgMessageId.Value, fileChannelId));
                     }
                     else if (!n.IsDir)
                     {
@@ -633,16 +633,16 @@ namespace TelegramWebDAV.Server
                     }
                     if (n.TgPreviewMessageId.HasValue && n.TgPreviewMessageId.Value > 0)
                     {
-                        tgMessageIds.Add(n.TgPreviewMessageId.Value);
+                        deletionItems.Add((n.TgPreviewMessageId.Value, fileChannelId));
                     }
                     AppLogger.Debug("WebDAV", $"[HandleDeleteAsync Subtree] Элемент поддерева: ID {n.Id} ('{n.Name}'), IsDir={n.IsDir}, InTrash={n.InTrash}, ParentId={n.ParentId}, TgMessageId={n.TgMessageId?.ToString() ?? "NULL"}, TgPreviewMessageId={n.TgPreviewMessageId?.ToString() ?? "NULL"}");
                 }
 
                 // Атомарно помещаем сообщения в гарантированную очередь удаления и удаляем узлы из базы
-                repository.EnqueuePermanentDeletion(tgMessageIds, dbNodeIds);
-                AppLogger.Info("WebDAV", $"Перманентное удаление '{node.Name}': удалено {dbNodeIds.Count} узлов из базы, {tgMessageIds.Count} сообщений отправлено в очередь очистки Telegram.");
+                repository.EnqueuePermanentDeletion(deletionItems, dbNodeIds);
+                AppLogger.Info("WebDAV", $"Перманентное удаление '{node.Name}': удалено {dbNodeIds.Count} узлов из базы, {deletionItems.Count} сообщений отправлено в очередь очистки Telegram.");
 
-                if (tgMessageIds.Count > 0)
+                if (deletionItems.Count > 0)
                 {
                     telegramService.TriggerDeletionQueueProcessing();
                 }

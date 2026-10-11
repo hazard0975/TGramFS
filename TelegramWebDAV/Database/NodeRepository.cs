@@ -717,15 +717,15 @@ namespace TelegramWebDAV.Database
         /// и удаляет сами узлы из таблицы nodes в единой транзакции SQLite.
         /// Гарантирует мгновенное исчезновение файлов из файловой системы и надежное фоновое удаление из Telegram.
         /// </summary>
-        public void EnqueuePermanentDeletion(List<int> tgMessageIds, List<int> dbNodeIds)
+        public void EnqueuePermanentDeletion(List<(int MessageId, long ChannelId)> items, List<int> dbNodeIds)
         {
-            var uniqueMsgIds = (tgMessageIds != null) ? tgMessageIds.Where(id => id > 0).Distinct().ToList() : new List<int>();
+            var uniqueItems = (items != null) ? items.Where(x => x.MessageId > 0).GroupBy(x => x.MessageId).Select(g => g.First()).ToList() : new List<(int MessageId, long ChannelId)>();
             int nodeCount = dbNodeIds?.Count ?? 0;
 
-            AppLogger.Info("Database", $"[EnqueuePermanentDeletion] Транзакция перманентного удаления: {nodeCount} узлов из БД, {uniqueMsgIds.Count} уникальных сообщений Telegram в очередь pending_deletions.");
-            if (uniqueMsgIds.Count > 0)
+            AppLogger.Info("Database", $"[EnqueuePermanentDeletion] Транзакция перманентного удаления: {nodeCount} узлов из БД, {uniqueItems.Count} уникальных сообщений Telegram в очередь pending_deletions.");
+            if (uniqueItems.Count > 0)
             {
-                AppLogger.Debug("Database", $"[EnqueuePermanentDeletion] Список Telegram Message ID для очистки: [{string.Join(", ", uniqueMsgIds)}]");
+                AppLogger.Debug("Database", $"[EnqueuePermanentDeletion] Список Telegram Message ID для очистки: [{string.Join(", ", uniqueItems.Select(x => $"{x.MessageId} (ch:{x.ChannelId})"))}]");
             }
             if (nodeCount > 0)
             {
@@ -737,17 +737,19 @@ namespace TelegramWebDAV.Database
             {
                 try
                 {
-                    if (uniqueMsgIds.Count > 0)
+                    if (uniqueItems.Count > 0)
                     {
                         using (var insertCmd = connection.CreateCommand())
                         {
                             insertCmd.Transaction = transaction;
-                            insertCmd.CommandText = "INSERT INTO pending_deletions (tg_message_id) VALUES (@msgId);";
+                            insertCmd.CommandText = "INSERT INTO pending_deletions (tg_message_id, channel_id) VALUES (@msgId, @channelId);";
                             var msgIdParam = insertCmd.Parameters.Add("@msgId", SqliteType.Integer);
+                            var channelIdParam = insertCmd.Parameters.Add("@channelId", SqliteType.Integer);
 
-                            foreach (var msgId in uniqueMsgIds)
+                            foreach (var item in uniqueItems)
                             {
-                                msgIdParam.Value = msgId;
+                                msgIdParam.Value = item.MessageId;
+                                channelIdParam.Value = item.ChannelId;
                                 insertCmd.ExecuteNonQuery();
                             }
                         }
@@ -782,21 +784,21 @@ namespace TelegramWebDAV.Database
         }
 
         /// <summary>
-        /// Получает порцию сообщений Telegram, ожидающих перманентного удаления
+        /// Получает порцию сообщений Telegram и их каналов, ожидающих перманентного удаления
         /// </summary>
-        public List<int> GetPendingDeletions(int limit = 100)
+        public List<(int MessageId, long ChannelId)> GetPendingDeletions(int limit = 100)
         {
-            var result = new List<int>();
+            var result = new List<(int MessageId, long ChannelId)>();
             using (var connection = _dbManager.GetConnection())
             using (var command = connection.CreateCommand())
             {
-                command.CommandText = "SELECT DISTINCT tg_message_id FROM pending_deletions LIMIT @limit;";
+                command.CommandText = "SELECT DISTINCT tg_message_id, channel_id FROM pending_deletions LIMIT @limit;";
                 command.Parameters.AddWithValue("@limit", limit);
                 using (var reader = command.ExecuteReader())
                 {
                     while (reader.Read())
                     {
-                        result.Add(reader.GetInt32(0));
+                        result.Add((reader.GetInt32(0), reader.GetInt64(1)));
                     }
                 }
             }

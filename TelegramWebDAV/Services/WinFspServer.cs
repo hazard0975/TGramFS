@@ -1138,6 +1138,7 @@ namespace TelegramWebDAV.Services
 
                     // 2. Формируем списки на удаление: файлы каналов, уничтожаемых целиком через Channels_DeleteChannel,
                     // не спамят очередь поштучного удаления сообщений
+                    var deletionItems = new List<(int MessageId, long ChannelId)>();
                     foreach (var n in sortedSubtree)
                     {
                         dbNodeIds.Add(n.Id);
@@ -1151,7 +1152,7 @@ namespace TelegramWebDAV.Services
 
                         if (n.TgMessageId.HasValue && n.TgMessageId.Value > 0)
                         {
-                            tgMessageIds.Add(n.TgMessageId.Value);
+                            deletionItems.Add((n.TgMessageId.Value, fileChannelId));
                         }
                         else if (!n.IsDir)
                         {
@@ -1159,16 +1160,16 @@ namespace TelegramWebDAV.Services
                         }
                         if (n.TgPreviewMessageId.HasValue && n.TgPreviewMessageId.Value > 0)
                         {
-                            tgMessageIds.Add(n.TgPreviewMessageId.Value);
+                            deletionItems.Add((n.TgPreviewMessageId.Value, fileChannelId));
                         }
                         AppLogger.Debug("WinFsp", $"[CleanupDelete Subtree] Элемент поддерева: ID {n.Id} ('{n.Name}'), IsDir={n.IsDir}, InTrash={n.InTrash}, ParentId={n.ParentId}, TgMessageId={n.TgMessageId?.ToString() ?? "NULL"}, TgPreviewMessageId={n.TgPreviewMessageId?.ToString() ?? "NULL"}");
                     }
 
                     // Атомарно помещаем сообщения в гарантированную очередь удаления и удаляем узлы из базы
-                    _repository.EnqueuePermanentDeletion(tgMessageIds, dbNodeIds);
-                    AppLogger.Info("WinFsp", $"Удалено {dbNodeIds.Count} узлов из базы; {tgMessageIds.Count} сообщений отправлено в очередь удаления Telegram.");
+                    _repository.EnqueuePermanentDeletion(deletionItems, dbNodeIds);
+                    AppLogger.Info("WinFsp", $"Удалено {dbNodeIds.Count} узлов из базы; {deletionItems.Count} сообщений отправлено в очередь удаления Telegram.");
 
-                    if (tgMessageIds.Count > 0)
+                    if (deletionItems.Count > 0)
                     {
                         _telegramService.TriggerDeletionQueueProcessing();
                     }
