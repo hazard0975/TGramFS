@@ -1,5 +1,6 @@
 using System;
 using System.Buffers;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Collections.Generic;
 using System.IO;
@@ -288,6 +289,65 @@ namespace TelegramWebDAV.Services
         private DateTime _lastListedTime = DateTime.MinValue;
         private readonly object _dirListingLock = new object();
 
+        private class ActiveVirtualCopyInfo
+        {
+            public int SourceNodeId { get; set; }
+            public int TargetNodeId { get; set; }
+            public int CreatorPid { get; set; }
+            public DateTime CreatedAtUtc { get; set; }
+        }
+
+        private static readonly ConcurrentDictionary<int, ActiveVirtualCopyInfo> _activeVirtualCopies = new();
+
+        public static void RegisterActiveVirtualCopy(int targetNodeId, int sourceNodeId, int creatorPid)
+        {
+            _activeVirtualCopies[targetNodeId] = new ActiveVirtualCopyInfo
+            {
+                SourceNodeId = sourceNodeId,
+                TargetNodeId = targetNodeId,
+                CreatorPid = creatorPid,
+                CreatedAtUtc = DateTime.UtcNow
+            };
+            AppLogger.Debug("WinFsp", $"[VirtualCopy] Зарегистрирована активная операция виртуального копирования: TargetNodeId={targetNodeId}, SourceNodeId={sourceNodeId}, CreatorPid={creatorPid}");
+        }
+
+        public static void UnregisterActiveVirtualCopy(int targetNodeId)
+        {
+            if (_activeVirtualCopies.TryRemove(targetNodeId, out var removed))
+            {
+                AppLogger.Debug("WinFsp", $"[VirtualCopy] Завершена активная операция виртуального копирования: TargetNodeId={targetNodeId}, SourceNodeId={removed.SourceNodeId}");
+            }
+        }
+
+        public static bool IsVirtualCopySourceActive(int sourceNodeId, int callerPid)
+        {
+            if (_activeVirtualCopies.IsEmpty) return false;
+
+            DateTime now = DateTime.UtcNow;
+            foreach (var kvp in _activeVirtualCopies)
+            {
+                var info = kvp.Value;
+                // Срок действия активной копии - до 2 минут (на случай зависших/аварийных дескрипторов)
+                if (now - info.CreatedAtUtc > TimeSpan.FromMinutes(2))
+                {
+                    _activeVirtualCopies.TryRemove(kvp.Key, out _);
+                    continue;
+                }
+
+                if (info.SourceNodeId == sourceNodeId)
+                {
+                    // Совпал исходный файл. Проверяем вызывающий процесс:
+                    // Либо тот же процесс-создатель копии (например explorer.exe), либо системный поток ядра Windows (PID <= 4)
+                    if (callerPid <= 4 || info.CreatorPid <= 0 || callerPid == info.CreatorPid)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
         private const int NT_STATUS_SUCCESS = 0;
         private const int NT_STATUS_UNSUCCESSFUL = unchecked((int)0xC0000001);
         private const int NT_STATUS_END_OF_FILE = unchecked((int)0xC0000011);
@@ -548,6 +608,8 @@ namespace TelegramWebDAV.Services
                         CreatorProcessId = callerPid
                     };
 
+                    RegisterActiveVirtualCopy(vNode.Id, virtualSource.Id, callerPid);
+
                     if (virtualSource.TgMessageId.HasValue && virtualSource.TgMessageId.Value > 0)
                     {
                         long? sourceChannelId = _repository.GetEffectiveChannelId(virtualSource.ParentId);
@@ -637,6 +699,7 @@ namespace TelegramWebDAV.Services
             {
                 ctx.VirtualSourceNode = virtualSource;
                 ctx.KnownTargetSize = virtualSource.Size;
+                RegisterActiveVirtualCopy(node.Id, virtualSource.Id, overwritePid);
                 if (virtualSource.TgMessageId.HasValue && virtualSource.TgMessageId.Value > 0)
                 {
                     int parentId = node.ParentId ?? 1;
@@ -1140,6 +1203,7 @@ namespace TelegramWebDAV.Services
 
                 if (ctx.VirtualSourceNode != null)
                 {
+                    UnregisterActiveVirtualCopy(node.Id);
                     if (ctx.ForwardTask != null)
                     {
                         try
@@ -1475,6 +1539,24 @@ namespace TelegramWebDAV.Services
             if (toRead == 0)
             {
                 bytesTransferred = 0;
+                return STATUS_SUCCESS;
+            }
+
+            // Проверяем, является ли текущее чтение частью активного виртуального копирования внутри диска.
+            // Если да — Проводник Windows считывает файл-источник исключительно ради передачи байтов в Write() целевого файла,
+            // где Write() их отбросит, так как дублирование уже выполнено на сервере через Telegram ForwardMessages.
+            // Мгновенно отдаем очищенный буфер из ОЗУ (0 байт сетевого трафика и 0 секунд задержки).
+            int callerPid = 0;
+            try { callerPid = FileSystemBase.GetOperationProcessId(); } catch { }
+
+            if (IsVirtualCopySourceActive(node.Id, callerPid))
+            {
+                unsafe
+                {
+                    new Span<byte>((void*)buffer, (int)toRead).Clear();
+                }
+                bytesTransferred = toRead;
+                AppLogger.Debug("WinFsp", $"[VirtualCopy Read Bypass] Файл '{node.Name}' (ID {node.Id}): чтение {toRead} байт (offset {offset}) обслужено из ОЗУ (0 байт из сети TG).");
                 return STATUS_SUCCESS;
             }
 
@@ -2453,6 +2535,7 @@ namespace TelegramWebDAV.Services
 
             public void Dispose()
             {
+                UnregisterActiveVirtualCopy(Node.Id);
                 if (DeleteOnClose)
                 {
                     try { UploadCts?.Cancel(); } catch { }

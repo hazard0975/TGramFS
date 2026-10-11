@@ -1080,9 +1080,9 @@ namespace TelegramWebDAV.Database
 
                 if (existingNode != null)
                 {
-                    // Проверяем: если это пустой файл-заглушка от Проводника (size == 0) или probe от Total Commander (size <= 1) без tg_message_id,
-                    // то это не предыдущая версия для корзины, а наполнение только что созданного узла!
-                    if (existingNode.Size <= 1 && existingNode.TgMessageId == null)
+                    // Проверяем: если это файл-заглушка от Проводника (еще не привязан tg_message_id и нет inline_data),
+                    // то это не предыдущая версия для корзины, а наполнение только что созданного узла (включая виртуальные копии и SetAllocationSize)!
+                    if (existingNode.TgMessageId == null && existingNode.InlineData == null)
                     {
                         using (var updateCmd = connection.CreateCommand())
                         {
