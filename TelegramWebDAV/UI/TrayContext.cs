@@ -23,6 +23,7 @@ namespace TelegramWebDAV.UI
         private readonly TelegramService _telegramService;
         private readonly WebDavServer _webDavServer;
         private readonly VirtualDriveManager _virtualDriveManager;
+        private readonly DatabaseBackupService _backupService;
         private readonly TrayProgressOverlay _progressOverlay;
         private AppSettings _settings;
         private AuthSettingsForm? _settingsForm;
@@ -34,13 +35,15 @@ namespace TelegramWebDAV.UI
             NodeRepository repository,
             TelegramService telegramService,
             WebDavServer webDavServer,
-            VirtualDriveManager virtualDriveManager)
+            VirtualDriveManager virtualDriveManager,
+            DatabaseBackupService backupService)
         {
             _configManager = configManager;
             _repository = repository;
             _telegramService = telegramService;
             _webDavServer = webDavServer;
             _virtualDriveManager = virtualDriveManager;
+            _backupService = backupService;
             _settings = _configManager.Load();
             _progressOverlay = new TrayProgressOverlay
             {
@@ -148,6 +151,38 @@ namespace TelegramWebDAV.UI
             itemRemount.Click += (s, e) => RemountDrive();
             menu.Items.Add(itemRemount);
 
+            // Отправить бэкап базы в Telegram
+            var itemBackup = new ToolStripMenuItem("Отправить бэкап базы в Telegram");
+            itemBackup.Click += async (s, e) =>
+            {
+                itemBackup.Enabled = false;
+                itemBackup.Text = "Отправка бэкапа...";
+                try
+                {
+                    _progressOverlay.UpdateProgress("Резервная копия базы...", 0, 100, TransferDirection.Upload);
+                    bool success = await _backupService.PerformBackupAsync("Запуск из системного трея");
+                    if (success)
+                    {
+                        _progressOverlay.CompleteTransfer("Резервная копия базы", TransferDirection.Upload);
+                        _notifyIcon.ShowBalloonTip(3000, "Бэкап базы данных", "Свежая резервная копия успешно отправлена в Telegram!", ToolTipIcon.Info);
+                    }
+                    else
+                    {
+                        _notifyIcon.ShowBalloonTip(3000, "Бэкап базы данных", "Не удалось отправить бэкап (проверьте авторизацию в Telegram).", ToolTipIcon.Warning);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _notifyIcon.ShowBalloonTip(3000, "Ошибка бэкапа", ex.Message, ToolTipIcon.Error);
+                }
+                finally
+                {
+                    itemBackup.Text = "Отправить бэкап базы в Telegram";
+                    itemBackup.Enabled = true;
+                }
+            };
+            menu.Items.Add(itemBackup);
+
             menu.Items.Add(new ToolStripSeparator());
 
             // Выход
@@ -171,7 +206,7 @@ namespace TelegramWebDAV.UI
                 return;
             }
 
-            _settingsForm = new AuthSettingsForm(_configManager, _telegramService, _repository);
+            _settingsForm = new AuthSettingsForm(_configManager, _telegramService, _repository, _backupService);
             _settingsForm.SettingsSaved += () =>
             {
                 _settings = _configManager.Load();
@@ -268,6 +303,7 @@ namespace TelegramWebDAV.UI
 
         private void ExitApplication()
         {
+            _backupService?.HandleApplicationExit();
             _notifyIcon.Visible = false;
             _notifyIcon.Dispose();
             _progressOverlay.Dispose();

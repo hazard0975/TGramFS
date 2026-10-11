@@ -19,6 +19,20 @@ namespace TelegramWebDAV.Database
 
         public string DatabasePath => _dbManager.DatabasePath;
 
+        public event Action? OnNodeChanged;
+
+        public void NotifyNodeChanged()
+        {
+            try
+            {
+                OnNodeChanged?.Invoke();
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Debug("NodeRepository", $"Ошибка OnNodeChanged: {ex.Message}");
+            }
+        }
+
         public void VacuumDatabase() => _dbManager.VacuumDatabase();
 
         public void ScheduleVacuum(int delayMs = 3000) => _dbManager.ScheduleVacuum(delayMs);
@@ -373,6 +387,7 @@ namespace TelegramWebDAV.Database
                 command.Parameters.AddWithValue("@name", name);
                 command.Parameters.AddWithValue("@tgChannelId", (object?)tgChannelId ?? DBNull.Value);
                 command.ExecuteNonQuery();
+                NotifyNodeChanged();
                 return true;
             }
         }
@@ -589,6 +604,8 @@ namespace TelegramWebDAV.Database
             {
                 AppLogger.Warn("Database", $"Не удалось поставить в очередь обновление подписей корзины: {ex.Message}");
             }
+
+            NotifyNodeChanged();
         }
 
         /// <summary>
@@ -773,6 +790,7 @@ namespace TelegramWebDAV.Database
 
                     transaction.Commit();
                     AppLogger.Info("Database", $"[EnqueuePermanentDeletion] Транзакция успешно зафиксирована.");
+                    NotifyNodeChanged();
                 }
                 catch (Exception ex)
                 {
@@ -875,6 +893,7 @@ namespace TelegramWebDAV.Database
 
             // Автоматически ставим в стойкую очередь SQLite все файлы перемещаемого/переименовываемого поддерева
             EnqueueCaptionUpdatesForSubtree(nodeId);
+            NotifyNodeChanged();
         }
 
         private void UpdateChildrenTrashStateRecursive(SqliteConnection connection, SqliteTransaction transaction, int parentId, int inTrashVal)
@@ -1117,6 +1136,7 @@ namespace TelegramWebDAV.Database
                             }
                             updateCmd.ExecuteNonQuery();
                         }
+                        NotifyNodeChanged();
                         return;
                     }
 
@@ -1264,6 +1284,7 @@ namespace TelegramWebDAV.Database
                     }
                 }
             }
+            NotifyNodeChanged();
         }
 
         /// <summary>

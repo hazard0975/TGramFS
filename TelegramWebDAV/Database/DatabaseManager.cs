@@ -333,6 +333,89 @@ CREATE INDEX IF NOT EXISTS idx_pending_deletions_tg_msg ON pending_deletions(tg_
             }
         }
 
+        /// <summary>
+        /// Создает консистентный монолитный снимок базы данных через принудительный сброс WAL и VACUUM INTO.
+        /// </summary>
+        public void CreateConsistentSnapshot(string targetPath)
+        {
+            var dir = Path.GetDirectoryName(targetPath);
+            if (!string.IsNullOrEmpty(dir))
+            {
+                Directory.CreateDirectory(dir);
+            }
+
+            if (File.Exists(targetPath))
+            {
+                try { File.Delete(targetPath); } catch { }
+            }
+
+            lock (_vacuumLock)
+            {
+                try
+                {
+                    AppLogger.Info("Database", $"Создание консистентного снимка базы данных в: {targetPath}...");
+                    using var connection = GetConnection();
+
+                    // 1. Принудительный сброс всех страниц WAL обратно в основной файл base.db и усечение WAL
+                    using (var checkpointCmd = connection.CreateCommand())
+                    {
+                        checkpointCmd.CommandText = "PRAGMA wal_checkpoint(TRUNCATE);";
+                        checkpointCmd.ExecuteNonQuery();
+                    }
+
+                    // 2. Создание изолированного атомарного снимка через VACUUM INTO
+                    using (var vacuumIntoCmd = connection.CreateCommand())
+                    {
+                        string escapedPath = targetPath.Replace("'", "''");
+                        vacuumIntoCmd.CommandText = $"VACUUM INTO '{escapedPath}';";
+                        vacuumIntoCmd.ExecuteNonQuery();
+                    }
+
+                    AppLogger.Info("Database", $"Снимок базы данных успешно создан: {targetPath}");
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Error("Database", $"Ошибка при создании снимка базы данных: {ex.Message}", ex);
+                    throw;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Получает сводную статистику по узлам базы данных для карточки резервного копирования.
+        /// </summary>
+        public (int totalNodes, int filesCount, int foldersCount, long totalSizeBytes) GetDatabaseStats()
+        {
+            try
+            {
+                using var connection = GetConnection();
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = @"
+                    SELECT 
+                        COUNT(*) as total,
+                        SUM(CASE WHEN is_dir = 0 THEN 1 ELSE 0 END) as files,
+                        SUM(CASE WHEN is_dir = 1 THEN 1 ELSE 0 END) as folders,
+                        SUM(size) as total_size
+                    FROM nodes 
+                    WHERE in_trash = 0;
+                ";
+                using var reader = cmd.ExecuteReader();
+                if (reader.Read())
+                {
+                    int total = reader.IsDBNull(0) ? 0 : Convert.ToInt32(reader[0]);
+                    int files = reader.IsDBNull(1) ? 0 : Convert.ToInt32(reader[1]);
+                    int folders = reader.IsDBNull(2) ? 0 : Convert.ToInt32(reader[2]);
+                    long size = reader.IsDBNull(3) ? 0L : Convert.ToInt64(reader[3]);
+                    return (total, files, folders, size);
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Debug("Database", $"Ошибка получения статистики базы: {ex.Message}");
+            }
+            return (0, 0, 0, 0L);
+        }
+
         public SqliteConnection GetConnection()
         {
             var connection = new SqliteConnection(_connectionString);

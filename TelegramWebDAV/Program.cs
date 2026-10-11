@@ -122,7 +122,10 @@ namespace TelegramWebDAV
                 var winFspServer = new WinFspServer(configManager, repository, telegramService);
                 var virtualDriveManager = new VirtualDriveManager(configManager, winFspServer);
 
-                // 6. Запуск локального IPC сервера (Named Pipe) для команд из контекстного меню Проводника
+                // 6. Инициализация службы резервного копирования базы данных
+                var backupService = new DatabaseBackupService(dbManager, repository, telegramService, configManager);
+
+                // 7. Запуск локального IPC сервера (Named Pipe) для команд из контекстного меню Проводника
                 using var ipcServer = new IpcServer(async req =>
                 {
                     if (req.Command == "bind-channel")
@@ -133,8 +136,8 @@ namespace TelegramWebDAV
                 });
                 ipcServer.Start();
 
-                // 7. Запуск приложения в системном трее Windows
-                Application.Run(new TrayContext(configManager, repository, telegramService, webDavServer, virtualDriveManager));
+                // 8. Запуск приложения в системном трее Windows
+                Application.Run(new TrayContext(configManager, repository, telegramService, webDavServer, virtualDriveManager, backupService));
             }
             catch (Exception ex)
             {

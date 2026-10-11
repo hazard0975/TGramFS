@@ -24,8 +24,19 @@ namespace TelegramWebDAV.UI
         private TabControl _tabControl = null!;
         private TabPage _tabGeneral = null!;
         private TabPage _tabTelegram = null!;
+        private TabPage _tabBackup = null!;
         private TabPage _tabRegistry = null!;
         private TabPage _tabLogs = null!;
+
+        // Backup Tab
+        private TextBox _txtBackupChannelTitle = null!;
+        private TextBox _txtBackupChannelId = null!;
+        private CheckBox _chkEnableAutoBackup = null!;
+        private NumericUpDown _numDebounceMinutes = null!;
+        private CheckBox _chkBackupOnExit = null!;
+        private CheckBox _chkCheckOnStartup = null!;
+        private Label _lblBackupStatus = null!;
+        private readonly DatabaseBackupService? _backupService;
 
         // General Tab
         private CheckBox _chkWebDavEnabled = null!;
@@ -83,11 +94,12 @@ namespace TelegramWebDAV.UI
         private NumericUpDown _numMaxLogFiles = null!;
         private Label _lblLogStats = null!;
 
-        public AuthSettingsForm(ConfigManager configManager, TelegramService telegramService, Database.NodeRepository repository)
+        public AuthSettingsForm(ConfigManager configManager, TelegramService telegramService, Database.NodeRepository repository, DatabaseBackupService? backupService = null)
         {
             _configManager = configManager;
             _telegramService = telegramService;
             _repository = repository;
+            _backupService = backupService;
             _settings = _configManager.Load();
 
             InitializeComponents();
@@ -444,7 +456,158 @@ namespace TelegramWebDAV.UI
             _tabTelegram.Controls.Add(pnlTg);
 
             // =========================================================================
-            // === Вкладка 3: Патч реестра Windows =====================================
+            // === Вкладка 3: Бэкап базы данных ========================================
+            // =========================================================================
+            _tabBackup = new TabPage("Бэкап базы");
+            var pnlBackup = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                Padding = new Padding(12),
+                AutoScroll = true
+            };
+
+            // 1. Рамка: Канал Telegram
+            var grpBackupChannel = UIFactory.CreateGroupBox("Канал Telegram для резервных копий");
+            var pnlBackupChannelInner = UIFactory.CreateVerticalContainer();
+
+            _txtBackupChannelTitle = new TextBox 
+            { 
+                Text = _settings.Database.Backup.BackupChannelTitle ?? "Telegram Drive Backups", 
+                Width = 260, 
+                Font = UITheme.BaseFont 
+            };
+            var rowBkupTitle = UIFactory.CreateSettingRow("Название канала:", _txtBackupChannelTitle, 160);
+
+            _txtBackupChannelId = new TextBox 
+            { 
+                Text = _settings.Database.Backup.BackupChannelId != 0 ? _settings.Database.Backup.BackupChannelId.ToString() : "0", 
+                Width = 260, 
+                Font = UITheme.BaseFont 
+            };
+            var rowBkupId = UIFactory.CreateSettingRow("ID канала (0 = авто):", _txtBackupChannelId, 160);
+
+            var lblBkupChannelHint = new Label
+            {
+                Text = "Если ID равен 0, сервис автоматически найдет существующий канал по названию или создаст новый приватный канал.",
+                AutoSize = true,
+                Font = UITheme.SmallFont,
+                ForeColor = UITheme.TextMuted,
+                Margin = new Padding(0, 2, 0, 4)
+            };
+
+            pnlBackupChannelInner.Controls.AddRange(new Control[] { rowBkupTitle, rowBkupId, lblBkupChannelHint });
+            grpBackupChannel.Controls.Add(pnlBackupChannelInner);
+
+            // 2. Рамка: Автоматический бэкап
+            var grpAutoBackup = UIFactory.CreateGroupBox("Политика автоматического бэкапа");
+            var pnlAutoBackupInner = UIFactory.CreateVerticalContainer();
+
+            _chkEnableAutoBackup = UIFactory.CreateCheckBox("Включить автоматическую выгрузку бэкапа в Telegram", _settings.Database.Backup.EnableAutoBackup);
+            
+            _numDebounceMinutes = UIFactory.CreateNumericInput(1, 120, _settings.Database.Backup.DebounceMinutes > 0 ? _settings.Database.Backup.DebounceMinutes : 15, 80);
+            var rowDebounce = UIFactory.CreateSettingRow("Таймер тишины после записи (мин):", _numDebounceMinutes, 240);
+
+            _chkBackupOnExit = UIFactory.CreateCheckBox("Создавать резервную копию при выходе из программы", _settings.Database.Backup.BackupOnExit);
+            _chkCheckOnStartup = UIFactory.CreateCheckBox("Проверять наличие свежей базы в Telegram при запуске (сценарий Дом/Работа)", _settings.Database.Backup.CheckForRemoteOnStartup);
+
+            pnlAutoBackupInner.Controls.AddRange(new Control[] { _chkEnableAutoBackup, rowDebounce, _chkBackupOnExit, _chkCheckOnStartup });
+            grpAutoBackup.Controls.Add(pnlAutoBackupInner);
+
+            // 3. Рамка: Ручные действия
+            var grpBackupActions = UIFactory.CreateGroupBox("Действия с резервными копиями");
+            var pnlBackupActionsInner = UIFactory.CreateVerticalContainer();
+
+            _lblBackupStatus = new Label
+            {
+                AutoSize = true,
+                Font = UITheme.SmallFont,
+                Margin = new Padding(0, 2, 0, 6)
+            };
+
+            Action updateBackupStatusText = () =>
+            {
+                string statusText = "Статус: ";
+                if (_backupService != null)
+                {
+                    statusText += _backupService.HasUnsavedChanges ? "Есть несохраненные изменения" : "Все изменения зафиксированы в Telegram";
+                    if (_backupService.LastBackupTimeUtc.HasValue)
+                    {
+                        statusText += $"   |   Последний бэкап: {_backupService.LastBackupTimeUtc.Value.ToLocalTime():yyyy-MM-dd HH:mm:ss}";
+                    }
+                }
+                else
+                {
+                    statusText += "Сервис бэкапов активен";
+                }
+                _lblBackupStatus.Text = statusText;
+            };
+            updateBackupStatusText();
+
+            var btnManualBackup = UIFactory.CreateButton("📤 Отправить бэкап в Telegram сейчас");
+            btnManualBackup.Click += async (s, e) =>
+            {
+                if (_backupService == null)
+                {
+                    MessageBox.Show("Служба бэкапа не инициализирована.", "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+                btnManualBackup.Enabled = false;
+                btnManualBackup.Text = "Создание и отправка...";
+                try
+                {
+                    bool ok = await _backupService.PerformBackupAsync("Запуск из окна настроек");
+                    updateBackupStatusText();
+                    if (ok)
+                    {
+                        MessageBox.Show("Резервная копия базы данных успешно создана и отправлена в Telegram!", "Бэкап базы", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    else
+                    {
+                        MessageBox.Show("Не удалось отправить бэкап. Проверьте авторизацию в Telegram (вкладка Telegram).", "Предупреждение", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Ошибка отправки бэкапа:\n{ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                finally
+                {
+                    btnManualBackup.Text = "📤 Отправить бэкап в Telegram сейчас";
+                    btnManualBackup.Enabled = true;
+                }
+            };
+
+            var btnOpenBackupsDir = UIFactory.CreateButton("📁 Папка локальных бэкапов");
+            btnOpenBackupsDir.Click += (s, e) =>
+            {
+                try
+                {
+                    string dir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "backups");
+                    Directory.CreateDirectory(dir);
+                    System.Diagnostics.Process.Start("explorer.exe", dir);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Не удалось открыть папку: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+
+            var rowBackupBtns = UIFactory.CreateActionRow(btnManualBackup, btnOpenBackupsDir);
+            pnlBackupActionsInner.Controls.AddRange(new Control[] { _lblBackupStatus, rowBackupBtns });
+            grpBackupActions.Controls.Add(pnlBackupActionsInner);
+
+            pnlBackup.Controls.AddRange(new Control[] {
+                grpBackupChannel,
+                grpAutoBackup,
+                grpBackupActions,
+                new Panel { Height = 10, Width = 10, Margin = Padding.Empty }
+            });
+            _tabBackup.Controls.Add(pnlBackup);
+
+            // =========================================================================
+            // === Вкладка 4: Патч реестра Windows =====================================
             // =========================================================================
             _tabRegistry = new TabPage("Патч реестра Windows");
             var pnlReg = new FlowLayoutPanel
@@ -679,7 +842,7 @@ namespace TelegramWebDAV.UI
             });
             _tabLogs.Controls.Add(pnlLogs);
 
-            _tabControl.TabPages.AddRange(new TabPage[] { _tabGeneral, _tabTelegram, _tabRegistry, _tabLogs });
+            _tabControl.TabPages.AddRange(new TabPage[] { _tabGeneral, _tabTelegram, _tabBackup, _tabRegistry, _tabLogs });
             this.Controls.Add(_tabControl);
             this.Controls.Add(pnlBottomBar);
         }
@@ -860,6 +1023,16 @@ namespace TelegramWebDAV.UI
             _settings.Logging.MaxLogFileSizeMb = (int)_numMaxLogMb.Value;
             _settings.Logging.MaxArchivedFiles = (int)_numMaxLogFiles.Value;
             _settings.Database.AutoVacuumOnTrashDelete = _chkAutoVacuum.Checked;
+
+            _settings.Database.Backup.EnableAutoBackup = _chkEnableAutoBackup.Checked;
+            _settings.Database.Backup.BackupChannelTitle = _txtBackupChannelTitle.Text.Trim();
+            if (long.TryParse(_txtBackupChannelId.Text.Trim(), out long bChId))
+            {
+                _settings.Database.Backup.BackupChannelId = bChId;
+            }
+            _settings.Database.Backup.DebounceMinutes = (int)_numDebounceMinutes.Value;
+            _settings.Database.Backup.BackupOnExit = _chkBackupOnExit.Checked;
+            _settings.Database.Backup.CheckForRemoteOnStartup = _chkCheckOnStartup.Checked;
 
             if (_chkContextMenu.Checked)
             {
