@@ -1117,16 +1117,23 @@ namespace TelegramWebDAV.Services
                     long primaryChannelId = _repository.GetPrimaryTelegramChannel()?.ChannelId ?? 0;
                     var channelsToDestroy = new HashSet<long>();
 
-                    // Собираем все tg_channel_id внутри удаляемого поддерева, которые не являются основным каналом
+                    // Канал подлежит полному уничтожению через Channels_DeleteChannel ТОЛЬКО если:
+                    // 1. Удаляемый узел является самой корневой привязанной папкой (node.Id == n.Id для папки с этим каналом).
+                    // 2. В базе данных больше не осталось других узлов, принадлежащих этому каналу (удаляется всё поддерево целиком).
                     var boundFoldersToDelete = sortedSubtree
-                        .Where(n => n.TgChannelId.HasValue && n.TgChannelId.Value != 0 && n.TgChannelId.Value != primaryChannelId)
+                        .Where(n => n.IsDir && n.TgChannelId.HasValue && n.TgChannelId.Value != 0 && n.TgChannelId.Value != primaryChannelId && n.Id == node.Id)
                         .Select(n => n.TgChannelId!.Value)
                         .Distinct()
                         .ToList();
 
                     foreach (var chId in boundFoldersToDelete)
                     {
-                        channelsToDestroy.Add(chId);
+                        int nodesInSubtreeForChannel = sortedSubtree.Count(n => (n.TgChannelId ?? _repository.GetEffectiveChannelId(n.ParentId)) == chId);
+                        int totalNodesInDbForChannel = _repository.GetNodeCountForChannel(chId);
+                        if (totalNodesInDbForChannel > 0 && totalNodesInDbForChannel <= nodesInSubtreeForChannel)
+                        {
+                            channelsToDestroy.Add(chId);
+                        }
                     }
 
                     // 2. Формируем списки на удаление: файлы каналов, уничтожаемых целиком через Channels_DeleteChannel,
