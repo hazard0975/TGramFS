@@ -857,7 +857,7 @@ namespace TelegramWebDAV.Services
                         }
 
                         long? targetChannelId = _repository.GetEffectiveChannelId(node.ParentId);
-                        AppLogger.Info("WinFsp", $"Запуск прямой потоковой передачи '{nodeName}' ({targetTotalSize} байт) в Telegram на лету (Zero-Temp)" + 
+                        AppLogger.Info("WinFsp", $"Запуск прямой потоковой передачи '{nodeName}' ({targetTotalSize} байт) в Telegram" + 
                             (targetChannelId != null ? $", канал: {targetChannelId}" : "") +
                             (videoMeta != null ? $", видео: {videoMeta.Width}x{videoMeta.Height}, {videoMeta.DurationSeconds} сек, обложка: {(videoMeta.Thumbnail != null ? "ДА" : "НЕТ")}" : "") +
                             (audioMeta != null ? $", аудио: {audioMeta.DurationSeconds} сек, обложка: {(audioMeta.AlbumCover != null ? "ДА" : "НЕТ")}" : "") + "...");
@@ -1117,20 +1117,16 @@ namespace TelegramWebDAV.Services
                     long primaryChannelId = _repository.GetPrimaryTelegramChannel()?.ChannelId ?? 0;
                     var channelsToDestroy = new HashSet<long>();
 
+                    // Собираем все tg_channel_id внутри удаляемого поддерева, которые не являются основным каналом
                     var boundFoldersToDelete = sortedSubtree
-                        .Where(n => n.IsDir && n.TgChannelId.HasValue && n.TgChannelId.Value != 0 && n.TgChannelId.Value != primaryChannelId && n.Id == node.Id)
+                        .Where(n => n.TgChannelId.HasValue && n.TgChannelId.Value != 0 && n.TgChannelId.Value != primaryChannelId)
                         .Select(n => n.TgChannelId!.Value)
                         .Distinct()
                         .ToList();
 
                     foreach (var chId in boundFoldersToDelete)
                     {
-                        int nodesInSubtreeForChannel = sortedSubtree.Count(n => n.TgChannelId == chId);
-                        int totalNodesInDbForChannel = _repository.GetNodeCountForChannel(chId);
-                        if (totalNodesInDbForChannel > 0 && totalNodesInDbForChannel == nodesInSubtreeForChannel)
-                        {
-                            channelsToDestroy.Add(chId);
-                        }
+                        channelsToDestroy.Add(chId);
                     }
 
                     // 2. Формируем списки на удаление: файлы каналов, уничтожаемых целиком через Channels_DeleteChannel,
@@ -1230,7 +1226,7 @@ namespace TelegramWebDAV.Services
                                 node.UpdatedAt = targetUpdatedAt;
                                 node.CreatedAt = targetCreatedAt;
 
-                                AppLogger.Info("WinFsp", $"[VirtualCopy] Файл '{nodeName}' успешно сохранен через Telegram ForwardMessages (новый Msg ID: {fwdResult.Value.MessageId}, размер: {node.Size} байт). 0 байт сетевого трафика!");
+                                AppLogger.Info("WinFsp", $"[VirtualCopy] Файл '{nodeName}' успешно сохранен через Telegram ForwardMessages (новый Msg ID: {fwdResult.Value.MessageId}, размер: {node.Size} байт).");
                             }
                             else
                             {
