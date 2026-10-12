@@ -80,6 +80,8 @@ namespace TelegramWebDAV.Config
         public int DebounceMinutes { get; set; } = 15;
         public bool BackupOnExit { get; set; } = true;
         public bool CheckForRemoteOnStartup { get; set; } = true;
+        public int RemoteCheckIntervalMinutes { get; set; } = 5;
+        public int LastSyncedBackupMessageId { get; set; } = 0;
     }
 
     public class WebDavSettings

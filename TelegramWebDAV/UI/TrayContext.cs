@@ -24,7 +24,7 @@ namespace TelegramWebDAV.UI
         private readonly TelegramService _telegramService;
         private readonly WebDavServer _webDavServer;
         private readonly VirtualDriveManager _virtualDriveManager;
-        private readonly DatabaseBackupService _backupService;
+        private readonly DatabaseBackupService? _backupService;
         private readonly TrayProgressOverlay _progressOverlay;
         private AppSettings _settings;
         private AuthSettingsForm? _settingsForm;
@@ -61,6 +61,19 @@ namespace TelegramWebDAV.UI
 
             BuildContextMenu();
             CheckDriveMounting();
+
+            if (_backupService != null)
+            {
+                _backupService.OnCloudSyncApplied += (message) =>
+                {
+                    _notifyIcon.ShowBalloonTip(3000, "Синхронизация Telegram", message, ToolTipIcon.Info);
+                };
+
+                _backupService.OnCloudSyncConflict += (message) =>
+                {
+                    _notifyIcon.ShowBalloonTip(4000, "Конфликт синхронизации", message, ToolTipIcon.Warning);
+                };
+            }
 
             if (_settings.Server.AddTrashToContextMenu)
             {
@@ -160,6 +173,7 @@ namespace TelegramWebDAV.UI
                 itemBackup.Text = "Отправка бэкапа...";
                 try
                 {
+                    if (_backupService == null) return;
                     _progressOverlay.UpdateProgress("Резервная копия базы...", 0, 100, TransferDirection.Upload);
                     bool success = await _backupService.PerformBackupAsync("Запуск из системного трея");
                     if (success)

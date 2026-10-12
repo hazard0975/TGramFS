@@ -35,6 +35,7 @@ namespace TelegramWebDAV.UI
         private NumericUpDown _numDebounceMinutes = null!;
         private CheckBox _chkBackupOnExit = null!;
         private CheckBox _chkCheckOnStartup = null!;
+        private NumericUpDown _numRemoteCheckInterval = null!;
         private Label _lblBackupStatus = null!;
         private readonly DatabaseBackupService? _backupService;
 
@@ -507,9 +508,14 @@ namespace TelegramWebDAV.UI
             var rowDebounce = UIFactory.CreateSettingRow("Таймер тишины после записи (мин):", _numDebounceMinutes, 240);
 
             _chkBackupOnExit = UIFactory.CreateCheckBox("Создавать резервную копию при выходе из программы", _settings.Database.Backup.BackupOnExit);
-            _chkCheckOnStartup = UIFactory.CreateCheckBox("Проверять наличие свежей базы в Telegram при запуске (сценарий Дом/Работа)", _settings.Database.Backup.CheckForRemoteOnStartup);
+            _chkCheckOnStartup = UIFactory.CreateCheckBox("Проверять наличие свежей базы в Telegram (сценарий Дом/Работа)", _settings.Database.Backup.CheckForRemoteOnStartup);
 
-            pnlAutoBackupInner.Controls.AddRange(new Control[] { _chkEnableAutoBackup, rowDebounce, _chkBackupOnExit, _chkCheckOnStartup });
+            _numRemoteCheckInterval = UIFactory.CreateNumericInput(1, 120, _settings.Database.Backup.RemoteCheckIntervalMinutes > 0 ? _settings.Database.Backup.RemoteCheckIntervalMinutes : 5, 80);
+            var rowRemoteCheck = UIFactory.CreateSettingRow("Интервал фоновой проверки (мин):", _numRemoteCheckInterval, 240);
+            _numRemoteCheckInterval.Enabled = _chkCheckOnStartup.Checked;
+            _chkCheckOnStartup.CheckedChanged += (s, e) => _numRemoteCheckInterval.Enabled = _chkCheckOnStartup.Checked;
+
+            pnlAutoBackupInner.Controls.AddRange(new Control[] { _chkEnableAutoBackup, rowDebounce, _chkBackupOnExit, _chkCheckOnStartup, rowRemoteCheck });
             grpAutoBackup.Controls.Add(pnlAutoBackupInner);
 
             // 3. Рамка: Ручные действия
@@ -1143,6 +1149,7 @@ namespace TelegramWebDAV.UI
             _settings.Database.Backup.DebounceMinutes = (int)_numDebounceMinutes.Value;
             _settings.Database.Backup.BackupOnExit = _chkBackupOnExit.Checked;
             _settings.Database.Backup.CheckForRemoteOnStartup = _chkCheckOnStartup.Checked;
+            _settings.Database.Backup.RemoteCheckIntervalMinutes = (int)_numRemoteCheckInterval.Value;
 
             if (_chkContextMenu.Checked)
             {
@@ -1154,6 +1161,7 @@ namespace TelegramWebDAV.UI
             }
 
             _configManager.Save(_settings);
+            _backupService?.StartCloudSyncTimer();
             _telegramService.UpdateSettings(_settings);
             SettingsSaved?.Invoke();
 
