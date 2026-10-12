@@ -591,8 +591,79 @@ namespace TelegramWebDAV.UI
                 }
             };
 
-            var rowBackupBtns = UIFactory.CreateActionRow(btnManualBackup, btnOpenBackupsDir);
-            pnlBackupActionsInner.Controls.AddRange(new Control[] { _lblBackupStatus, rowBackupBtns });
+            var btnRestoreFromTelegram = UIFactory.CreateButton("📥 Восстановить базу из Telegram");
+            btnRestoreFromTelegram.Click += async (s, e) =>
+            {
+                if (_backupService == null)
+                {
+                    MessageBox.Show("Служба бэкапа не инициализирована.", "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+                if (!_telegramService.IsAuthorized)
+                {
+                    MessageBox.Show("Для восстановления базы данных необходимо сначала авторизоваться в Telegram (вкладка Telegram).", "Требуется авторизация", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                btnRestoreFromTelegram.Enabled = false;
+                btnRestoreFromTelegram.Text = "Поиск бэкапа в Telegram...";
+                try
+                {
+                    var backupInfo = await _backupService.GetLatestBackupInfoAsync();
+                    if (!backupInfo.Found || backupInfo.Document == null)
+                    {
+                        MessageBox.Show("В канале Telegram не найдено резервных копий базы данных (#db_backup).", "Резервная копия не найдена", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        return;
+                    }
+
+                    double sizeMb = (double)backupInfo.Size / (1024 * 1024);
+                    string promptMessage = 
+                        $"Найдена последняя резервная копия базы данных в Telegram:\n\n" +
+                        $"• Файл: {backupInfo.FileName}\n" +
+                        $"• Дата: {backupInfo.Date.ToLocalTime():yyyy-MM-dd HH:mm:ss}\n" +
+                        $"• Размер: {sizeMb:F2} МБ\n\n" +
+                        $"Внимание: Текущая база данных будет замещена версией из Telegram (перед заменой будет создан защитный локальный снимок base_pre_restore_*.db).\n\n" +
+                        $"Вы уверены, что хотите восстановить базу данных?";
+
+                    var confirmResult = MessageBox.Show(promptMessage, "Подтверждение восстановления", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                    if (confirmResult != DialogResult.Yes)
+                    {
+                        return;
+                    }
+
+                    btnRestoreFromTelegram.Text = "Восстановление...";
+                    bool restored = await _backupService.RestoreFromTelegramAsync(backupInfo.Document, status =>
+                    {
+                        if (!IsDisposed && IsHandleCreated)
+                        {
+                            BeginInvoke(new Action(() => _lblBackupStatus.Text = status));
+                        }
+                    });
+
+                    updateBackupStatusText();
+                    if (restored)
+                    {
+                        MessageBox.Show("База данных успешно восстановлена из Telegram!\nФайловая структура обновлена.", "Восстановление завершено", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    else
+                    {
+                        MessageBox.Show("Не удалось восстановить базу данных. Подробности записаны в журнал логов.", "Ошибка восстановления", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Ошибка при восстановлении базы данных:\n{ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                finally
+                {
+                    btnRestoreFromTelegram.Text = "📥 Восстановить базу из Telegram";
+                    btnRestoreFromTelegram.Enabled = true;
+                }
+            };
+
+            var rowBackupBtns = UIFactory.CreateActionRow(btnManualBackup, btnRestoreFromTelegram);
+            var rowFolderBtn = UIFactory.CreateActionRow(btnOpenBackupsDir);
+            pnlBackupActionsInner.Controls.AddRange(new Control[] { _lblBackupStatus, rowBackupBtns, rowFolderBtn });
             grpBackupActions.Controls.Add(pnlBackupActionsInner);
 
             pnlBackup.Controls.AddRange(new Control[] {

@@ -837,6 +837,13 @@
   - **Реализовано**:
     1. В `TrayContext.cs` обработчик события двойного клика `_notifyIcon.DoubleClick` изменен с вызова окна настроек `ShowSettingsDialog()` на открытие смонтированного диска или WebDAV URL (`OpenDriveInExplorer()`).
     2. Успешно пройдена валидационная сборка C# проекта `dotnet build` (`0 Warning(s), 0 Error(s)`).
+- [x] **8.39. Восстановление базы данных base.db из Telegram-канала бэкапов**:
+  - **Реализовано**:
+    1. В `TelegramService.cs` добавлены методы `GetLatestBackupDocumentAsync` (поиск последнего сообщения с документом базы данных в канале бэкапов через `Messages_GetHistory`) и `DownloadBackupDocumentAsync` (потоковое скачивание документа с отслеживанием прогресса).
+    2. В `DatabaseManager.cs` добавлен метод `RestoreFromSnapshot`: процедура сброса пулов соединений (`SqliteConnection.ClearAllPools()`), создание защитного локального снимка текущей базы `base_pre_restore_*.db`, атомарная замена `base.db`, очистка временных файлов WAL/SHM и валидация целостности через `PRAGMA integrity_check`.
+    3. В `DatabaseBackupService.cs` реализованы методы `GetLatestBackupInfoAsync` и `RestoreFromTelegramAsync`: оркестрация скачивания снимка во временный файл, накат на базу, сброс флага несохраненных изменений и уведомление репозитория об обновлении узлов (`NotifyNodeChanged`).
+    4. В `AuthSettingsForm.cs` во вкладке «Бэкап базы» добавлена кнопка «📥 Восстановить базу из Telegram» с интерактивным диалогом подтверждения (вывод имени файла, даты, размера и предупреждения) и отображением прогресса.
+    5. Успешно выполнена компиляция и валидация C# проекта `dotnet build` (`0 Warning(s), 0 Error(s)`) и веб-приложения (`Build succeeded`).
 
 
 

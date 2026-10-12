@@ -2132,6 +2132,69 @@ namespace TelegramWebDAV.Services
         }
 
         /// <summary>
+        /// Выполняет поиск последнего сообщения с резервной копией базы данных в канале резервных копий Telegram.
+        /// </summary>
+        public async Task<(int MessageId, TL.Document Document, string Caption, DateTime Date, long Size, string FileName)?> GetLatestBackupDocumentAsync(string? backupChannelTitle = null)
+        {
+            await EnsureFloodWaitDelayAsync();
+            if (_client == null || !IsAuthorized)
+            {
+                throw new InvalidOperationException("Клиент Telegram не подключен или не авторизован.");
+            }
+
+            var peer = await GetBackupStoragePeerAsync(backupChannelTitle);
+            var messagesBase = await _client.Messages_GetHistory(peer, limit: 20);
+            TL.MessageBase[] messages = messagesBase switch
+            {
+                TL.Messages_ChannelMessages cm => cm.messages,
+                TL.Messages_Messages mm => mm.messages,
+                _ => Array.Empty<TL.MessageBase>()
+            };
+
+            foreach (var msgBase in messages)
+            {
+                if (msgBase is TL.Message msg && msg.media is TL.MessageMediaDocument mediaDoc && mediaDoc.document is TL.Document doc)
+                {
+                    string fileName = "";
+                    var fnAttr = doc.attributes?.OfType<TL.DocumentAttributeFilename>().FirstOrDefault();
+                    if (fnAttr != null)
+                    {
+                        fileName = fnAttr.file_name;
+                    }
+
+                    bool isDbBackup = (!string.IsNullOrEmpty(fileName) && fileName.StartsWith("base_") && fileName.EndsWith(".db"))
+                                      || (msg.message != null && msg.message.Contains("#db_backup"));
+
+                    if (isDbBackup)
+                    {
+                        return (msg.ID, doc, msg.message ?? "", msg.Date, doc.size, fileName);
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Скачивает документ резервной копии базы данных из Telegram в целевой поток.
+        /// </summary>
+        public async Task DownloadBackupDocumentAsync(TL.Document document, Stream outputStream, Action<long, long>? progressCallback = null)
+        {
+            await EnsureFloodWaitDelayAsync();
+            if (_client == null || !IsAuthorized)
+            {
+                throw new InvalidOperationException("Клиент Telegram не подключен или не авторизован.");
+            }
+
+            AppLogger.Info("TelegramService", $"Скачивание резервной копии базы данных ({document.size / (1024.0 * 1024.0):F2} МБ)...");
+            await _client.DownloadFileAsync(document, outputStream, progress: (current, total) =>
+            {
+                progressCallback?.Invoke(current, total);
+            });
+            AppLogger.Info("TelegramService", "Скачивание резервной копии базы данных успешно завершено.");
+        }
+
+        /// <summary>
         /// Обновляет текстовую подпись (Caption) у существующего сообщения в Telegram (например, при переименовании из .tmp)
         /// </summary>
         public async Task UpdateMessageCaptionAsync(int messageId, string newCaption, long? channelId = null)

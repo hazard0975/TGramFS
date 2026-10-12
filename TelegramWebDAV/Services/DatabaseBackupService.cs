@@ -232,6 +232,97 @@ namespace TelegramWebDAV.Services
             }
         }
 
+        /// <summary>
+        /// Запрашивает информацию о последней резервной копии базы данных из канала Telegram.
+        /// </summary>
+        public async Task<(bool Found, int MessageId, string Caption, DateTime Date, long Size, string FileName, TL.Document? Document)> GetLatestBackupInfoAsync()
+        {
+            if (!_telegramService.IsAuthorized)
+            {
+                return (false, 0, "Telegram не авторизован", DateTime.MinValue, 0, "", null);
+            }
+
+            try
+            {
+                var backup = await _telegramService.GetLatestBackupDocumentAsync();
+                if (backup.HasValue)
+                {
+                    return (true, backup.Value.MessageId, backup.Value.Caption, backup.Value.Date, backup.Value.Size, backup.Value.FileName, backup.Value.Document);
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("DatabaseBackup", $"Ошибка при поиске бэкапа в Telegram: {ex.Message}", ex);
+            }
+
+            return (false, 0, "Бэкапы не найдены", DateTime.MinValue, 0, "", null);
+        }
+
+        /// <summary>
+        /// Скачивает резервную копию из Telegram и накатывает ее на локальную базу base.db.
+        /// </summary>
+        public async Task<bool> RestoreFromTelegramAsync(TL.Document document, Action<string>? statusCallback = null)
+        {
+            bool lockAcquired = await _backupLock.WaitAsync(10000);
+            if (!lockAcquired)
+            {
+                AppLogger.Warn("DatabaseBackup", "Операция с базой данных уже выполняется другим потоком.");
+                return false;
+            }
+
+            string tempRestoreFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "backups", "restore_incoming.db");
+            try
+            {
+                statusCallback?.Invoke("Скачивание резервной копии из Telegram...");
+                string backupsDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "backups");
+                Directory.CreateDirectory(backupsDir);
+
+                if (File.Exists(tempRestoreFile))
+                {
+                    try { File.Delete(tempRestoreFile); } catch { }
+                }
+
+                using (var fs = new FileStream(tempRestoreFile, FileMode.Create, FileAccess.Write, FileShare.None))
+                {
+                    await _telegramService.DownloadBackupDocumentAsync(document, fs, (cur, tot) =>
+                    {
+                        if (tot > 0)
+                        {
+                            int pct = (int)(cur * 100 / tot);
+                            statusCallback?.Invoke($"Скачивание из Telegram: {pct}%");
+                        }
+                    });
+                }
+
+                statusCallback?.Invoke("Применение резервной копии к базе данных...");
+                _dbManager.RestoreFromSnapshot(tempRestoreFile);
+
+                _hasUnsavedChanges = false;
+                _lastBackupTimeUtc = DateTime.UtcNow;
+
+                // Уведомляем систему об изменении узлов, чтобы обновилось дерево
+                _repository.NotifyNodeChanged();
+
+                AppLogger.Info("DatabaseBackup", "База данных успешно восстановлена из Telegram!");
+                statusCallback?.Invoke("База данных успешно восстановлена!");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("DatabaseBackup", $"Ошибка восстановления базы данных из Telegram: {ex.Message}", ex);
+                statusCallback?.Invoke($"Ошибка: {ex.Message}");
+                return false;
+            }
+            finally
+            {
+                if (File.Exists(tempRestoreFile))
+                {
+                    try { File.Delete(tempRestoreFile); } catch { }
+                }
+                _backupLock.Release();
+            }
+        }
+
         public void Dispose()
         {
             if (_isDisposed) return;

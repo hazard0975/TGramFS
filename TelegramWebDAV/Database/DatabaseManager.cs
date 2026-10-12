@@ -431,6 +431,87 @@ CREATE INDEX IF NOT EXISTS idx_pending_deletions_tg_msg ON pending_deletions(tg_
             return (0, 0, 0, 0L);
         }
 
+        /// <summary>
+        /// Безопасно накатывает файл снимка базы данных на основную базу данных base.db.
+        /// Создает защитный локальный снимок перед накатом, сбрасывает пулы соединений SQLite,
+        /// заменяет файл, удаляет временные WAL/SHM файлы и проводит валидацию целостности.
+        /// </summary>
+        public void RestoreFromSnapshot(string snapshotFilePath)
+        {
+            if (!File.Exists(snapshotFilePath))
+            {
+                throw new FileNotFoundException($"Файл снимка для восстановления не найден: {snapshotFilePath}");
+            }
+
+            lock (_vacuumLock)
+            {
+                AppLogger.Info("Database", $"Начало процедуры восстановления базы из снимка: {snapshotFilePath}...");
+
+                // 1. Сброс всех пулов соединений SQLite, чтобы освободить дескрипторы файлов
+                SqliteConnection.ClearAllPools();
+
+                // 2. Создание защитного снимка текущей базы (Safety Snapshot)
+                string backupDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "backups");
+                Directory.CreateDirectory(backupDir);
+                string safetyBackupPath = Path.Combine(backupDir, $"base_pre_restore_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.db");
+
+                if (File.Exists(_dbPath))
+                {
+                    try
+                    {
+                        File.Copy(_dbPath, safetyBackupPath, overwrite: true);
+                        AppLogger.Info("Database", $"Создан аварийный снимок перед восстановлением: {safetyBackupPath}");
+                    }
+                    catch (Exception ex)
+                    {
+                        AppLogger.Warn("Database", $"Не удалось создать аварийный снимок базы: {ex.Message}");
+                    }
+                }
+
+                // 3. Замена основного файла base.db
+                try
+                {
+                    File.Copy(snapshotFilePath, _dbPath, overwrite: true);
+
+                    // Удаляем связанные WAL и SHM файлы, чтобы база открылась в чистом виде
+                    string walPath = _dbPath + "-wal";
+                    string shmPath = _dbPath + "-shm";
+                    if (File.Exists(walPath)) { try { File.Delete(walPath); } catch { } }
+                    if (File.Exists(shmPath)) { try { File.Delete(shmPath); } catch { } }
+
+                    AppLogger.Info("Database", "Файл base.db успешно заменен снимком из бэкапа.");
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Error("Database", $"Ошибка при замене файла base.db: {ex.Message}", ex);
+                    // Попытка отката к аварийному снимку при сбое
+                    if (File.Exists(safetyBackupPath))
+                    {
+                        try { File.Copy(safetyBackupPath, _dbPath, overwrite: true); } catch { }
+                    }
+                    throw;
+                }
+
+                // 4. Инициализация и проверка целостности восстановленной базы
+                InitializeDatabase();
+
+                using (var connection = GetConnection())
+                {
+                    using var checkCmd = connection.CreateCommand();
+                    checkCmd.CommandText = "PRAGMA integrity_check;";
+                    var result = checkCmd.ExecuteScalar()?.ToString();
+                    if (result != "ok")
+                    {
+                        AppLogger.Warn("Database", $"Предупреждение целостности базы данных: {result}");
+                    }
+                    else
+                    {
+                        AppLogger.Info("Database", "Целостность восстановленной базы данных подтверждена: ok");
+                    }
+                }
+            }
+        }
+
         public SqliteConnection GetConnection()
         {
             var connection = new SqliteConnection(_connectionString);
