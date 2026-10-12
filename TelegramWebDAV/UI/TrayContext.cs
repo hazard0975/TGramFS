@@ -57,7 +57,7 @@ namespace TelegramWebDAV.UI
                 Text = "Telegram WebDAV & Network Drive",
                 Visible = true
             };
-            _notifyIcon.DoubleClick += (s, e) => ShowSettingsDialog();
+            _notifyIcon.DoubleClick += (s, e) => OpenDriveInExplorer();
 
             BuildContextMenu();
             CheckDriveMounting();
