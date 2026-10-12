@@ -309,7 +309,16 @@ namespace TelegramWebDAV.UI
                 if (_backupService != null && _backupService.HasUnsavedChanges && _telegramService.IsAuthorized)
                 {
                     _notifyIcon.ShowBalloonTip(1500, "Telegram Drive", "Сохранение резервной копии базы данных перед выходом...", ToolTipIcon.Info);
-                    await _backupService.HandleApplicationExitAsync();
+                    bool success = await _backupService.HandleApplicationExitAsync();
+                    if (success)
+                    {
+                        _notifyIcon.ShowBalloonTip(3000, "Бэкап базы данных", "Резервная копия базы данных успешно сохранена", ToolTipIcon.Info);
+                    }
+                    else
+                    {
+                        _notifyIcon.ShowBalloonTip(3000, "Бэкап базы данных", "Не удалось сохранить резервную копию перед выходом.", ToolTipIcon.Warning);
+                    }
+                    await Task.Delay(1500);
                 }
             }
             catch (Exception ex)

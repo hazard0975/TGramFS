@@ -197,23 +197,24 @@ namespace TelegramWebDAV.Services
         /// Обработчик штатного завершения работы приложения (Graceful Exit).
         /// Асинхронно сохраняет базу и отправляет в Telegram, не блокируя UI-поток.
         /// </summary>
-        public async Task HandleApplicationExitAsync()
+        public async Task<bool> HandleApplicationExitAsync()
         {
             try
             {
                 var settings = _configManager.CurrentSettings?.Database?.Backup;
-                if (settings == null || !settings.BackupOnExit) return;
+                if (settings == null || !settings.BackupOnExit) return false;
 
                 if (_hasUnsavedChanges && _telegramService.IsAuthorized)
                 {
                     AppLogger.Info("DatabaseBackup", "Выполняется финальное сохранение базы данных при выходе из программы...");
-                    await PerformBackupAsync("Штатный выход из программы", isGracefulExit: true).ConfigureAwait(false);
+                    return await PerformBackupAsync("Штатный выход из программы", isGracefulExit: true).ConfigureAwait(false);
                 }
             }
             catch (Exception ex)
             {
                 AppLogger.Warn("DatabaseBackup", $"Ошибка финального бэкапа при выходе: {ex.Message}");
             }
+            return false;
         }
 
         /// <summary>
