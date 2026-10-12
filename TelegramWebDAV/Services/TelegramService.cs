@@ -2139,10 +2139,14 @@ namespace TelegramWebDAV.Services
             await EnsureFloodWaitDelayAsync();
             if (_client == null || !IsAuthorized)
             {
+                AppLogger.Warn("TelegramService", "Поиск бэкапа отменен: клиент Telegram не подключен или не авторизован.");
                 throw new InvalidOperationException("Клиент Telegram не подключен или не авторизован.");
             }
 
+            AppLogger.Info("TelegramService", "Запрос к Telegram: поиск последней резервной копии базы данных...");
             var peer = await GetBackupStoragePeerAsync(backupChannelTitle);
+            long resolvedChannelId = peer is TL.InputPeerChannel ipc ? ipc.channel_id : 0;
+
             var messagesBase = await _client.Messages_GetHistory(peer, limit: 20);
             TL.MessageBase[] messages = messagesBase switch
             {
@@ -2150,6 +2154,8 @@ namespace TelegramWebDAV.Services
                 TL.Messages_Messages mm => mm.messages,
                 _ => Array.Empty<TL.MessageBase>()
             };
+
+            AppLogger.Debug("TelegramService", $"Получено сообщений из канала бэкапов (ID: {resolvedChannelId}): {messages.Length}. Проверка файлов...");
 
             foreach (var msgBase in messages)
             {
@@ -2167,11 +2173,13 @@ namespace TelegramWebDAV.Services
 
                     if (isDbBackup)
                     {
+                        AppLogger.Info("TelegramService", $"Найден файл бэкапа базы в Telegram: Message #{msg.ID}, '{fileName}', {doc.size / 1024.0:F1} КБ, дата: {msg.Date.ToLocalTime():yyyy-MM-dd HH:mm:ss}");
                         return (msg.ID, doc, msg.message ?? "", msg.Date, doc.size, fileName);
                     }
                 }
             }
 
+            AppLogger.Info("TelegramService", "В последних 20 сообщениях канала бэкапов файл резервной копии (#db_backup / base_*.db) не найден.");
             return null;
         }
 
