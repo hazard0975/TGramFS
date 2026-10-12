@@ -1800,12 +1800,12 @@ namespace TelegramWebDAV.Database
             {
                 if (accountId.HasValue)
                 {
-                    command.CommandText = "SELECT * FROM telegram_channels WHERE account_id = @accountId AND is_primary = 1 AND is_active = 1 LIMIT 1;";
+                    command.CommandText = "SELECT * FROM telegram_channels WHERE account_id = @accountId AND is_primary = 1 AND is_active = 1 AND channel_type != 'backup' LIMIT 1;";
                     command.Parameters.AddWithValue("@accountId", accountId.Value);
                 }
                 else
                 {
-                    command.CommandText = "SELECT * FROM telegram_channels WHERE is_primary = 1 AND is_active = 1 LIMIT 1;";
+                    command.CommandText = "SELECT * FROM telegram_channels WHERE is_primary = 1 AND is_active = 1 AND channel_type != 'backup' LIMIT 1;";
                 }
 
                 using (var reader = command.ExecuteReader())
@@ -1817,6 +1817,62 @@ namespace TelegramWebDAV.Database
                 }
             }
             return null;
+        }
+
+        /// <summary>
+        /// Возвращает выделенный канал для резервных копий базы данных (channel_type = 'backup').
+        /// </summary>
+        public TelegramChannel? GetBackupChannel(int? accountId = null)
+        {
+            using (var connection = _dbManager.GetConnection())
+            using (var command = connection.CreateCommand())
+            {
+                if (accountId.HasValue)
+                {
+                    command.CommandText = "SELECT * FROM telegram_channels WHERE account_id = @accountId AND channel_type = 'backup' AND is_active = 1 LIMIT 1;";
+                    command.Parameters.AddWithValue("@accountId", accountId.Value);
+                }
+                else
+                {
+                    command.CommandText = "SELECT * FROM telegram_channels WHERE channel_type = 'backup' AND is_active = 1 LIMIT 1;";
+                }
+
+                using (var reader = command.ExecuteReader())
+                {
+                    if (reader.Read())
+                    {
+                        return MapReaderToTelegramChannel(reader);
+                    }
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Сохраняет или обновляет выделенный канал резервных копий базы данных в SQLite.
+        /// </summary>
+        public void SaveOrUpdateBackupChannel(int accountId, long channelId, long accessHash, string title)
+        {
+            using (var connection = _dbManager.GetConnection())
+            using (var command = connection.CreateCommand())
+            {
+                command.CommandText = @"
+                    INSERT INTO telegram_channels (account_id, channel_id, access_hash, title, is_primary, is_active, channel_type)
+                    VALUES (@accountId, @channelId, @accessHash, @title, 0, 1, 'backup')
+                    ON CONFLICT(channel_id) DO UPDATE SET
+                        account_id = excluded.account_id,
+                        access_hash = excluded.access_hash,
+                        title = excluded.title,
+                        channel_type = 'backup',
+                        is_active = 1,
+                        updated_at = CURRENT_TIMESTAMP;
+                ";
+                command.Parameters.AddWithValue("@accountId", accountId);
+                command.Parameters.AddWithValue("@channelId", channelId);
+                command.Parameters.AddWithValue("@accessHash", accessHash);
+                command.Parameters.AddWithValue("@title", title);
+                command.ExecuteNonQuery();
+            }
         }
 
         /// <summary>
@@ -1895,8 +1951,8 @@ namespace TelegramWebDAV.Database
                     {
                         upsertCmd.Transaction = transaction;
                         upsertCmd.CommandText = @"
-                            INSERT INTO telegram_channels (account_id, channel_id, access_hash, title, is_primary, is_active)
-                            VALUES (@accountId, @channelId, @accessHash, @title, @isPrimary, 1)
+                            INSERT INTO telegram_channels (account_id, channel_id, access_hash, title, is_primary, is_active, channel_type)
+                            VALUES (@accountId, @channelId, @accessHash, @title, @isPrimary, 1, 'storage')
                             ON CONFLICT(channel_id) DO UPDATE SET
                                 account_id = excluded.account_id,
                                 access_hash = excluded.access_hash,
@@ -1940,6 +1996,17 @@ namespace TelegramWebDAV.Database
 
         private static TelegramChannel MapReaderToTelegramChannel(SqliteDataReader reader)
         {
+            string channelType = "storage";
+            try
+            {
+                int colIdx = reader.GetOrdinal("channel_type");
+                if (colIdx >= 0 && !reader.IsDBNull(colIdx))
+                {
+                    channelType = reader.GetString(colIdx);
+                }
+            }
+            catch { }
+
             return new TelegramChannel
             {
                 Id = Convert.ToInt32(reader["id"]),
@@ -1949,6 +2016,7 @@ namespace TelegramWebDAV.Database
                 Title = Convert.ToString(reader["title"]) ?? string.Empty,
                 IsPrimary = Convert.ToInt32(reader["is_primary"]) == 1,
                 IsActive = Convert.ToInt32(reader["is_active"]) == 1,
+                ChannelType = channelType,
                 CreatedAt = DateTime.SpecifyKind(Convert.ToDateTime(reader["created_at"]), DateTimeKind.Utc),
                 UpdatedAt = DateTime.SpecifyKind(Convert.ToDateTime(reader["updated_at"]), DateTimeKind.Utc)
             };

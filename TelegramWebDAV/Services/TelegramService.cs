@@ -2030,55 +2030,29 @@ namespace TelegramWebDAV.Services
 
         /// <summary>
         /// Разрешает peer приватного канала для резервных копий базы данных.
-        /// Если канал с указанным ID/названием не существует, автоматически находит его среди диалогов или создает новый.
+        /// Источник правды — база данных (таблица telegram_channels, channel_type = 'backup').
+        /// Если канал уже сохранен в базе, возвращает его мгновенно по channel_id и access_hash.
+        /// Если канала в базе нет, создает новый приватный broadcast-канал и сохраняет в базу.
+        /// Поиск по всем диалогам не выполняется.
         /// </summary>
-        public async Task<TL.InputPeer> GetBackupStoragePeerAsync(long? specificChannelId = null, string? specificTitle = null)
+        public async Task<TL.InputPeer> GetBackupStoragePeerAsync(string? specificTitle = null)
         {
             if (_client == null || !IsAuthorized)
                 throw new InvalidOperationException("Клиент Telegram не подключен или не авторизован.");
 
-            // 1. Поиск по явному ID канала
-            if (specificChannelId.HasValue && specificChannelId.Value != 0)
+            // 1. Проверяем в базе данных (единый источник правды)
+            var backupChannel = _repository?.GetBackupChannel();
+            if (backupChannel != null && backupChannel.ChannelId != 0 && backupChannel.AccessHash != 0)
             {
-                try
-                {
-                    var peer = await GetStoragePeerAsync(specificChannelId.Value);
-                    if (peer != null) return peer;
-                }
-                catch (Exception ex)
-                {
-                    AppLogger.Warn("TelegramService", $"Не удалось подключиться к каналу бэкапов по ID {specificChannelId.Value}: {ex.Message}. Поиск по названию...");
-                }
+                return new TL.InputPeerChannel(backupChannel.ChannelId, backupChannel.AccessHash);
             }
 
             string targetTitle = !string.IsNullOrWhiteSpace(specificTitle) 
                 ? specificTitle.Trim() 
                 : "Telegram Drive Backups";
 
-            // 2. Поиск среди существующих диалогов по названию
-            try
-            {
-                var chats = await _client.Messages_GetAllChats();
-                foreach (var chat in chats.chats.Values)
-                {
-                    if (chat is TL.Channel ch && ch.Title.Equals(targetTitle, StringComparison.OrdinalIgnoreCase))
-                    {
-                        var account = _repository?.GetActiveTelegramAccount();
-                        if (account != null && _repository != null)
-                        {
-                            _repository.SaveOrUpdateTelegramChannel(account.Id, ch.ID, ch.access_hash, ch.Title, isPrimary: false);
-                        }
-                        return ch.ToInputPeer();
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                AppLogger.Warn("TelegramService", $"Ошибка поиска существующего канала бэкапов: {ex.Message}");
-            }
-
-            // 3. Создаем новый приватный канал
-            AppLogger.Info("TelegramService", $"Канал резервных копий '{targetTitle}' не найден. Создание нового приватного канала...");
+            // 2. Если в базе нет — создаем новый приватный канал
+            AppLogger.Info("TelegramService", $"Канал резервных копий не найден в базе данных. Создание нового приватного канала '{targetTitle}'...");
             var createReq = new TL.Methods.Channels_CreateChannel
             {
                 flags = TL.Methods.Channels_CreateChannel.Flags.broadcast,
@@ -2096,9 +2070,9 @@ namespace TelegramWebDAV.Services
                         var account = _repository?.GetActiveTelegramAccount();
                         if (account != null && _repository != null)
                         {
-                            _repository.SaveOrUpdateTelegramChannel(account.Id, newCh.ID, newCh.access_hash, newCh.Title, isPrimary: false);
+                            _repository.SaveOrUpdateBackupChannel(account.Id, newCh.ID, newCh.access_hash, newCh.Title);
                         }
-                        AppLogger.Info("TelegramService", $"Создан новый канал резервных копий: '{newCh.Title}' (ID: {newCh.ID}).");
+                        AppLogger.Info("TelegramService", $"Создан новый канал резервных копий: '{newCh.Title}' (ID: {newCh.ID}) и сохранен в базу данных.");
                         return newCh.ToInputPeer();
                     }
                 }
@@ -2114,7 +2088,6 @@ namespace TelegramWebDAV.Services
             Stream fileStream,
             string fileName,
             string caption,
-            long? backupChannelId = null,
             string? backupChannelTitle = null)
         {
             await EnsureFloodWaitDelayAsync();
@@ -2123,8 +2096,8 @@ namespace TelegramWebDAV.Services
                 throw new InvalidOperationException("Клиент Telegram не подключен или не авторизован.");
             }
 
-            var peer = await GetBackupStoragePeerAsync(backupChannelId, backupChannelTitle);
-            long resolvedChannelId = peer is TL.InputPeerChannel ipc ? ipc.channel_id : (backupChannelId ?? 0);
+            var peer = await GetBackupStoragePeerAsync(backupChannelTitle);
+            long resolvedChannelId = peer is TL.InputPeerChannel ipc ? ipc.channel_id : 0;
 
             AppLogger.Info("TelegramService", $"Загрузка резервной копии '{fileName}' в Telegram (канал ID: {resolvedChannelId})...");
 

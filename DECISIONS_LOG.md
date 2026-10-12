@@ -1521,6 +1521,36 @@ _telegramService.UpdateSettings(_settings);
 4. **Валидация:**
    - Проект успешно скомпилирован через `dotnet build` (`0 Warning(s), 0 Error(s)`).
 
+---
+
+## 65. Привязка канала резервных копий к таблице `telegram_channels` базы данных (Single Source of Truth)
+
+### Бизнес-цель:
+Устранить избыточное дублирование `BackupChannelId` в локальном конфигурационном файле `settings.json`, сделать базу данных `base.db` единым и самодостаточным источником правды для всех подключенных устройств (сценарий «Дом — Работа»), а также ускорить отправку бэкапов до 0 мс за счет прямого использования `(channel_id, access_hash)` без поиска по всем диалогам Telegram.
+
+### Проблема и недостатки хранения в JSON:
+1. Если ID канала хранится в `settings.json`, то при переносе базы на новый ПК (или ноутбук) конфигурацию приходилось дублировать вручную, иначе программа не знала о существовании канала бэкапов и создавала дубликат канала.
+2. При отсутствии ID в конфиге происходило тяжелое сетевое сканирование всех чатов пользователя (`Messages_GetAllChats`) по текстовому названию, что приводило к лишним сетевым задержкам и риску лимитов FloodWait.
+
+### Принятое решение (Root Cause First — Вариант 1):
+1. **Расширение схемы `telegram_channels`**:
+   - В таблицу `telegram_channels` добавлена колонка `channel_type TEXT NOT NULL DEFAULT 'storage'` (с автоматической бесшовной миграцией `ALTER TABLE` в `DatabaseManager.ApplySchema`).
+   - Для каналов диска используется роль `'storage'`, а для выделенного канала резервных копий базы данных — `'backup'`.
+2. **Методы репозитория `NodeRepository`**:
+   - Добавлены методы `GetBackupChannel(accountId)` и `SaveOrUpdateBackupChannel(accountId, channelId, accessHash, title)`.
+   - Основной метод поиска хранилища `GetPrimaryChannel` фильтрует каналы условием `channel_type != 'backup'`, исключая случайную запись файлов диска в канал резервных копий.
+3. **Прямое разрешение peer в `TelegramService`**:
+   - Метод `GetBackupStoragePeerAsync` проверяет наличие канала в базе данных: если запись есть, возвращается готовый `InputPeerChannel(channel_id, access_hash)` мгновенно без сетевых обращений.
+   - Если канала в базе нет (самый первый запуск проекта с нуля), создается приватный канал `"Telegram Drive Backups"`, и его реквизиты сразу сохраняются в `base.db`.
+   - Полностью исключен избыточный перебор всех диалогов через `Messages_GetAllChats`.
+4. **Очистка `settings.json` и обновление UI**:
+   - Поле `BackupChannelId` удалено из конфигурации `settings.json` (`AppSettings.cs`).
+   - В интерфейсе настроек `AuthSettingsForm.cs` поле ID канала сделано информационным (Read-Only) с пояснением, что канал привязан непосредственно в `base.db`.
+5. **Валидация**:
+   - Сборка C# проекта `dotnet build /app/applet/TelegramWebDAV/TelegramWebDAV.csproj -p:EnableWindowsTargeting=true` выполнена успешно (`0 Warning(s), 0 Error(s)`).
+   - Сборка TypeScript/React `npm run build` выполнена успешно.
+
+
 
 
 

@@ -469,12 +469,14 @@ namespace TelegramWebDAV.UI
             };
 
             // 1. Рамка: Канал Telegram
-            var grpBackupChannel = UIFactory.CreateGroupBox("Канал Telegram для резервных копий");
+            var grpBackupChannel = UIFactory.CreateGroupBox("Канал Telegram для резервных копий (Хранится в базе)");
             var pnlBackupChannelInner = UIFactory.CreateVerticalContainer();
+
+            var currentBackupCh = _repository?.GetBackupChannel();
 
             _txtBackupChannelTitle = new TextBox 
             { 
-                Text = _settings.Database.Backup.BackupChannelTitle ?? "Telegram Drive Backups", 
+                Text = currentBackupCh?.Title ?? _settings.Database.Backup.BackupChannelTitle ?? "Telegram Drive Backups", 
                 Width = 260, 
                 Font = UITheme.BaseFont 
             };
@@ -482,15 +484,17 @@ namespace TelegramWebDAV.UI
 
             _txtBackupChannelId = new TextBox 
             { 
-                Text = _settings.Database.Backup.BackupChannelId != 0 ? _settings.Database.Backup.BackupChannelId.ToString() : "0", 
+                Text = currentBackupCh != null && currentBackupCh.ChannelId != 0 ? currentBackupCh.ChannelId.ToString() : "Автоматически при первом бэкапе", 
                 Width = 260, 
-                Font = UITheme.BaseFont 
+                Font = UITheme.BaseFont,
+                ReadOnly = true,
+                BackColor = SystemColors.Control
             };
-            var rowBkupId = UIFactory.CreateSettingRow("ID канала (0 = авто):", _txtBackupChannelId, 160);
+            var rowBkupId = UIFactory.CreateSettingRow("ID канала в базе:", _txtBackupChannelId, 160);
 
             var lblBkupChannelHint = new Label
             {
-                Text = "Если ID равен 0, сервис автоматически найдет существующий канал по названию или создаст новый приватный канал.",
+                Text = "ID канала и ключ доступа хранятся в таблице telegram_channels базы base.db.\nПри первом создании канал генерируется автоматически без лишних сетевых поисков.",
                 AutoSize = true,
                 Font = UITheme.SmallFont,
                 ForeColor = UITheme.TextMuted,
@@ -1025,10 +1029,12 @@ namespace TelegramWebDAV.UI
             _settings.Database.AutoVacuumOnTrashDelete = _chkAutoVacuum.Checked;
 
             _settings.Database.Backup.EnableAutoBackup = _chkEnableAutoBackup.Checked;
-            _settings.Database.Backup.BackupChannelTitle = _txtBackupChannelTitle.Text.Trim();
-            if (long.TryParse(_txtBackupChannelId.Text.Trim(), out long bChId))
+            string newTitle = _txtBackupChannelTitle.Text.Trim();
+            _settings.Database.Backup.BackupChannelTitle = newTitle;
+            var currentBk = _repository?.GetBackupChannel();
+            if (currentBk != null && !string.IsNullOrWhiteSpace(newTitle) && currentBk.Title != newTitle)
             {
-                _settings.Database.Backup.BackupChannelId = bChId;
+                _repository?.UpdateChannelTitle(currentBk.ChannelId, newTitle);
             }
             _settings.Database.Backup.DebounceMinutes = (int)_numDebounceMinutes.Value;
             _settings.Database.Backup.BackupOnExit = _chkBackupOnExit.Checked;

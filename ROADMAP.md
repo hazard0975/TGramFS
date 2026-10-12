@@ -800,6 +800,15 @@
     6. Настройки в `AuthSettingsForm.cs`:
        - Новая вкладка «Бэкап базы»: выбор/ввод ID и названия канала, включение авто-бэкапа, настройка таймера тишины, чекбокс выгрузки при выходе, кнопка «Отправить бэкап в Telegram сейчас» и быстрый переход в папку локальных бэкапов.
     7. Выполнена валидационная сборка C# проекта `dotnet build` (`0 Warning(s), 0 Error(s)`).
+- [x] **8.33. Привязка канала резервных копий к таблице `telegram_channels` базы данных (Single Source of Truth)**:
+  - **Реализовано**:
+    1. Расширение схемы `telegram_channels` в `Schema.sql` и `DatabaseManager.cs`: добавлена колонка `channel_type TEXT NOT NULL DEFAULT 'storage'` ('storage' для хранения файлов диска, 'backup' для резервных копий) с автоматической миграцией `ALTER TABLE`.
+    2. Добавлены методы репозитория `NodeRepository.cs`: `GetBackupChannel(accountId)` и `SaveOrUpdateBackupChannel(accountId, channelId, accessHash, title)`.
+    3. Метод поиска основного хранилища `GetPrimaryChannel` защищен фильтром `channel_type != 'backup'` во избежание случайной записи файлов диска в канал резервных копий.
+    4. Оптимизация `TelegramService.GetBackupStoragePeerAsync`: устранено тяжелое сетевое сканирование всех диалогов `Messages_GetAllChats`. При наличии записи в базе peer формируется мгновенно из `(channel_id, access_hash)`. Если в базе записи нет, создается приватный канал и его реквизиты сразу сохраняются в `telegram_channels`.
+    5. Конфигурационный файл `settings.json` очищен от дублирования `BackupChannelId`. В интерфейсе настроек `AuthSettingsForm.cs` поле ID канала привязано напрямую к SQLite в режиме информации (Read-Only).
+    6. Выполнена валидационная сборка C# проекта `dotnet build` (`0 Warning(s), 0 Error(s)`) и веб-приложения `npm run build`.
+
 
 
 

@@ -14,6 +14,7 @@ namespace TelegramWebDAV.Models
         public string Title { get; set; } = "Telegram WebDAV Drive";
         public bool IsPrimary { get; set; } = true;
         public bool IsActive { get; set; } = true;
+        public string ChannelType { get; set; } = "storage"; // "storage" или "backup"
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
     }

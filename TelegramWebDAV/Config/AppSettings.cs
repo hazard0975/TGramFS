@@ -77,7 +77,6 @@ namespace TelegramWebDAV.Config
     public class DatabaseBackupSettings
     {
         public bool EnableAutoBackup { get; set; } = true;
-        public long BackupChannelId { get; set; } = 0;
         public string BackupChannelTitle { get; set; } = "Telegram Drive Backups";
         public int DebounceMinutes { get; set; } = 15;
         public bool BackupOnExit { get; set; } = true;

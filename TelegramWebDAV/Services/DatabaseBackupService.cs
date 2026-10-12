@@ -140,17 +140,7 @@ namespace TelegramWebDAV.Services
                         fs,
                         fileName,
                         caption,
-                        backupSettings.BackupChannelId != 0 ? backupSettings.BackupChannelId : null,
                         backupSettings.BackupChannelTitle);
-
-                    // Сохраняем ID канала, если он был создан/определен
-                    if (uploadResult.ChannelId != 0 && backupSettings.BackupChannelId != uploadResult.ChannelId)
-                    {
-                        backupSettings.BackupChannelId = uploadResult.ChannelId;
-                        var current = _configManager.CurrentSettings ?? new AppSettings();
-                        current.Database.Backup = backupSettings;
-                        _configManager.Save(current);
-                    }
                 }
 
                 _hasUnsavedChanges = false;

@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS telegram_channels (
     title TEXT NOT NULL,                          -- Название канала ("Telegram WebDAV Drive")
     is_primary INTEGER NOT NULL DEFAULT 1,        -- 1 = основной канал для новых загрузок
     is_active INTEGER NOT NULL DEFAULT 1,         -- 1 = активен для чтения/записи
+    channel_type TEXT NOT NULL DEFAULT 'storage', -- 'storage' для хранения файлов диска, 'backup' для бэкапов базы
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (account_id) REFERENCES telegram_accounts(id) ON DELETE CASCADE

@@ -119,6 +119,7 @@ CREATE TABLE IF NOT EXISTS telegram_channels (
     title TEXT NOT NULL,
     is_primary INTEGER NOT NULL DEFAULT 1,
     is_active INTEGER NOT NULL DEFAULT 1,
+    channel_type TEXT NOT NULL DEFAULT 'storage',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (account_id) REFERENCES telegram_accounts(id) ON DELETE CASCADE
@@ -227,6 +228,20 @@ CREATE INDEX IF NOT EXISTS idx_pending_deletions_tg_msg ON pending_deletions(tg_
                 using (var command = connection.CreateCommand())
                 {
                     command.CommandText = "ALTER TABLE pending_deletions ADD COLUMN channel_id INTEGER NOT NULL DEFAULT 0;";
+                    command.ExecuteNonQuery();
+                }
+            }
+            catch
+            {
+                // Колонка уже существует, игнорируем ошибку
+            }
+
+            // Миграция: убедимся, что колонка channel_type существует в таблице telegram_channels
+            try
+            {
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = "ALTER TABLE telegram_channels ADD COLUMN channel_type TEXT NOT NULL DEFAULT 'storage';";
                     command.ExecuteNonQuery();
                 }
             }
