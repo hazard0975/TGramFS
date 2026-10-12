@@ -878,6 +878,13 @@
         - Детали обнаруженного бэкапа перед накатыванием (имя ПК, Message ID, размер в КБ, дата создания).
      5. В `TelegramService.cs` в методе `GetLatestBackupDocumentAsync` добавлено прозрачное логирование поиска резервных копий: ID канала бэкапов, количество проверенных сообщений, найденный документ или запись об отсутствии файлов бэкапа.
      6. Проведена валидация и компиляция C# проекта: `dotnet build /app/applet/TelegramWebDAV/TelegramWebDAV.csproj -p:EnableWindowsTargeting=true` (`0 Warning(s), 0 Error(s)`).
+- [x] **8.43. Немедленная синхронизация базы данных из Telegram ДО монтирования диска (Вариант А)**:
+   - **Реализовано**:
+     1. В `Program.cs` вызов `CheckAndSyncFromTelegramAsync(isResumeOrStartup: true)` перенесен непосредственно после успешной авторизации `TelegramService.ConnectAsync()`, строго до запуска WebDAV сервера и монтирования виртуального диска WinFsp.
+     2. Исключена гонка состояний: когда диск `Y:` монтируется в системе, база данных `base.db` уже содержит актуальное дерево узлов из облака.
+     3. В `DatabaseBackupService.cs` внедрен механизм отложенных уведомлений `PendingSyncNotification` и `PendingConflictNotification`. Если синхронизация или конфликт зафиксированы до запуска трея, сообщение сохраняется и показывается в `TrayContext` сразу после инициализации иконки.
+     4. Таймер `StartCloudSyncTimer()` переведен исключительно на периодический режим (без лишних стартовых задержек).
+     5. Успешно выполнена компиляция и валидация проекта: `dotnet build /app/applet/TelegramWebDAV/TelegramWebDAV.csproj -p:EnableWindowsTargeting=true` (`0 Warning(s), 0 Error(s)`).
 
 
 

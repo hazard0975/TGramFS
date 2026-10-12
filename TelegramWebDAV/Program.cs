@@ -110,7 +110,20 @@ namespace TelegramWebDAV
                 var telegramService = new TelegramService(configManager, repository);
                 await telegramService.ConnectAsync();
 
-                // 4. Запуск встроенного WebDAV сервера на порту 37000 (или из конфига)
+                // 4. Инициализация службы резервного копирования базы данных
+                var backupService = new DatabaseBackupService(dbManager, repository, telegramService, configManager);
+
+                // 5. Проверка и синхронизация свежей базы из Telegram ДО запуска сервера и монтирования диска
+                try
+                {
+                    await backupService.CheckAndSyncFromTelegramAsync(isResumeOrStartup: true);
+                }
+                catch (Exception exSync)
+                {
+                    AppLogger.Warn("Program", $"Не удалось синхронизировать базу данных перед запуском диска: {exSync.Message}");
+                }
+
+                // 6. Запуск встроенного WebDAV сервера на порту 37000 (или из конфига)
                 var webDavServer = new WebDavServer(configManager, repository, telegramService);
                 if (settings.Server.WebDavEnabled)
                 {
@@ -118,14 +131,11 @@ namespace TelegramWebDAV
                     AppLogger.Info("Program", $"Встроенный WebDAV сервер запущен: http://localhost:{settings.Server.Port}/");
                 }
 
-                // 5. Инициализация менеджера виртуального диска (WinFsp / WebDAV)
+                // 7. Инициализация менеджера виртуального диска (WinFsp / WebDAV)
                 var winFspServer = new WinFspServer(configManager, repository, telegramService);
                 var virtualDriveManager = new VirtualDriveManager(configManager, winFspServer);
 
-                // 6. Инициализация службы резервного копирования базы данных
-                var backupService = new DatabaseBackupService(dbManager, repository, telegramService, configManager);
-
-                // 7. Запуск локального IPC сервера (Named Pipe) для команд из контекстного меню Проводника
+                // 8. Запуск локального IPC сервера (Named Pipe) для команд из контекстного меню Проводника
                 using var ipcServer = new IpcServer(async req =>
                 {
                     if (req.Command == "bind-channel")
@@ -136,7 +146,7 @@ namespace TelegramWebDAV
                 });
                 ipcServer.Start();
 
-                // 8. Запуск приложения в системном трее Windows
+                // 9. Запуск приложения в системном трее Windows
                 Application.Run(new TrayContext(configManager, repository, telegramService, webDavServer, virtualDriveManager, backupService));
             }
             catch (Exception ex)

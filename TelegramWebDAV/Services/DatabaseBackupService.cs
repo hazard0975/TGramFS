@@ -23,10 +23,11 @@ namespace TelegramWebDAV.Services
         private bool _hasUnsavedChanges = false;
         private bool _hasConflict = false;
         private string? _conflictDetails;
+        private string? _pendingSyncNotification;
+        private string? _pendingConflictNotification;
         private DateTime? _lastBackupTimeUtc;
         private Timer? _debounceTimer;
         private Timer? _cloudSyncTimer;
-        private bool _isFirstSyncRun = true;
         private readonly SemaphoreSlim _backupLock = new SemaphoreSlim(1, 1);
         private bool _isDisposed = false;
 
@@ -39,7 +40,15 @@ namespace TelegramWebDAV.Services
         public bool HasUnsavedChanges => _hasUnsavedChanges;
         public bool HasConflict => _hasConflict;
         public string? ConflictDetails => _conflictDetails;
+        public string? PendingSyncNotification => _pendingSyncNotification;
+        public string? PendingConflictNotification => _pendingConflictNotification;
         public DateTime? LastBackupTimeUtc => _lastBackupTimeUtc;
+
+        public void ClearPendingNotifications()
+        {
+            _pendingSyncNotification = null;
+            _pendingConflictNotification = null;
+        }
 
         public DatabaseBackupService(
             DatabaseManager dbManager,
@@ -101,21 +110,19 @@ namespace TelegramWebDAV.Services
             }
 
             int intervalMinutes = Math.Clamp(settings.RemoteCheckIntervalMinutes, 1, 120);
-            AppLogger.Info("DatabaseBackup", $"Запущен фоновый таймер проверки свежей базы в Telegram (первый запуск через 5 сек, интервал: {intervalMinutes} мин).");
+            AppLogger.Info("DatabaseBackup", $"Запущен фоновый таймер периодической проверки базы в Telegram (интервал: {intervalMinutes} мин).");
 
             _cloudSyncTimer = new Timer(async _ =>
             {
                 try
                 {
-                    bool isStartup = _isFirstSyncRun;
-                    _isFirstSyncRun = false;
-                    await CheckAndSyncFromTelegramAsync(isResumeOrStartup: isStartup);
+                    await CheckAndSyncFromTelegramAsync(isResumeOrStartup: false);
                 }
                 catch (Exception ex)
                 {
                     AppLogger.Debug("DatabaseBackup", $"Ошибка периодической фоновой синхронизации: {ex.Message}");
                 }
-            }, null, TimeSpan.FromSeconds(5), TimeSpan.FromMinutes(intervalMinutes));
+            }, null, TimeSpan.FromMinutes(intervalMinutes), TimeSpan.FromMinutes(intervalMinutes));
         }
 
         private void HandleDatabaseModified()
@@ -539,7 +546,9 @@ namespace TelegramWebDAV.Services
                     _hasConflict = true;
                     _conflictDetails = $"В Telegram доступна более свежая база от {senderMachine} (сообщение #{latestMsgId}), но на локальном ПК есть несохраненные изменения.";
                     AppLogger.Warn("DatabaseBackup", $"[Синхронизация] Обнаружен конфликт: {_conflictDetails}");
-                    OnCloudSyncConflict?.Invoke($"В Telegram доступна свежая база от {senderMachine}, но на этом ПК есть несохраненные изменения. Выгрузка базы заблокирована.");
+                    string conflictNotice = $"В Telegram доступна свежая база от {senderMachine}, но на этом ПК есть несохраненные изменения. Выгрузка базы заблокирована.";
+                    _pendingConflictNotification = conflictNotice;
+                    OnCloudSyncConflict?.Invoke(conflictNotice);
                     return false;
                 }
 
@@ -585,6 +594,7 @@ namespace TelegramWebDAV.Services
                 string timeStr = backupInfo.Value.Date.ToLocalTime().ToString("HH:mm");
                 string syncNotice = $"Структура диска синхронизирована с {senderMachine} (копия за {timeStr})";
                 AppLogger.Info("DatabaseBackup", syncNotice);
+                _pendingSyncNotification = syncNotice;
                 OnCloudSyncApplied?.Invoke(syncNotice);
                 return true;
             }
@@ -593,6 +603,7 @@ namespace TelegramWebDAV.Services
                 _hasConflict = true;
                 _conflictDetails = $"Сбой фоновой синхронизации базы из Telegram: {ex.Message}. Выгрузка локальной базы заблокирована.";
                 AppLogger.Error("DatabaseBackup", $"Ошибка при фоновой синхронизации базы из Telegram: {ex.Message}", ex);
+                _pendingConflictNotification = _conflictDetails;
                 OnCloudSyncConflict?.Invoke(_conflictDetails);
                 return false;
             }

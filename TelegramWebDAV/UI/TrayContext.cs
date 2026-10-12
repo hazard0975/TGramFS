@@ -73,6 +73,18 @@ namespace TelegramWebDAV.UI
                 {
                     _notifyIcon.ShowBalloonTip(4000, "Конфликт синхронизации", message, ToolTipIcon.Warning);
                 };
+
+                // Если база данных обновилась или был обнаружен конфликт еще до создания трея (при холодном старте)
+                if (!string.IsNullOrEmpty(_backupService.PendingSyncNotification))
+                {
+                    _notifyIcon.ShowBalloonTip(3500, "Синхронизация Telegram", _backupService.PendingSyncNotification, ToolTipIcon.Info);
+                    _backupService.ClearPendingNotifications();
+                }
+                else if (!string.IsNullOrEmpty(_backupService.PendingConflictNotification))
+                {
+                    _notifyIcon.ShowBalloonTip(4500, "Конфликт синхронизации", _backupService.PendingConflictNotification, ToolTipIcon.Warning);
+                    _backupService.ClearPendingNotifications();
+                }
             }
 
             if (_settings.Server.AddTrashToContextMenu)
