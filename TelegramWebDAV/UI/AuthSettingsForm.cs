@@ -1,6 +1,7 @@
 using System;
 using System.Drawing;
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using TelegramWebDAV.Config;
 using TelegramWebDAV.Services;
@@ -30,7 +31,6 @@ namespace TelegramWebDAV.UI
 
         // Backup Tab
         private TextBox _txtBackupChannelTitle = null!;
-        private TextBox _txtBackupChannelId = null!;
         private CheckBox _chkEnableAutoBackup = null!;
         private NumericUpDown _numDebounceMinutes = null!;
         private CheckBox _chkBackupOnExit = null!;
@@ -469,7 +469,7 @@ namespace TelegramWebDAV.UI
             };
 
             // 1. Рамка: Канал Telegram
-            var grpBackupChannel = UIFactory.CreateGroupBox("Канал Telegram для резервных копий (Хранится в базе)");
+            var grpBackupChannel = UIFactory.CreateGroupBox("Канал Telegram для резервных копий");
             var pnlBackupChannelInner = UIFactory.CreateVerticalContainer();
 
             var currentBackupCh = _repository?.GetBackupChannel();
@@ -482,26 +482,19 @@ namespace TelegramWebDAV.UI
             };
             var rowBkupTitle = UIFactory.CreateSettingRow("Название канала:", _txtBackupChannelTitle, 160);
 
-            _txtBackupChannelId = new TextBox 
-            { 
-                Text = currentBackupCh != null && currentBackupCh.ChannelId != 0 ? currentBackupCh.ChannelId.ToString() : "Автоматически при первом бэкапе", 
-                Width = 260, 
-                Font = UITheme.BaseFont,
-                ReadOnly = true,
-                BackColor = SystemColors.Control
-            };
-            var rowBkupId = UIFactory.CreateSettingRow("ID канала в базе:", _txtBackupChannelId, 160);
-
-            var lblBkupChannelHint = new Label
+            bool isChannelReady = currentBackupCh != null && currentBackupCh.ChannelId != 0;
+            var lblBackupChannelStatus = new Label
             {
-                Text = "ID канала и ключ доступа хранятся в таблице telegram_channels базы base.db.\nПри первом создании канал генерируется автоматически без лишних сетевых поисков.",
+                Text = isChannelReady 
+                    ? "✓ Канал подключен" 
+                    : "• Канал будет создан автоматически при первом бэкапе",
                 AutoSize = true,
                 Font = UITheme.SmallFont,
-                ForeColor = UITheme.TextMuted,
-                Margin = new Padding(0, 2, 0, 4)
+                ForeColor = isChannelReady ? Color.DarkGreen : UITheme.TextMuted,
+                Margin = new Padding(0, 4, 0, 4)
             };
 
-            pnlBackupChannelInner.Controls.AddRange(new Control[] { rowBkupTitle, rowBkupId, lblBkupChannelHint });
+            pnlBackupChannelInner.Controls.AddRange(new Control[] { rowBkupTitle, lblBackupChannelStatus });
             grpBackupChannel.Controls.Add(pnlBackupChannelInner);
 
             // 2. Рамка: Автоматический бэкап
@@ -1030,11 +1023,37 @@ namespace TelegramWebDAV.UI
 
             _settings.Database.Backup.EnableAutoBackup = _chkEnableAutoBackup.Checked;
             string newTitle = _txtBackupChannelTitle.Text.Trim();
+            if (string.IsNullOrWhiteSpace(newTitle))
+            {
+                newTitle = "Telegram Drive Backups";
+            }
+            if (newTitle.Length > 128)
+            {
+                newTitle = newTitle.Substring(0, 128);
+            }
+            _txtBackupChannelTitle.Text = newTitle;
             _settings.Database.Backup.BackupChannelTitle = newTitle;
+
             var currentBk = _repository?.GetBackupChannel();
-            if (currentBk != null && !string.IsNullOrWhiteSpace(newTitle) && currentBk.Title != newTitle)
+            if (currentBk != null && !string.Equals(currentBk.Title, newTitle, StringComparison.Ordinal))
             {
                 _repository?.UpdateChannelTitle(currentBk.ChannelId, newTitle);
+                if (_telegramService.IsAuthorized)
+                {
+                    long chIdToRename = currentBk.ChannelId;
+                    string titleToRename = newTitle;
+                    Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await _telegramService.EditChannelTitleAsync(chIdToRename, titleToRename);
+                        }
+                        catch (Exception ex)
+                        {
+                            AppLogger.Warn("AuthSettingsForm", $"Не удалось синхронизировать новое название бэкап-канала в Telegram: {ex.Message}");
+                        }
+                    });
+                }
             }
             _settings.Database.Backup.DebounceMinutes = (int)_numDebounceMinutes.Value;
             _settings.Database.Backup.BackupOnExit = _chkBackupOnExit.Checked;

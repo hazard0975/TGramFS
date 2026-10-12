@@ -2044,6 +2044,25 @@ namespace TelegramWebDAV.Services
             var backupChannel = _repository?.GetBackupChannel();
             if (backupChannel != null && backupChannel.ChannelId != 0 && backupChannel.AccessHash != 0)
             {
+                // Если передано новое желаемое название и оно отличается от сохраненного — синхронизируем в Telegram и базе
+                if (!string.IsNullOrWhiteSpace(specificTitle))
+                {
+                    string desiredTitle = specificTitle.Trim();
+                    if (desiredTitle.Length > 128) desiredTitle = desiredTitle.Substring(0, 128);
+
+                    if (!string.Equals(backupChannel.Title, desiredTitle, StringComparison.Ordinal))
+                    {
+                        try
+                        {
+                            await EditChannelTitleAsync(backupChannel.ChannelId, desiredTitle);
+                        }
+                        catch (Exception ex)
+                        {
+                            AppLogger.Warn("TelegramService", $"Не удалось синхронизировать заголовок бэкап-канала ID {backupChannel.ChannelId}: {ex.Message}");
+                        }
+                    }
+                }
+
                 return new TL.InputPeerChannel(backupChannel.ChannelId, backupChannel.AccessHash);
             }
 
