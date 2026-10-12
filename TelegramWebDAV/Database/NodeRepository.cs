@@ -1873,6 +1873,7 @@ namespace TelegramWebDAV.Database
                 command.Parameters.AddWithValue("@title", title);
                 command.ExecuteNonQuery();
             }
+            NotifyNodeChanged();
         }
 
         /// <summary>
@@ -1992,6 +1993,7 @@ namespace TelegramWebDAV.Database
                 command.Parameters.AddWithValue("@channelId", channelId);
                 command.ExecuteNonQuery();
             }
+            NotifyNodeChanged();
         }
 
         private static TelegramChannel MapReaderToTelegramChannel(SqliteDataReader reader)

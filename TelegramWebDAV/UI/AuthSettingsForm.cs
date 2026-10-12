@@ -476,7 +476,7 @@ namespace TelegramWebDAV.UI
 
             _txtBackupChannelTitle = new TextBox 
             { 
-                Text = currentBackupCh?.Title ?? _settings.Database.Backup.BackupChannelTitle ?? "Telegram Drive Backups", 
+                Text = currentBackupCh?.Title ?? "Telegram Drive Backups", 
                 Width = 260, 
                 Font = UITheme.BaseFont 
             };
@@ -1032,7 +1032,6 @@ namespace TelegramWebDAV.UI
                 newTitle = newTitle.Substring(0, 128);
             }
             _txtBackupChannelTitle.Text = newTitle;
-            _settings.Database.Backup.BackupChannelTitle = newTitle;
 
             var currentBk = _repository?.GetBackupChannel();
             if (currentBk != null && !string.Equals(currentBk.Title, newTitle, StringComparison.Ordinal))
@@ -1054,6 +1053,21 @@ namespace TelegramWebDAV.UI
                         }
                     });
                 }
+            }
+            else if (currentBk == null && _telegramService.IsAuthorized)
+            {
+                string titleToCreate = newTitle;
+                Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _telegramService.GetBackupStoragePeerAsync(titleToCreate);
+                    }
+                    catch (Exception ex)
+                    {
+                        AppLogger.Warn("AuthSettingsForm", $"Не удалось создать бэкап-канал при сохранении настроек: {ex.Message}");
+                    }
+                });
             }
             _settings.Database.Backup.DebounceMinutes = (int)_numDebounceMinutes.Value;
             _settings.Database.Backup.BackupOnExit = _chkBackupOnExit.Checked;

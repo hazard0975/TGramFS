@@ -139,8 +139,7 @@ namespace TelegramWebDAV.Services
                     var uploadResult = await _telegramService.UploadBackupDocumentAsync(
                         fs,
                         fileName,
-                        caption,
-                        backupSettings.BackupChannelTitle);
+                        caption);
                 }
 
                 _hasUnsavedChanges = false;
