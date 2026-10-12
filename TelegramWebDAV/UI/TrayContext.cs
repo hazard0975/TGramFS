@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using TelegramWebDAV.Config;
 using TelegramWebDAV.Database;
@@ -187,7 +188,7 @@ namespace TelegramWebDAV.UI
 
             // Выход
             var itemExit = new ToolStripMenuItem("Выход");
-            itemExit.Click += (s, e) => ExitApplication();
+            itemExit.Click += async (s, e) => await ExitApplicationAsync();
             menu.Items.Add(itemExit);
 
             _notifyIcon.ContextMenuStrip = menu;
@@ -301,9 +302,28 @@ namespace TelegramWebDAV.UI
             }
         }
 
+        private async Task ExitApplicationAsync()
+        {
+            try
+            {
+                if (_backupService != null && _backupService.HasUnsavedChanges && _telegramService.IsAuthorized)
+                {
+                    _notifyIcon.ShowBalloonTip(1500, "Telegram Drive", "Сохранение резервной копии базы данных перед выходом...", ToolTipIcon.Info);
+                    await _backupService.HandleApplicationExitAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Warn("TrayContext", $"Ошибка при выполнении бэкапа перед закрытием: {ex.Message}");
+            }
+            finally
+            {
+                ExitApplication();
+            }
+        }
+
         private void ExitApplication()
         {
-            _backupService?.HandleApplicationExit();
             _notifyIcon.Visible = false;
             _notifyIcon.Dispose();
             _progressOverlay.Dispose();

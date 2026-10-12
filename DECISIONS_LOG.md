@@ -1593,6 +1593,34 @@ _telegramService.UpdateSettings(_settings);
    - Сборка C# проекта `dotnet build /app/applet/TelegramWebDAV/TelegramWebDAV.csproj -p:EnableWindowsTargeting=true` выполнена успешно (`0 Warning(s), 0 Error(s)`).
    - Сборка TypeScript/React `npm run build` выполнена успешно.
 
+---
+
+## 68. Устранение дедлока при автоматическом бэкапе при выходе из программы (Root Cause First)
+
+### Проблема и симптомы:
+При нажатии на пункт меню системного трея «Выход» процесс зависал: меню трея переставало откликаться, окно настроек не открывалось, диск продолжал функционировать в памяти, а в логах процесс останавливался на строке:
+`[INFO ] [TelegramService] Загрузка резервной копии 'base_*.db' в Telegram (канал ID: ...)...`
+
+### Анализ первопричины (Root Cause):
+1. **Блокировка UI-потока WinForms**:
+   Пункт меню «Выход» в `TrayContext.cs` синхронно вызывал `_backupService?.HandleApplicationExit()`.
+2. Внутри `HandleApplicationExit()` выполнялся вызов `PerformBackupAsync(...).GetAwaiter().GetResult()`.
+3. Внутри метода `PerformBackupAsync()` и вызываемого им `_telegramService.UploadBackupDocumentAsync()` выполнялись асинхронные вызовы (`await _client.UploadFileAsync`, `await _client.SendMessageAsync`).
+4. Без передачи свободного управления циклу обработки сообщений Windows (`WindowsFormsSynchronizationContext`) поток UI блокировался в ожидании результата задачи, в то время как продолжение асинхронных вызовов требовало диспетчеризации контекста или цикла событий, приводя к классическому взаимному дедлоку UI-потока.
+
+### Реализованное решение (Вариант 1):
+1. **Асинхронный выход в `TrayContext.cs`**:
+   - Метод закрытия переведен на полноценный асинхронный поток `private async Task ExitApplicationAsync()`.
+   - Клик по пункту «Выход» вызывает асинхронный метод `async (s, e) => await ExitApplicationAsync()`.
+   - Пользователю выводится информационное уведомление в трее: `«Сохранение резервной копии базы данных перед выходом...»`.
+   - Гарантированный сброс ресурсов и завершение процесса (`Application.Exit()`) выполняется в блоке `finally`.
+2. **Асинхронный метод `HandleApplicationExitAsync` в `DatabaseBackupService.cs`**:
+   - Добавлен метод `public async Task HandleApplicationExitAsync()` с использованием `ConfigureAwait(false)`.
+   - Для синхронного вызова оставлен безопасный метод `HandleApplicationExit()`, использующий `Task.Run` с таймаутом в пуле потоков без блокировки UI-контекста.
+3. **Валидация**:
+   - Сборка C# проекта `dotnet build /app/applet/TelegramWebDAV/TelegramWebDAV.csproj -p:EnableWindowsTargeting=true` выполнена успешно (`0 Warning(s), 0 Error(s)`).
+
+
 
 
 
