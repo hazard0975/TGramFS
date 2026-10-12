@@ -556,11 +556,31 @@ namespace TelegramWebDAV.UI
                     MessageBox.Show("Служба бэкапа не инициализирована.", "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
+
+                bool force = false;
+                if (_backupService.HasConflict)
+                {
+                    string conflictText = _backupService.ConflictDetails ?? "В Telegram доступна более свежая копия базы от другого устройства.";
+                    var conflictAnswer = MessageBox.Show(
+                        $"⚠️ Обнаружен конфликт синхронизации базы данных!\n\n" +
+                        $"{conflictText}\n\n" +
+                        $"Вы уверены, что хотите ПРИНУДИТЕЛЬНО отправить локальную базу в Telegram и перезаписать статус синхронизации?",
+                        "Конфликт версий базы данных",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Warning);
+
+                    if (conflictAnswer != DialogResult.Yes)
+                    {
+                        return;
+                    }
+                    force = true;
+                }
+
                 btnManualBackup.Enabled = false;
                 btnManualBackup.Text = "Создание и отправка...";
                 try
                 {
-                    bool ok = await _backupService.PerformBackupAsync("Запуск из окна настроек");
+                    bool ok = await _backupService.PerformBackupAsync("Запуск из окна настроек", force: force);
                     updateBackupStatusText();
                     if (ok)
                     {
@@ -568,7 +588,14 @@ namespace TelegramWebDAV.UI
                     }
                     else
                     {
-                        MessageBox.Show("Не удалось отправить бэкап. Проверьте авторизацию в Telegram (вкладка Telegram).", "Предупреждение", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        if (_backupService.HasConflict)
+                        {
+                            MessageBox.Show($"Выгрузка заблокирована из-за конфликта версий:\n{_backupService.ConflictDetails}", "Конфликт синхронизации", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        }
+                        else
+                        {
+                            MessageBox.Show("Не удалось отправить бэкап. Проверьте авторизацию в Telegram (вкладка Telegram).", "Предупреждение", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -644,7 +671,7 @@ namespace TelegramWebDAV.UI
                         {
                             BeginInvoke(new Action(() => _lblBackupStatus.Text = status));
                         }
-                    });
+                    }, messageId: backupInfo.MessageId);
 
                     updateBackupStatusText();
                     if (restored)

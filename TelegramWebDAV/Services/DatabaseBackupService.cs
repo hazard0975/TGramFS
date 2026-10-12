@@ -21,6 +21,8 @@ namespace TelegramWebDAV.Services
         private readonly ConfigManager _configManager;
 
         private bool _hasUnsavedChanges = false;
+        private bool _hasConflict = false;
+        private string? _conflictDetails;
         private DateTime? _lastBackupTimeUtc;
         private Timer? _debounceTimer;
         private Timer? _cloudSyncTimer;
@@ -34,6 +36,8 @@ namespace TelegramWebDAV.Services
         public event Action<string>? OnCloudSyncConflict;
 
         public bool HasUnsavedChanges => _hasUnsavedChanges;
+        public bool HasConflict => _hasConflict;
+        public string? ConflictDetails => _conflictDetails;
         public DateTime? LastBackupTimeUtc => _lastBackupTimeUtc;
 
         public DatabaseBackupService(
@@ -135,8 +139,9 @@ namespace TelegramWebDAV.Services
 
         /// <summary>
         /// Выполняет процедуру создания консистентного снимка и выгрузки в Telegram-канал.
+        /// Если обнаружен неразрешенный конфликт с удаленной базой, операция блокируется (если force == false).
         /// </summary>
-        public async Task<bool> PerformBackupAsync(string triggerReason = "Ручной бэкап", bool isGracefulExit = false)
+        public async Task<bool> PerformBackupAsync(string triggerReason = "Ручной бэкап", bool isGracefulExit = false, bool force = false)
         {
             int timeoutMs = isGracefulExit ? 15000 : 3000;
             bool lockAcquired = await _backupLock.WaitAsync(timeoutMs);
@@ -156,10 +161,55 @@ namespace TelegramWebDAV.Services
                     return false;
                 }
 
+                // Защита от потери данных: проверка неразрешенного конфликта версий
+                if (!force)
+                {
+                    if (_hasConflict)
+                    {
+                        string conflictMsg = _conflictDetails ?? "Обнаружен конфликт версий: в Telegram есть более свежая копия базы от другого устройства.";
+                        AppLogger.Warn("DatabaseBackup", $"Выгрузка бэкапа заблокирована из-за неразрешенного конфликта: {conflictMsg}");
+                        OnCloudSyncConflict?.Invoke(conflictMsg);
+                        OnBackupFailed?.Invoke("Выгрузка заблокирована: конфликт версий базы данных");
+                        return false;
+                    }
+
+                    // Проверяем актуальность удаленной базы перед отправкой
+                    try
+                    {
+                        var latestRemote = await _telegramService.GetLatestBackupDocumentAsync();
+                        if (latestRemote.HasValue && latestRemote.Value.Document != null)
+                        {
+                            int remoteMsgId = latestRemote.Value.MessageId;
+                            var backupSettings = _configManager.CurrentSettings?.Database?.Backup;
+                            int lastSyncedId = backupSettings?.LastSyncedBackupMessageId ?? 0;
+                            if (remoteMsgId > lastSyncedId)
+                            {
+                                string captionCheck = latestRemote.Value.Caption ?? "";
+                                string currentMachine = Environment.MachineName;
+                                bool isOwnMachine = captionCheck.Contains(currentMachine, StringComparison.OrdinalIgnoreCase);
+                                if (!isOwnMachine)
+                                {
+                                    string senderMachine = ExtractMachineName(captionCheck);
+                                    _hasConflict = true;
+                                    _conflictDetails = $"В Telegram найдена более свежая копия базы от {senderMachine} (сообщение #{remoteMsgId}), которая еще не была синхронизирована.";
+                                    AppLogger.Warn("DatabaseBackup", $"Выгрузка бэкапа заблокирована: {_conflictDetails}");
+                                    OnCloudSyncConflict?.Invoke($"Выгрузка отменена: в Telegram доступна более свежая база от {senderMachine}. Синхронизируйте базу перед выгрузкой.");
+                                    OnBackupFailed?.Invoke("Выгрузка заблокирована: в облаке есть более свежая копия от другого ПК");
+                                    return false;
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception exCheck)
+                    {
+                        AppLogger.Debug("DatabaseBackup", $"Не удалось проверить удаленный бэкап перед выгрузкой: {exCheck.Message}");
+                    }
+                }
+
                 OnBackupStarted?.Invoke(triggerReason);
                 AppLogger.Info("DatabaseBackup", $"Запуск резервного копирования базы данных. Причина: '{triggerReason}'...");
 
-                var backupSettings = _configManager.CurrentSettings?.Database?.Backup ?? new DatabaseBackupSettings();
+                var backupSettingsConfig = _configManager.CurrentSettings?.Database?.Backup ?? new DatabaseBackupSettings();
                 string backupDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "backups");
                 Directory.CreateDirectory(backupDir);
 
@@ -211,6 +261,8 @@ namespace TelegramWebDAV.Services
                     }
                 }
 
+                _hasConflict = false;
+                _conflictDetails = null;
                 _hasUnsavedChanges = false;
                 _lastBackupTimeUtc = DateTime.UtcNow;
 
@@ -376,6 +428,8 @@ namespace TelegramWebDAV.Services
                     }
                 }
 
+                _hasConflict = false;
+                _conflictDetails = null;
                 _hasUnsavedChanges = false;
                 _lastBackupTimeUtc = DateTime.UtcNow;
 
@@ -388,8 +442,11 @@ namespace TelegramWebDAV.Services
             }
             catch (Exception ex)
             {
+                _hasConflict = true;
+                _conflictDetails = $"Сбой восстановления базы из Telegram: {ex.Message}. Выгрузка локальной базы заблокирована.";
                 AppLogger.Error("DatabaseBackup", $"Ошибка восстановления базы данных из Telegram: {ex.Message}", ex);
                 statusCallback?.Invoke($"Ошибка: {ex.Message}");
+                OnCloudSyncConflict?.Invoke(_conflictDetails);
                 return false;
             }
             finally
@@ -452,26 +509,15 @@ namespace TelegramWebDAV.Services
                     return false;
                 }
 
-                // Извлекаем имя удаленного компьютера из карточки бэкапа ("💻 Устройство: X")
-                string senderMachine = "другого ПК";
-                foreach (var line in caption.Split('\n'))
-                {
-                    if (line.Contains("Устройство:", StringComparison.OrdinalIgnoreCase))
-                    {
-                        var parts = line.Split(':');
-                        if (parts.Length > 1)
-                        {
-                            senderMachine = parts[1].Trim();
-                            break;
-                        }
-                    }
-                }
+                string senderMachine = ExtractMachineName(caption);
 
                 // Если есть локальные несохраненные изменения — это конфликт
                 if (_hasUnsavedChanges)
                 {
-                    AppLogger.Warn("DatabaseBackup", $"Обнаружен конфликт синхронизации: в Telegram доступна копия от {senderMachine}, но на локальном ПК есть несохраненные изменения.");
-                    OnCloudSyncConflict?.Invoke($"В Telegram доступна свежая база от {senderMachine}, но на этом ПК есть несохраненные изменения.");
+                    _hasConflict = true;
+                    _conflictDetails = $"В Telegram доступна более свежая база от {senderMachine} (сообщение #{latestMsgId}), но на локальном ПК есть несохраненные изменения.";
+                    AppLogger.Warn("DatabaseBackup", $"Обнаружен конфликт синхронизации: {_conflictDetails}");
+                    OnCloudSyncConflict?.Invoke($"В Telegram доступна свежая база от {senderMachine}, но на этом ПК есть несохраненные изменения. Выгрузка базы заблокирована.");
                     return false;
                 }
 
@@ -507,6 +553,8 @@ namespace TelegramWebDAV.Services
                     _configManager.Save(currentCfg);
                 }
 
+                _hasConflict = false;
+                _conflictDetails = null;
                 _hasUnsavedChanges = false;
                 _lastBackupTimeUtc = DateTime.UtcNow;
 
@@ -520,13 +568,33 @@ namespace TelegramWebDAV.Services
             }
             catch (Exception ex)
             {
+                _hasConflict = true;
+                _conflictDetails = $"Сбой фоновой синхронизации базы из Telegram: {ex.Message}. Выгрузка локальной базы заблокирована.";
                 AppLogger.Error("DatabaseBackup", $"Ошибка при фоновой синхронизации базы из Telegram: {ex.Message}", ex);
+                OnCloudSyncConflict?.Invoke(_conflictDetails);
                 return false;
             }
             finally
             {
                 _backupLock.Release();
             }
+        }
+
+        private static string ExtractMachineName(string caption)
+        {
+            if (string.IsNullOrWhiteSpace(caption)) return "другого ПК";
+            foreach (var line in caption.Split('\n'))
+            {
+                if (line.Contains("Устройство:", StringComparison.OrdinalIgnoreCase))
+                {
+                    var parts = line.Split(':');
+                    if (parts.Length > 1)
+                    {
+                        return parts[1].Trim();
+                    }
+                }
+            }
+            return "другого ПК";
         }
 
         public void Dispose()

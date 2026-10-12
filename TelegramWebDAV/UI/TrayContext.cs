@@ -183,7 +183,14 @@ namespace TelegramWebDAV.UI
                     }
                     else
                     {
-                        _notifyIcon.ShowBalloonTip(3000, "Бэкап базы данных", "Не удалось отправить бэкап (проверьте авторизацию в Telegram).", ToolTipIcon.Warning);
+                        if (_backupService.HasConflict)
+                        {
+                            _notifyIcon.ShowBalloonTip(4500, "Конфликт синхронизации", "Выгрузка бэкапа заблокирована: в Telegram есть более свежая копия от другого ПК! Откройте настройки для проверки.", ToolTipIcon.Warning);
+                        }
+                        else
+                        {
+                            _notifyIcon.ShowBalloonTip(3000, "Бэкап базы данных", "Не удалось отправить бэкап (проверьте авторизацию в Telegram).", ToolTipIcon.Warning);
+                        }
                     }
                 }
                 catch (Exception ex)
