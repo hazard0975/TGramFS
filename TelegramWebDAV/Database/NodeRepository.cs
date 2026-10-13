@@ -1241,15 +1241,6 @@ namespace TelegramWebDAV.Database
                             }
                         }
 
-                        // Удаляем старый прогресс докачки для перезаписываемого файла
-                        using (var clearCmd = connection.CreateCommand())
-                        {
-                            clearCmd.Transaction = transaction;
-                            clearCmd.CommandText = "DELETE FROM upload_progress WHERE node_id = @nodeId;";
-                            clearCmd.Parameters.AddWithValue("@nodeId", existingNode.Id);
-                            clearCmd.ExecuteNonQuery();
-                        }
-                        
                         transaction.Commit();
                     }
                 }
@@ -1307,79 +1298,6 @@ namespace TelegramWebDAV.Database
                 command.Parameters.AddWithValue("@tgChannelId", tgChannelId);
                 command.Parameters.AddWithValue("@nodeId", nodeId);
                 command.ExecuteNonQuery();
-            }
-        }
-
-        /// <summary>
-        /// Обновляет прогресс частичной загрузки (для умного софта с Content-Range в PUT).
-        /// Если загрузка завершена (передан tgMessageId или достигнут totalSize), очищает временный прогресс.
-        /// </summary>
-        public void UpdateUploadProgress(int parentId, string name, long chunkPosition, long totalSize, int? tgMessageId, int? tgPreviewMessageId = null)
-        {
-            using (var connection = _dbManager.GetConnection())
-            {
-                Node? node = null;
-                using (var command = connection.CreateCommand())
-                {
-                    command.CommandText = "SELECT * FROM nodes WHERE parent_id = @parentId AND name = @name AND in_trash = 0 LIMIT 1;";
-                    command.Parameters.AddWithValue("@parentId", parentId);
-                    command.Parameters.AddWithValue("@name", name);
-                    node = ReadNode(command);
-                }
-
-                if (node == null)
-                {
-                    CreateOrUpdateFile(parentId, name, totalSize, tgMessageId, tgPreviewMessageId);
-                    return;
-                }
-
-                bool isCompleted = tgMessageId.HasValue || (chunkPosition >= totalSize);
-
-                using (var command = connection.CreateCommand())
-                {
-                    if (isCompleted)
-                    {
-                        // При успешном завершении удаляем временный журнал докачки и обновляем финальный узел
-                        command.CommandText = @"
-                            DELETE FROM upload_progress WHERE node_id = @nodeId;
-                            UPDATE nodes SET size = @totalSize, 
-                                tg_message_id = COALESCE(@tgMessageId, tg_message_id),
-                                tg_preview_message_id = COALESCE(@tgPreviewMessageId, tg_preview_message_id)
-                            WHERE id = @nodeId;";
-                    }
-                    else
-                    {
-                        command.CommandText = @"
-                            INSERT INTO upload_progress (node_id, chunk_position) 
-                            VALUES (@nodeId, @chunkPosition);
-                            UPDATE nodes SET size = @totalSize, 
-                                tg_message_id = COALESCE(@tgMessageId, tg_message_id),
-                                tg_preview_message_id = COALESCE(@tgPreviewMessageId, tg_preview_message_id)
-                            WHERE id = @nodeId;";
-                    }
-                    command.Parameters.AddWithValue("@nodeId", node.Id);
-                    command.Parameters.AddWithValue("@chunkPosition", chunkPosition);
-                    command.Parameters.AddWithValue("@totalSize", totalSize);
-                    command.Parameters.AddWithValue("@tgMessageId", (object?)tgMessageId ?? DBNull.Value);
-                    command.Parameters.AddWithValue("@tgPreviewMessageId", (object?)tgPreviewMessageId ?? DBNull.Value);
-                    command.ExecuteNonQuery();
-                }
-            }
-        }
-
-        /// <summary>
-        /// Очищает временный журнал загрузки для указанного узла
-        /// </summary>
-        public void ClearUploadProgress(int nodeId)
-        {
-            using (var connection = _dbManager.GetConnection())
-            {
-                using (var command = connection.CreateCommand())
-                {
-                    command.CommandText = "DELETE FROM upload_progress WHERE node_id = @nodeId;";
-                    command.Parameters.AddWithValue("@nodeId", nodeId);
-                    command.ExecuteNonQuery();
-                }
             }
         }
 

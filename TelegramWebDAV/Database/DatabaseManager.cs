@@ -145,23 +145,10 @@ CREATE TABLE IF NOT EXISTS nodes (
     FOREIGN KEY (parent_id) REFERENCES nodes(id)
 );
 
--- Таблица трекинга незавершенных загрузок (для докачки при обрывах)
-CREATE TABLE IF NOT EXISTS upload_progress (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    node_id INTEGER NOT NULL,
-    chunk_position INTEGER NOT NULL DEFAULT 0,
-    file_hash TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    
-    FOREIGN KEY (node_id) REFERENCES nodes(id)
-);
-
 CREATE INDEX IF NOT EXISTS idx_nodes_parent_id ON nodes(parent_id);
 CREATE INDEX IF NOT EXISTS idx_nodes_name ON nodes(name);
 CREATE INDEX IF NOT EXISTS idx_nodes_in_trash ON nodes(in_trash);
 CREATE INDEX IF NOT EXISTS idx_nodes_tg_message_id ON nodes(tg_message_id);
-CREATE INDEX IF NOT EXISTS idx_upload_progress_node_id ON upload_progress(node_id);
 
 CREATE TABLE IF NOT EXISTS pending_channel_migrations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

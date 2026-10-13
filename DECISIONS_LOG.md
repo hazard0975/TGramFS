@@ -1779,6 +1779,33 @@ _telegramService.UpdateSettings(_settings);
 4. **Валидация**:
    - Сборка C# проекта `dotnet build /app/applet/TelegramWebDAV/TelegramWebDAV.csproj -p:EnableWindowsTargeting=true`: `0 Warning(s), 0 Error(s)`.
 
+---
+
+## 45. Удаление рудиментарной таблицы `upload_progress` и связанных методов
+
+### Бизнес-цель и первопричина (Root Cause Analysis):
+1. **Отсутствие чтения (0 SELECT-запросов):**
+   Таблица `upload_progress` была спроектирована как журнал прогресса прерванных загрузок, однако по всей кодовой базе в нее выполнялись исключительно операции `INSERT` и `DELETE`. Ни одного запроса `SELECT` для чтения, возобновления или восстановления сессии загрузки в проекте не существовало.
+2. **Несоответствие архитектуре передачи файлов:**
+   - В нативном режиме виртуального диска WinFsp запись идет потоком в локальный временный файл с последующей передачей в Telegram; таблица `upload_progress` не затрагивалась вовсе.
+   - В режиме WebDAV при передаче чанками (`Content-Range`) сборка фрагментов осуществляется непосредственно на диске через `TelegramService.UploadFileChunkAsync` (во временный файл `.part`). Запись же промежуточных позиций в `upload_progress` и преждевременное обновление `nodes` с `tg_message_id = null` лишь засоряли базу незавершенными записями при сбоях передачи.
+3. **Статус фичи: "Не сработало / Признано рудиментом":**
+   Механизм докачки через отдельную таблицу базы данных не функционировал как полноценная докачка, усложнял схему БД и создавал ложную иллюзию отказоустойчивости при паузе в Проводнике Windows.
+
+### Реализованное решение:
+1. `TelegramWebDAV/Database/Schema.sql` и `TelegramWebDAV/Database/DatabaseManager.cs`:
+   - Удалены `CREATE TABLE IF NOT EXISTS upload_progress` и индекс `idx_upload_progress_node_id`.
+2. `TelegramWebDAV/Database/NodeRepository.cs`:
+   - Удалены методы `UpdateUploadProgress` и `ClearUploadProgress`.
+   - Из метода `CreateOrUpdateFile` удален неиспользуемый блок очистки `DELETE FROM upload_progress WHERE node_id = @nodeId`.
+3. `TelegramWebDAV/Server/WebDavMiddleware.cs`:
+   - В блоке обработки чанков `isResumableChunk` вызов `UpdateUploadProgress` заменен на прямую регистрацию файла через `CreateOrUpdateFile` при успешной сборке последнего куска (`uploadResult != null`). Промежуточные чанки подтверждаются статусом `202 Accepted` без паразитной модификации таблицы `nodes`.
+4. `TelegramWebDAV/Models/UploadProgress.cs`:
+   - Неиспользуемый класс-модель `UploadProgress` удален.
+5. `db_backup.md` и `ROADMAP.md`:
+   - Актуализированы спецификации, зафиксирован статус упразднения таблицы `upload_progress`.
+
+
 
 
 

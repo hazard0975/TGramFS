@@ -358,16 +358,17 @@ namespace TelegramWebDAV.Server
 
                     // Загружаем чанк в Telegram
                     var uploadResult = await telegramService.UploadFileChunkAsync(context.Request.InputStream, name, offset, totalSize, caption: fullPathWithVersion, targetChannelId: targetChannelId);
-                    int? tgMessageId = uploadResult?.MessageId;
-                    int? tgPreviewId = uploadResult?.PreviewMessageId;
-                    
-                    // Обновляем позицию докачки и статус в SQLite
-                    repository.UpdateUploadProgress(parentNode.Id, name, offset + contentLength, totalSize, tgMessageId, tgPreviewId);
 
-                    // Если файл полностью догружен последним куском - 201 Created / 204 No Content, иначе 200/206
-                    if (tgMessageId.HasValue || (offset + contentLength >= totalSize))
+                    // Если файл полностью догружен последним куском - создаем/обновляем узел в базе
+                    if (uploadResult != null)
                     {
+                        repository.CreateOrUpdateFile(parentNode.Id, name, totalSize, uploadResult.MessageId, uploadResult.PreviewMessageId);
                         context.Response.StatusCode = (int)HttpStatusCode.Created;
+                    }
+                    else if (offset + contentLength >= totalSize)
+                    {
+                        // Все чанки переданы, но выгрузка в Telegram завершилась ошибкой
+                        context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
                     }
                     else
                     {
