@@ -305,81 +305,11 @@ namespace TelegramWebDAV.Server
             }
 
             long contentLength = context.Request.ContentLength64;
-            string? contentRangeHeader = context.Request.Headers["Content-Range"];
-            long offset = 0;
             long totalSize = contentLength;
-            bool isResumableChunk = false;
-
-            // Поддержка умного софта для бэкапа и клиентов с докачкой (например, Rclone, Cyberduck, GoodSync)
-            // Заголовок формата: Content-Range: bytes 500000-999999/2000000
-            if (!string.IsNullOrEmpty(contentRangeHeader) && contentRangeHeader.StartsWith("bytes "))
-            {
-                try
-                {
-                    string rangePart = contentRangeHeader.Substring(6).Trim(); // "500000-999999/2000000"
-                    string[] parts = rangePart.Split('/');
-                    if (parts.Length == 2)
-                    {
-                        if (long.TryParse(parts[1], out long parsedTotal))
-                        {
-                            totalSize = parsedTotal;
-                        }
-
-                        string[] byteBounds = parts[0].Split('-');
-                        if (byteBounds.Length == 2 && long.TryParse(byteBounds[0], out long parsedStart))
-                        {
-                            offset = parsedStart;
-                            isResumableChunk = true;
-                        }
-                    }
-                }
-                catch
-                {
-                    // Если заголовок поврежден, падаем обратно на обычную загрузку
-                    offset = 0;
-                    totalSize = contentLength;
-                    isResumableChunk = false;
-                }
-            }
 
             try 
             {
-                if (isResumableChunk)
-                {
-                    // Вычисляем полный путь с версией для подписи в Telegram
-                    int nextVersion = repository.GetNextVersionForFile(parentNode.Id, name);
-                    string parentFullPath = repository.GetNodeFullPath(parentNode.Id);
-                    if (parentFullPath == "/") parentFullPath = "";
-                    string fileExt = Path.GetExtension(name);
-                    string nameNoExt = Path.GetFileNameWithoutExtension(name);
-                    string fullPathWithVersion = $"{parentFullPath}/{nameNoExt}_v{nextVersion}{fileExt}";
-
-                    long? targetChannelId = repository.GetEffectiveChannelId(parentNode.Id);
-
-                    // Загружаем чанк в Telegram
-                    var uploadResult = await telegramService.UploadFileChunkAsync(context.Request.InputStream, name, offset, totalSize, caption: fullPathWithVersion, targetChannelId: targetChannelId);
-
-                    // Если файл полностью догружен последним куском - создаем/обновляем узел в базе
-                    if (uploadResult != null)
-                    {
-                        repository.CreateOrUpdateFile(parentNode.Id, name, totalSize, uploadResult.MessageId, uploadResult.PreviewMessageId);
-                        context.Response.StatusCode = (int)HttpStatusCode.Created;
-                    }
-                    else if (offset + contentLength >= totalSize)
-                    {
-                        // Все чанки переданы, но выгрузка в Telegram завершилась ошибкой
-                        context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-                    }
-                    else
-                    {
-                        // Подтверждаем принятие диапазона чанка для клиента бэкапа
-                        context.Response.StatusCode = (int)HttpStatusCode.Accepted; // 202 Accepted
-                        context.Response.AddHeader("Range", $"bytes=0-{offset + contentLength - 1}");
-                    }
-                }
-                else
-                {
-                    // Проверяем, является ли загружаемый файл аудио или видео (включая временные файлы .tmp софта бэкапа)
+                // Проверяем, является ли загружаемый файл аудио или видео (включая временные файлы .tmp софта бэкапа)
                     AudioMetadataResult? audioMeta = null;
                     VideoMetadataResult? videoMeta = null;
                     Stream uploadStream = context.Request.InputStream;
@@ -505,7 +435,6 @@ namespace TelegramWebDAV.Server
                             try { uploadStream.Dispose(); } catch { }
                         }
                     }
-                }
             }
             catch (Exception ex)
             {
