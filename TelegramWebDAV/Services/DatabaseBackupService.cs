@@ -28,6 +28,9 @@ namespace TelegramWebDAV.Services
         private DateTime? _lastBackupTimeUtc;
         private Timer? _debounceTimer;
         private Timer? _cloudSyncTimer;
+        private Timer? _heartbeatTimer;
+        private DateTime _lastHeartbeatUtc = DateTime.UtcNow;
+        private DateTime _lastConnectionSyncAttemptUtc = DateTime.MinValue;
         private readonly SemaphoreSlim _backupLock = new SemaphoreSlim(1, 1);
         private bool _isDisposed = false;
 
@@ -64,36 +67,64 @@ namespace TelegramWebDAV.Services
             // Подписываемся на любые изменения узлов файловой системы
             _repository.OnNodeChanged += HandleDatabaseModified;
 
-            // Подписка на системное событие пробуждения ОС из режима сна/гибернации
-            try
-            {
-                Microsoft.Win32.SystemEvents.PowerModeChanged += HandlePowerModeChanged;
-            }
-            catch (Exception ex)
-            {
-                AppLogger.Debug("DatabaseBackup", $"Не удалось подписаться на PowerModeChanged: {ex.Message}");
-            }
+            // Подписываемся на успешное установление/восстановление подключения к Telegram (как при старте, так и после сна/дисконнекта)
+            _telegramService.OnConnectionRestored += HandleTelegramConnectionRestored;
+
+            // Запускаем сторожевой таймер Time-Leap для надежной фиксации пробуждения из сна/гибернации
+            StartHeartbeatTimer();
 
             StartCloudSyncTimer();
         }
 
-        private void HandlePowerModeChanged(object sender, Microsoft.Win32.PowerModeChangedEventArgs e)
+        private void HandleTelegramConnectionRestored()
         {
-            if (e.Mode == Microsoft.Win32.PowerModes.Resume)
+            // Cooldown защита от повторного спама запросами (минимум 30 сек между проверками по реконнекту)
+            if ((DateTime.UtcNow - _lastConnectionSyncAttemptUtc).TotalSeconds < 30)
             {
-                AppLogger.Info("DatabaseBackup", "Обнаружено пробуждение Windows из режима сна/гибернации. Запуск проверки свежей базы через 5 сек...");
-                Task.Delay(5000).ContinueWith(async _ =>
+                return;
+            }
+
+            _lastConnectionSyncAttemptUtc = DateTime.UtcNow;
+            AppLogger.Info("DatabaseBackup", "[Синхронизация] Получен сигнал подключения к Telegram (Connected to DC). Запуск проверки свежей базы...");
+
+            Task.Run(async () =>
+            {
+                try
                 {
+                    // Пауза 1.5 секунды для завершения внутреннего хэндшейка сессии WTelegramClient
+                    await Task.Delay(1500);
+                    await CheckAndSyncFromTelegramAsync(isResumeOrStartup: true);
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Debug("DatabaseBackup", $"Ошибка проверки базы после подключения к Telegram: {ex.Message}");
+                }
+            });
+        }
+
+        private void StartHeartbeatTimer()
+        {
+            _heartbeatTimer?.Dispose();
+            _lastHeartbeatUtc = DateTime.UtcNow;
+            _heartbeatTimer = new Timer(async _ =>
+            {
+                var now = DateTime.UtcNow;
+                var elapsed = now - _lastHeartbeatUtc;
+                _lastHeartbeatUtc = now;
+
+                // Если интервал между тиками (которые идут каждые 10 сек) превысил 30 секунд,
+                // значит система спала или находилась в гибернации
+                if (elapsed.TotalSeconds >= 30)
+                {
+                    AppLogger.Info("DatabaseBackup", $"[Синхронизация] Зафиксирован выход Windows из сна/гибернации (временной скачок: {elapsed.TotalSeconds:F0} сек). Ожидание подключения к Telegram...");
                     try
                     {
-                        await CheckAndSyncFromTelegramAsync(isResumeOrStartup: true);
+                        // Провоцируем реактор Telegram на выявление разорванного сокета и переподключение
+                        await _telegramService.PingOrReconnectAsync();
                     }
-                    catch (Exception ex)
-                    {
-                        AppLogger.Debug("DatabaseBackup", $"Ошибка проверки базы после сна: {ex.Message}");
-                    }
-                });
-            }
+                    catch { }
+                }
+            }, null, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10));
         }
 
         /// <summary>
@@ -481,6 +512,7 @@ namespace TelegramWebDAV.Services
         /// </summary>
         public async Task<bool> CheckAndSyncFromTelegramAsync(bool isResumeOrStartup = false)
         {
+            _lastConnectionSyncAttemptUtc = DateTime.UtcNow;
             var settings = _configManager.CurrentSettings?.Database?.Backup;
             if (settings == null || !settings.CheckForRemoteOnStartup)
             {
@@ -635,12 +667,8 @@ namespace TelegramWebDAV.Services
             if (_isDisposed) return;
             _isDisposed = true;
 
-            try
-            {
-                Microsoft.Win32.SystemEvents.PowerModeChanged -= HandlePowerModeChanged;
-            }
-            catch { }
-
+            _telegramService.OnConnectionRestored -= HandleTelegramConnectionRestored;
+            _heartbeatTimer?.Dispose();
             _repository.OnNodeChanged -= HandleDatabaseModified;
             _debounceTimer?.Dispose();
             _cloudSyncTimer?.Dispose();

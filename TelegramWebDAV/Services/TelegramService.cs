@@ -394,6 +394,11 @@ namespace TelegramWebDAV.Services
         public string? LastError { get; private set; }
 
         /// <summary>
+        /// Событие успешного установления или восстановления соединения с дата-центром Telegram (Connected to DC).
+        /// </summary>
+        public event Action? OnConnectionRestored;
+
+        /// <summary>
         /// Событие прогресса загрузки файла в Telegram (имя файла, передано байт, всего байт).
         /// </summary>
         public event Action<string, long, long>? OnUploadProgress;
@@ -443,9 +448,37 @@ namespace TelegramWebDAV.Services
             _configManager = configManager;
             _repository = repository;
             _currentSettings = _configManager.Load();
+            AppLogger.OnWTelegramLog += HandleWTelegramLog;
             StartCaptionQueueWorker();
             StartDeletionQueueWorker();
             StartChannelMigrationQueueWorker();
+        }
+
+        private void HandleWTelegramLog(int level, string str)
+        {
+            if (level == 2 && !string.IsNullOrEmpty(str) && str.Contains("Connected to DC", StringComparison.OrdinalIgnoreCase))
+            {
+                if (IsAuthorized)
+                {
+                    OnConnectionRestored?.Invoke();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Быстрая проверка живости сокета или провоцирование реактора WTelegram на переподключение после сна.
+        /// </summary>
+        public async Task PingOrReconnectAsync()
+        {
+            if (_client == null || !IsAuthorized) return;
+            try
+            {
+                await _client.Help_GetNearestDc();
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Debug("TelegramService", $"Проверка соединения Telegram спровоцировала реакцию сокета: {ex.Message}");
+            }
         }
 
         public void SetRepository(NodeRepository repository)
@@ -1313,6 +1346,8 @@ namespace TelegramWebDAV.Services
                             AppLogger.Warn("TelegramService", $"Фоновый прогрев канала-хранилища: {ex.Message}");
                         }
                     });
+
+                    OnConnectionRestored?.Invoke();
                 }
             }
             else if (result == "verification_code")
@@ -3203,6 +3238,11 @@ namespace TelegramWebDAV.Services
 
         public void Dispose()
         {
+            try
+            {
+                AppLogger.OnWTelegramLog -= HandleWTelegramLog;
+            }
+            catch { }
             try
             {
                 _deletionQueueCts?.Cancel();

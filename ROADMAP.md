@@ -885,6 +885,16 @@
      3. В `DatabaseBackupService.cs` внедрен механизм отложенных уведомлений `PendingSyncNotification` и `PendingConflictNotification`. Если синхронизация или конфликт зафиксированы до запуска трея, сообщение сохраняется и показывается в `TrayContext` сразу после инициализации иконки.
      4. Таймер `StartCloudSyncTimer()` переведен исключительно на периодический режим (без лишних стартовых задержек).
      5. Успешно выполнена компиляция и валидация проекта: `dotnet build /app/applet/TelegramWebDAV/TelegramWebDAV.csproj -p:EnableWindowsTargeting=true` (`0 Warning(s), 0 Error(s)`).
+- [x] **8.44. Синхронизация базы данных по событию подключения к Telegram и аппаратный сторож сна (Time-Leap Watcher)**:
+   - **Реализовано**:
+     1. В `AppLogger.cs` добавлено событие `OnWTelegramLog` для перехвата внутренних логов `WTelegramClient`.
+     2. В `TelegramService.cs` реализовано событие `OnConnectionRestored`, срабатывающее при получении лога `Connected to DC` от реактора WTelegram (как при старте, так и при автоматическом переподключении сокета после сна), а также метод `PingOrReconnectAsync()`.
+     3. В `DatabaseBackupService.cs` упразднена неработающая в Windows 10/11 подписка `Microsoft.Win32.SystemEvents.PowerModeChanged` (не получавшая сигналы при Modern Standby).
+     4. Внедрена мгновенная реакция на событие `_telegramService.OnConnectionRestored` с защитным кулдауном 30 секунд.
+     5. Реализован аппаратный сторож сна (Time-Leap Watcher): фоновый 10-секундный таймер фиксирует скачки времени `DateTime.UtcNow` ($\ge 30$ сек) при выходе из сна/гибернации и пингует сокет Telegram для мгновенного реконнекта и синхронизации.
+     6. Успешно выполнена валидация и компиляция C# проекта: `dotnet build /app/applet/TelegramWebDAV/TelegramWebDAV.csproj -p:EnableWindowsTargeting=true` (`0 Warning(s), 0 Error(s)`).
+
+
 
 
 

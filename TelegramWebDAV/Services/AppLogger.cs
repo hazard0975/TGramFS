@@ -37,6 +37,11 @@ namespace TelegramWebDAV.Services
         private static readonly Task _workerTask;
         private static readonly CancellationTokenSource _cts = new();
 
+        /// <summary>
+        /// Событие перехвата внутренних логов WTelegramClient (уровень, сообщение).
+        /// </summary>
+        public static event Action<int, string>? OnWTelegramLog;
+
         static AppLogger()
         {
             string baseDir = AppDomain.CurrentDomain.BaseDirectory;
@@ -81,6 +86,12 @@ namespace TelegramWebDAV.Services
                         Error("WTelegram", str);
                         break;
                 }
+
+                try
+                {
+                    OnWTelegramLog?.Invoke(level, str);
+                }
+                catch { }
             };
 
             Info("AppLogger", $"Инициализирован файловый логгер. Путь: {CurrentLogFilePath} (лимит {MaxFileSizeBytes / 1024 / 1024} МБ, ротация до {MaxArchivedFiles} файлов).");
