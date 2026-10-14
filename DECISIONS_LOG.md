@@ -1776,8 +1776,6 @@ _telegramService.UpdateSettings(_settings);
    - Таймер `StartCloudSyncTimer()` переведен на чистый периодический режим: `TimeSpan.FromMinutes(intervalMinutes)` как для начальной задержки, так и для интервала.
 3. `TelegramWebDAV/UI/TrayContext.cs`:
    - В конструкторе добавлена проверка наличия `PendingSyncNotification` и `PendingConflictNotification` с моментальным показом информационного или предупреждающего всплывающего сообщения.
-4. **Валидация**:
-   - Сборка C# проекта `dotnet build /app/applet/TelegramWebDAV/TelegramWebDAV.csproj -p:EnableWindowsTargeting=true`: `0 Warning(s), 0 Error(s)`.
 
 ---
 
@@ -1830,8 +1828,6 @@ _telegramService.UpdateSettings(_settings);
 2. **Упрощение `HandlePutAsync` (`TelegramWebDAV/Server/WebDavMiddleware.cs`):**
    - Удален разбор заголовка `Content-Range` и флаг `isResumableChunk`.
    - Все входящие `PUT` запросы унифицированы: поток данных сразу передается в `UploadFileAsync` с прямой отправкой в Telegram без промежуточных файлов на жестком диске.
-3. **Валидация:**
-   - Сборка C# проекта `dotnet build /app/applet/TelegramWebDAV/TelegramWebDAV.csproj -p:EnableWindowsTargeting=true`: `0 Warning(s), 0 Error(s)`.
 
 ---
 
@@ -1863,8 +1859,6 @@ _telegramService.UpdateSettings(_settings);
    - Пинг заставляет реактор Telegram немедленно выявить сброшенный сокет и выполнить переподключение, после чего событие `Connected to DC` сразу триггерит синхронизацию свежей базы.
 4. **Удаление рудиментов:**
    - Полностью удалена неработающая подписка на `Microsoft.Win32.SystemEvents.PowerModeChanged`.
-5. **Валидация:**
-   - Сборка C# проекта `dotnet build /app/applet/TelegramWebDAV/TelegramWebDAV.csproj -p:EnableWindowsTargeting=true`: `0 Warning(s), 0 Error(s)`.
 
 ---
 
