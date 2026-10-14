@@ -534,15 +534,31 @@ namespace TelegramWebDAV.UI
                 string statusText = "Статус: ";
                 if (_backupService != null)
                 {
-                    statusText += _backupService.HasUnsavedChanges ? "Есть несохраненные изменения" : "Все изменения зафиксированы в Telegram";
+                    if (_backupService.HasConflict)
+                    {
+                        statusText += "⚠️ Конфликт синхронизации";
+                    }
+                    else if (_backupService.HasUnsavedChanges)
+                    {
+                        statusText += "Есть локальные изменения";
+                    }
+                    else
+                    {
+                        statusText += "Синхронизировано";
+                    }
+
                     if (_backupService.LastBackupTimeUtc.HasValue)
                     {
-                        statusText += $"   |   Последний бэкап: {_backupService.LastBackupTimeUtc.Value.ToLocalTime():yyyy-MM-dd HH:mm:ss}";
+                        var localTime = _backupService.LastBackupTimeUtc.Value.ToLocalTime();
+                        string timeStr = localTime.Date == DateTime.Today
+                            ? localTime.ToString("HH:mm:ss")
+                            : localTime.ToString("dd.MM HH:mm");
+                        statusText += $" (бэкап в {timeStr})";
                     }
                 }
                 else
                 {
-                    statusText += "Сервис бэкапов активен";
+                    statusText += "Активен";
                 }
                 _lblBackupStatus.Text = statusText;
             };
