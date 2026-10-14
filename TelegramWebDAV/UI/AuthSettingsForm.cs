@@ -226,98 +226,10 @@ namespace TelegramWebDAV.UI
             });
             grpCache.Controls.Add(pnlCacheInner);
 
-            // 4. Рамка: База данных SQLite (base.db)
-            var grpDb = UIFactory.CreateGroupBox("База данных SQLite (base.db)");
-            var pnlDbInner = UIFactory.CreateVerticalContainer();
-
-            var lblDbStats = new Label
-            {
-                AutoSize = true,
-                Margin = new Padding(0, 2, 0, 4),
-                Font = UITheme.SmallFont
-            };
-
-            Action updateDbStats = () =>
-            {
-                try
-                {
-                    string dbPath = _repository.DatabasePath;
-                    if (File.Exists(dbPath))
-                    {
-                        var fi = new FileInfo(dbPath);
-                        double sizeMb = (double)fi.Length / (1024 * 1024);
-                        lblDbStats.Text = $"Размер базы на диске: {sizeMb:F2} МБ   |   Файл: {Path.GetFileName(dbPath)}";
-                    }
-                    else
-                    {
-                        lblDbStats.Text = $"Файл базы данных: {dbPath} (еще не создан)";
-                    }
-                }
-                catch (Exception ex)
-                {
-                    lblDbStats.Text = $"Ошибка получения статуса БД: {ex.Message}";
-                }
-            };
-            updateDbStats();
-
-            var btnVacuum = UIFactory.CreateButton("🗜 Сжать базу (VACUUM)");
-            btnVacuum.Click += async (s, e) =>
-            {
-                btnVacuum.Enabled = false;
-                btnVacuum.Text = "Сжатие базы...";
-                try
-                {
-                    await System.Threading.Tasks.Task.Run(() => _repository.VacuumDatabase());
-                    updateDbStats();
-                    MessageBox.Show("Оптимизация базы данных (VACUUM) успешно завершена!\nНеиспользуемое дисковое пространство освобождено.", "База данных", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Ошибка сжатия базы данных:\n{ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-                finally
-                {
-                    btnVacuum.Text = "🗜 Сжать базу (VACUUM)";
-                    btnVacuum.Enabled = true;
-                }
-            };
-
-            var btnOpenDbFolder = UIFactory.CreateButton("📁 Папка с базой данных");
-            btnOpenDbFolder.Click += (s, e) =>
-            {
-                try
-                {
-                    string fullPath = Path.GetFullPath(_repository.DatabasePath);
-                    string? dir = Path.GetDirectoryName(fullPath);
-                    if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir))
-                    {
-                        System.Diagnostics.Process.Start("explorer.exe", dir);
-                    }
-                    else
-                    {
-                        System.Diagnostics.Process.Start("explorer.exe", AppDomain.CurrentDomain.BaseDirectory);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Не удалось открыть папку: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            };
-
-            _chkAutoVacuum = UIFactory.CreateCheckBox(
-                "Автоматически сжимать базу (VACUUM) при очистке корзины",
-                _settings.Database.AutoVacuumOnTrashDelete
-            );
-
-            var rowDbButtons = UIFactory.CreateActionRow(btnVacuum, btnOpenDbFolder);
-            pnlDbInner.Controls.AddRange(new Control[] { lblDbStats, _chkAutoVacuum, rowDbButtons });
-            grpDb.Controls.Add(pnlDbInner);
-
             pnlGeneral.Controls.AddRange(new Control[] { 
                 grpServerDrive, 
                 grpIntegration, 
                 grpCache, 
-                grpDb, 
                 new Panel { Height = 10, Width = 10, Margin = Padding.Empty } 
             });
             _tabGeneral.Controls.Add(pnlGeneral);
@@ -457,9 +369,9 @@ namespace TelegramWebDAV.UI
             _tabTelegram.Controls.Add(pnlTg);
 
             // =========================================================================
-            // === Вкладка 3: Бэкап базы данных ========================================
+            // === Вкладка 3: База данных (SQLite и бэкап) =============================
             // =========================================================================
-            _tabBackup = new TabPage("Бэкап базы");
+            _tabBackup = new TabPage("База");
             var pnlBackup = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
@@ -469,7 +381,94 @@ namespace TelegramWebDAV.UI
                 AutoScroll = true
             };
 
-            // 1. Рамка: Канал Telegram
+            // 1. Рамка: База данных SQLite (base.db)
+            var grpDb = UIFactory.CreateGroupBox("База данных SQLite (base.db)");
+            var pnlDbInner = UIFactory.CreateVerticalContainer();
+
+            var lblDbStats = new Label
+            {
+                AutoSize = true,
+                Margin = new Padding(0, 2, 0, 4),
+                Font = UITheme.SmallFont
+            };
+
+            Action updateDbStats = () =>
+            {
+                try
+                {
+                    string dbPath = _repository.DatabasePath;
+                    if (File.Exists(dbPath))
+                    {
+                        var fi = new FileInfo(dbPath);
+                        double sizeMb = (double)fi.Length / (1024 * 1024);
+                        lblDbStats.Text = $"Размер базы на диске: {sizeMb:F2} МБ   |   Файл: {Path.GetFileName(dbPath)}";
+                    }
+                    else
+                    {
+                        lblDbStats.Text = $"Файл базы данных: {dbPath} (еще не создан)";
+                    }
+                }
+                catch (Exception ex)
+                {
+                    lblDbStats.Text = $"Ошибка получения статуса БД: {ex.Message}";
+                }
+            };
+            updateDbStats();
+
+            var btnVacuum = UIFactory.CreateButton("🗜 Сжать базу (VACUUM)");
+            btnVacuum.Click += async (s, e) =>
+            {
+                btnVacuum.Enabled = false;
+                btnVacuum.Text = "Сжатие базы...";
+                try
+                {
+                    await System.Threading.Tasks.Task.Run(() => _repository.VacuumDatabase());
+                    updateDbStats();
+                    MessageBox.Show("Оптимизация базы данных (VACUUM) успешно завершена!\nНеиспользуемое дисковое пространство освобождено.", "База данных", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Ошибка сжатия базы данных:\n{ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                finally
+                {
+                    btnVacuum.Text = "🗜 Сжать базу (VACUUM)";
+                    btnVacuum.Enabled = true;
+                }
+            };
+
+            var btnOpenDbFolder = UIFactory.CreateButton("📁 Папка с базой данных");
+            btnOpenDbFolder.Click += (s, e) =>
+            {
+                try
+                {
+                    string fullPath = Path.GetFullPath(_repository.DatabasePath);
+                    string? dir = Path.GetDirectoryName(fullPath);
+                    if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir))
+                    {
+                        System.Diagnostics.Process.Start("explorer.exe", dir);
+                    }
+                    else
+                    {
+                        System.Diagnostics.Process.Start("explorer.exe", AppDomain.CurrentDomain.BaseDirectory);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Не удалось открыть папку: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+
+            _chkAutoVacuum = UIFactory.CreateCheckBox(
+                "Автоматически сжимать базу (VACUUM) при очистке корзины",
+                _settings.Database.AutoVacuumOnTrashDelete
+            );
+
+            var rowDbButtons = UIFactory.CreateActionRow(btnVacuum, btnOpenDbFolder);
+            pnlDbInner.Controls.AddRange(new Control[] { lblDbStats, _chkAutoVacuum, rowDbButtons });
+            grpDb.Controls.Add(pnlDbInner);
+
+            // 2. Рамка: Канал Telegram для резервных копий
             var grpBackupChannel = UIFactory.CreateGroupBox("Канал Telegram для резервных копий");
             var pnlBackupChannelInner = UIFactory.CreateVerticalContainer();
 
@@ -692,6 +691,7 @@ namespace TelegramWebDAV.UI
                     updateBackupStatusText();
                     if (restored)
                     {
+                        updateDbStats();
                         MessageBox.Show("База данных успешно восстановлена из Telegram!\nФайловая структура обновлена.", "Восстановление завершено", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
                     else
@@ -716,6 +716,7 @@ namespace TelegramWebDAV.UI
             grpBackupActions.Controls.Add(pnlBackupActionsInner);
 
             pnlBackup.Controls.AddRange(new Control[] {
+                grpDb,
                 grpBackupChannel,
                 grpAutoBackup,
                 grpBackupActions,
