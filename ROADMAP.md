@@ -907,3 +907,13 @@
 
 
 
+
+- [x] **8.47. Поддержка файлов произвольного размера свыше 2 ГБ / 4 ГБ (Raw Binary Chunking & node_parts)**:
+   - **Реализовано**:
+     1. В `Schema.sql` и `DatabaseManager.cs` внедрена выделенная таблица `node_parts (id, node_id, part_index, part_size, tg_message_id, tg_channel_id, created_at)` с внешним ключом `ON DELETE CASCADE`. В таблице `nodes` файл всегда представлен ровно одной строкой с полным агрегированным размером, что исключает дубликаты в Проводнике Windows и не требует фильтрации в методах файловой системы.
+     2. В `TelegramWebDAV/Services/BoundedStream.cs` создан ограничивающий потоковый адаптер `BoundedStream` для последовательной нарезки крупных файлов напрямую из входящего сокета WebDAV или пайпа WinFsp без создания временных файлов на системном диске C:.
+     3. В `TelegramService.cs` реализованы методы `GetMaxUploadPartSize` (авто-определение лимита 2000 МБ для обычных пользователей и 4000 МБ для Premium, либо `CustomMaxUploadPartSizeBytes` из настроек) и `UploadMultiPartFileAsync` (заглавная часть с обложкой и дочерние части в виде `reply_to_msg_id` с маркерами `[Часть X из Y]`). В случае ошибки при отправке предусмотрена автоматическая аварийная очистка уже загруженных сообщений.
+     4. В `TelegramService.cs` реализован метод `DownloadMultiPartFileAsync`: прозрачная склейка частей при чтении, мгновенная адресация нужной части при произвольном `Seek` (например, мгновенный прыжок на 15-й ГБ) и бесшовное разбиение диапазона при пересечении границы частей.
+     5. В `NodeRepository.cs` метод `EnqueuePermanentDeletion` доработан для автоматического сбора всех частей удаляемых файлов из `node_parts` и помещения их в очередь `pending_deletions`, исключая сироты в Telegram-канале.
+     6. В `WebDavMiddleware.cs` и `WinFspServer.cs` вызовы `CreateOrUpdateFile` и `DownloadFileAsync` переведены на поддержку сегментов `node_parts`.
+     7. Успешно выполнена сборка проекта `dotnet build` (`0 Warning(s), 0 Error(s)`).

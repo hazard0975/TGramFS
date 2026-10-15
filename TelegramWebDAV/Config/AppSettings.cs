@@ -65,6 +65,7 @@ namespace TelegramWebDAV.Config
         public int StreamingPrefetchWindowMb { get; set; } = 20; // Окно упреждения для видео и крупных файлов
         public int DownloadWorkerCount { get; set; } = DefaultDownloadWorkerCount; // Количество параллельных воркеров MTProto (1-3)
         public int PacingDelayMs { get; set; } = DefaultPacingDelayMs; // Задержка между запросами MTProto в мс (0-500)
+        public long? CustomMaxUploadPartSizeBytes { get; set; } = null; // Пользовательский лимит размера одной части (по умолчанию авто: 2000 МБ / 4000 МБ)
     }
 
     public class DatabaseSettings

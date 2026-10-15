@@ -211,7 +211,7 @@ namespace TelegramWebDAV.Server
             {
                 try
                 {
-                    await telegramService.DownloadFileAsync(node.TgMessageId.Value, context.Response.OutputStream, start, length, node.Name, totalSize, node.TgChannelId);
+                    await telegramService.DownloadFileAsync(node.TgMessageId.Value, context.Response.OutputStream, start, length, node.Name, totalSize, node.TgChannelId, node.Id);
                 }
                 catch (Exception ex)
                 {
@@ -352,6 +352,7 @@ namespace TelegramWebDAV.Server
                         byte[]? inlineBytes = null;
                         int? tgMessageId = null;
                         int? tgPreviewMessageId = null;
+                        FileUploadResult? uploadResult = null;
 
                         // Если размер файла <= 1 байт (пустой плейсхолдер Проводника или probe Total Commander)
                         if (uploadLength <= 1)
@@ -403,7 +404,7 @@ namespace TelegramWebDAV.Server
 
                             // Прямая потоковая загрузка в Telegram с сохранением TCP Flow Control для Проводника
                             long? targetChannelId = repository.GetEffectiveChannelId(parentNode.Id);
-                            var uploadResult = await telegramService.UploadFileAsync(uploadStream, name, uploadLength, displayFileName: tgDisplayName, caption: fullPathWithVersion, audioMeta: audioMeta, videoMeta: videoMeta, targetChannelId: targetChannelId);
+                            uploadResult = await telegramService.UploadFileAsync(uploadStream, name, uploadLength, displayFileName: tgDisplayName, caption: fullPathWithVersion, audioMeta: audioMeta, videoMeta: videoMeta, targetChannelId: targetChannelId);
                             tgMessageId = uploadResult?.MessageId;
                             tgPreviewMessageId = uploadResult?.PreviewMessageId;
                         }
@@ -424,7 +425,7 @@ namespace TelegramWebDAV.Server
                         }
 
                         // Записываем инфу в базу с встроенными байтами при необходимости (без аудио-тегов в БД)
-                        repository.CreateOrUpdateFile(parentNode.Id, name, totalSize, tgMessageId, tgPreviewMessageId, inlineBytes, headerLastModified);
+                        repository.CreateOrUpdateFile(parentNode.Id, name, totalSize, tgMessageId, tgPreviewMessageId, inlineBytes, headerLastModified, parts: uploadResult?.Parts);
 
                         context.Response.StatusCode = (int)HttpStatusCode.Created;
                     }

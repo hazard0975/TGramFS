@@ -79,11 +79,13 @@ namespace TelegramWebDAV.Services
     {
         public int MessageId { get; set; }
         public int? PreviewMessageId { get; set; }
+        public List<Models.NodePart>? Parts { get; set; }
 
-        public FileUploadResult(int messageId, int? previewMessageId = null)
+        public FileUploadResult(int messageId, int? previewMessageId = null, List<Models.NodePart>? parts = null)
         {
             MessageId = messageId;
             PreviewMessageId = previewMessageId;
+            Parts = parts;
         }
 
         public static implicit operator int?(FileUploadResult? res) => res?.MessageId;
@@ -1687,6 +1689,23 @@ namespace TelegramWebDAV.Services
                     }
                 }
 
+                long maxPartSize = GetMaxUploadPartSize();
+                if (fileLength > maxPartSize && !isGallery)
+                {
+                    return await UploadMultiPartFileAsync(
+                        uploadStream,
+                        effectiveFileName,
+                        fileLength,
+                        maxPartSize,
+                        peer,
+                        targetChannelId,
+                        effectiveCaption,
+                        rawCaptionPath,
+                        audioMeta,
+                        videoMeta
+                    );
+                }
+
                 AppLogger.Info("TelegramService", $"Прямая потоковая передача файла '{effectiveFileName}' ({fileLength} байт) в Telegram...");
                 
                 // Передаем прогресс-колбэк также в WTelegramClient для детального трекинга MTProto частей
@@ -1990,6 +2009,185 @@ namespace TelegramWebDAV.Services
 
                 _uploadSemaphore.Release();
                 Interlocked.Decrement(ref _pendingUploadsCount);
+            }
+        }
+
+        /// <summary>
+        /// Возвращает максимальный размер одной части файла в байтах.
+        /// Если в настройках задан CustomMaxUploadPartSizeBytes, используется он.
+        /// Иначе: 4000 МБ для Telegram Premium, 2000 МБ для обычных аккаунтов.
+        /// </summary>
+        public long GetMaxUploadPartSize()
+        {
+            if (_configManager?.CurrentSettings?.Server?.CustomMaxUploadPartSizeBytes is long customSize && customSize > 0)
+            {
+                return customSize;
+            }
+            bool isPremium = CurrentUser?.IsPremium ?? false;
+            return (isPremium ? 4000L : 2000L) * 1048576L;
+        }
+
+        private async Task<FileUploadResult?> UploadMultiPartFileAsync(
+            Stream uploadStream,
+            string effectiveFileName,
+            long fileLength,
+            long maxPartSize,
+            TL.InputPeer peer,
+            long? targetChannelId,
+            string effectiveCaption,
+            string rawCaptionPath,
+            AudioMetadataResult? audioMeta,
+            VideoMetadataResult? videoMeta)
+        {
+            int partCount = (int)Math.Ceiling((double)fileLength / maxPartSize);
+            AppLogger.Info("TelegramService", $"[BigFile Chunking] Запуск нарезки и загрузки крупного файла '{effectiveFileName}' ({fileLength:N0} байт / {fileLength / (1024.0 * 1024.0 * 1024.0):F2} ГБ). Всего частей: {partCount}, лимит части: {maxPartSize / (1024.0 * 1024.0):F0} МБ.");
+
+            var parts = new List<Models.NodePart>();
+            int masterMessageId = 0;
+            long channelId = targetChannelId ?? (peer is TL.InputPeerChannel ipc ? ipc.channel_id : 0);
+
+            try
+            {
+                for (int i = 0; i < partCount; i++)
+                {
+                    await EnsureFloodWaitDelayAsync();
+
+                    long currentPartLength = (i == partCount - 1)
+                        ? (fileLength - ((long)i * maxPartSize))
+                        : maxPartSize;
+
+                    long partStartGlobal = (long)i * maxPartSize;
+                    int partDisplayNum = i + 1;
+
+                    string partFileName = (i == 0)
+                        ? effectiveFileName
+                        : $"{effectiveFileName}.{partDisplayNum:D3}";
+
+                    AppLogger.Info("TelegramService", $"[BigFile Chunking] Загрузка части {partDisplayNum}/{partCount} ('{partFileName}', {currentPartLength:N0} байт, смещение {partStartGlobal:N0})...");
+
+                    using var boundedStream = new BoundedStream(
+                        uploadStream,
+                        currentPartLength,
+                        (partPos, partTotal) =>
+                        {
+                            long globalPos = partStartGlobal + partPos;
+                            OnUploadProgress?.Invoke(effectiveFileName, globalPos, fileLength);
+                        }
+                    );
+
+                    var inputFile = await _client!.UploadFileAsync(
+                        boundedStream,
+                        partFileName,
+                        progress: (partPos, partTotal) =>
+                        {
+                            long globalPos = partStartGlobal + partPos;
+                            OnUploadProgress?.Invoke(effectiveFileName, globalPos, fileLength);
+                        }
+                    );
+
+                    string mimeType = GetDocumentMimeType(effectiveFileName);
+                    var fileNameAttr = new TL.DocumentAttributeFilename { file_name = partFileName };
+                    var attributes = new TL.DocumentAttribute[] { fileNameAttr };
+
+                    TL.InputFileBase? thumbFile = null;
+                    if (i == 0)
+                    {
+                        if (videoMeta?.Thumbnail != null && videoMeta.Thumbnail.Length > 0)
+                        {
+                            try
+                            {
+                                using var thumbMs = new MemoryStream(videoMeta.Thumbnail, false);
+                                thumbFile = await _client.UploadFileAsync(thumbMs, "thumb.jpg");
+                            }
+                            catch { }
+                        }
+                        else if (audioMeta?.AlbumCover != null && audioMeta.AlbumCover.Length > 0)
+                        {
+                            try
+                            {
+                                using var thumbMs = new MemoryStream(audioMeta.AlbumCover, false);
+                                thumbFile = await _client.UploadFileAsync(thumbMs, "thumb.jpg");
+                            }
+                            catch { }
+                        }
+                    }
+
+                    var mediaDoc = new TL.InputMediaUploadedDocument(inputFile, mimeType, attributes);
+                    if (thumbFile != null)
+                    {
+                        mediaDoc.thumb = thumbFile;
+                        mediaDoc.flags |= TL.InputMediaUploadedDocument.Flags.has_thumb;
+                    }
+
+                    string partCaption;
+                    TL.Message? message;
+
+                    if (i == 0)
+                    {
+                        partCaption = $"{effectiveCaption} [Часть 1 из {partCount}, total={fileLength:N0} Bytes]";
+                        try
+                        {
+                            message = await _client.SendMessageAsync(peer, partCaption, mediaDoc);
+                        }
+                        catch (TL.RpcException rpcEx) when (rpcEx.Code == 400 && (rpcEx.Message.Contains("CHANNEL_INVALID") || rpcEx.Message.Contains("CHANNEL_PRIVATE")))
+                        {
+                            InvalidateStoragePeer();
+                            peer = await GetStoragePeerAsync(targetChannelId);
+                            message = await _client.SendMessageAsync(peer, partCaption, mediaDoc);
+                        }
+
+                        masterMessageId = message.ID;
+                        AppLogger.Info("TelegramService", $"[BigFile Chunking] Заглавная Часть 1/{partCount} успешно отправлена в канал (Message ID: {masterMessageId}).");
+                    }
+                    else
+                    {
+                        partCaption = $"{rawCaptionPath} [Часть {partDisplayNum} из {partCount}, total={fileLength:N0} Bytes]";
+                        try
+                        {
+                            message = await _client.SendMessageAsync(peer, partCaption, mediaDoc, reply_to_msg_id: masterMessageId);
+                        }
+                        catch (TL.RpcException rpcEx) when (rpcEx.Code == 400 && (rpcEx.Message.Contains("CHANNEL_INVALID") || rpcEx.Message.Contains("CHANNEL_PRIVATE")))
+                        {
+                            InvalidateStoragePeer();
+                            peer = await GetStoragePeerAsync(targetChannelId);
+                            message = await _client.SendMessageAsync(peer, partCaption, mediaDoc, reply_to_msg_id: masterMessageId);
+                        }
+
+                        AppLogger.Info("TelegramService", $"[BigFile Chunking] Дочерняя Часть {partDisplayNum}/{partCount} успешно отправлена в канал (Message ID: {message.ID}, ReplyTo: {masterMessageId}).");
+                    }
+
+                    parts.Add(new Models.NodePart(0, i, currentPartLength, message.ID, channelId));
+                }
+
+                AppLogger.Info("TelegramService", $"[BigFile Chunking] Все {parts.Count} частей для '{effectiveFileName}' успешно загружены в Telegram!");
+                return new FileUploadResult(masterMessageId, null, parts);
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("TelegramService", $"[BigFile Chunking] Ошибка загрузки части файла '{effectiveFileName}': {ex.Message}. Очистка загруженных частей...", ex);
+                if (parts.Count > 0)
+                {
+                    var msgIdsToDelete = parts.Select(p => p.TgMessageId).ToArray();
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            if (_client != null)
+                            {
+                                var storagePeer = await GetStoragePeerAsync(targetChannelId);
+                                if (storagePeer is TL.InputPeerChannel ipc)
+                                {
+                                    await _client.Channels_DeleteMessages(new TL.InputChannel(ipc.channel_id, ipc.access_hash), msgIdsToDelete);
+                                }
+                            }
+                        }
+                        catch (Exception delEx)
+                        {
+                            AppLogger.Warn("TelegramService", $"Не удалось удалить незавершенные части файла: {delEx.Message}");
+                        }
+                    });
+                }
+                throw;
             }
         }
 
@@ -2555,10 +2753,87 @@ namespace TelegramWebDAV.Services
         }
 
         /// <summary>
-        /// Потоковое скачивание чанков напрямую из Telegram через MTProto Upload_GetFile.
+        /// Потоковое скачивание файла напрямую из Telegram через MTProto Upload_GetFile.
+        /// Поддерживает как обычные файлы, так и крупногабаритные составные файлы (> 2 ГБ / 4 ГБ) из таблицы node_parts.
         /// В режиме Pure RAM Mode качает данные 100% через ОЗУ (без файлов на диске), сохраняя чанки в динамический 128 МБ RAM-кэш.
         /// </summary>
-        public async Task DownloadFileAsync(int messageId, Stream destination, long offset, long length, string fileName = "файл", long totalFileSize = -1, long? channelId = null)
+        public async Task DownloadFileAsync(int messageId, Stream destination, long offset, long length, string fileName = "файл", long totalFileSize = -1, long? channelId = null, int? nodeId = null)
+        {
+            List<Models.NodePart>? parts = null;
+            if (nodeId.HasValue && nodeId.Value > 0)
+            {
+                parts = _repository?.GetNodeParts(nodeId.Value);
+            }
+            if ((parts == null || parts.Count <= 1) && messageId > 0)
+            {
+                parts = _repository?.GetNodePartsByMessageId(messageId);
+            }
+
+            if (parts != null && parts.Count > 1)
+            {
+                await DownloadMultiPartFileAsync(parts, destination, offset, length, fileName, totalFileSize, channelId);
+                return;
+            }
+
+            await DownloadSingleDocumentSliceAsync(messageId, destination, offset, length, fileName, totalFileSize, channelId);
+        }
+
+        private async Task DownloadMultiPartFileAsync(
+            List<Models.NodePart> parts,
+            Stream destination,
+            long offset,
+            long length,
+            string fileName,
+            long totalFileSize,
+            long? channelId)
+        {
+            var sortedParts = parts.OrderBy(p => p.PartIndex).ToList();
+            long currentStart = 0;
+            var ranges = new List<(Models.NodePart part, long start, long end, long size)>();
+            foreach (var p in sortedParts)
+            {
+                long pSize = p.PartSize;
+                ranges.Add((p, currentStart, currentStart + pSize, pSize));
+                currentStart += pSize;
+            }
+            long aggregatedSize = currentStart;
+            if (totalFileSize <= 0) totalFileSize = aggregatedSize;
+
+            if (offset >= aggregatedSize)
+            {
+                return;
+            }
+
+            if (offset + length > aggregatedSize)
+            {
+                length = aggregatedSize - offset;
+            }
+
+            if (length <= 0) return;
+
+            long requestedEnd = offset + length;
+
+            foreach (var (p, pStart, pEnd, pSize) in ranges)
+            {
+                if (offset < pEnd && requestedEnd > pStart)
+                {
+                    long overlapStart = Math.Max(offset, pStart);
+                    long overlapEnd = Math.Min(requestedEnd, pEnd);
+                    long overlapLength = overlapEnd - overlapStart;
+
+                    long localOffset = overlapStart - pStart;
+                    long localTotalSize = pSize;
+                    long partChannelId = p.TgChannelId > 0 ? p.TgChannelId : (channelId ?? 0);
+
+                    string partDisplayName = $"{fileName} [Часть {p.PartIndex + 1}/{sortedParts.Count}]";
+                    AppLogger.Debug("TelegramService", $"[MultiPart Read] Чтение диапазона [{overlapStart}..{overlapEnd}) ({overlapLength:N0} байт) из части {p.PartIndex + 1} (Msg ID {p.TgMessageId}, localOffset={localOffset}).");
+
+                    await DownloadSingleDocumentSliceAsync(p.TgMessageId, destination, localOffset, overlapLength, partDisplayName, localTotalSize, partChannelId);
+                }
+            }
+        }
+
+        private async Task DownloadSingleDocumentSliceAsync(int messageId, Stream destination, long offset, long length, string fileName = "файл", long totalFileSize = -1, long? channelId = null)
         {
             await EnsureFloodWaitDelayAsync();
 

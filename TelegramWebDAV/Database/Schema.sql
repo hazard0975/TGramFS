@@ -84,3 +84,17 @@ CREATE TABLE IF NOT EXISTS pending_caption_updates (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_pending_caption_tg_msg ON pending_caption_updates(tg_message_id);
 
+-- Таблица составных частей крупногабаритных файлов (> 2 ГБ / 4 ГБ)
+CREATE TABLE IF NOT EXISTS node_parts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    node_id INTEGER NOT NULL,
+    part_index INTEGER NOT NULL,
+    part_size INTEGER NOT NULL,
+    tg_message_id INTEGER NOT NULL,
+    tg_channel_id INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (node_id) REFERENCES nodes(id) ON DELETE CASCADE,
+    UNIQUE(node_id, part_index)
+);
+CREATE INDEX IF NOT EXISTS idx_node_parts_node ON node_parts(node_id);
+

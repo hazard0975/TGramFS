@@ -62,6 +62,24 @@ namespace TelegramWebDAV.Database
                     alterCmd.CommandText = "ALTER TABLE nodes ADD COLUMN tg_channel_id INTEGER;";
                     alterCmd.ExecuteNonQuery();
                 }
+
+                // Гарантируем наличие таблицы node_parts и ее индекса
+                using var nodePartsCmd = connection.CreateCommand();
+                nodePartsCmd.CommandText = @"
+                    CREATE TABLE IF NOT EXISTS node_parts (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        node_id INTEGER NOT NULL,
+                        part_index INTEGER NOT NULL,
+                        part_size INTEGER NOT NULL,
+                        tg_message_id INTEGER NOT NULL,
+                        tg_channel_id INTEGER NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (node_id) REFERENCES nodes(id) ON DELETE CASCADE,
+                        UNIQUE(node_id, part_index)
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_node_parts_node ON node_parts(node_id);
+                ";
+                nodePartsCmd.ExecuteNonQuery();
             }
             catch (Exception ex)
             {
@@ -179,6 +197,19 @@ CREATE TABLE IF NOT EXISTS pending_deletions (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_pending_deletions_tg_msg ON pending_deletions(tg_message_id);
+
+CREATE TABLE IF NOT EXISTS node_parts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    node_id INTEGER NOT NULL,
+    part_index INTEGER NOT NULL,
+    part_size INTEGER NOT NULL,
+    tg_message_id INTEGER NOT NULL,
+    tg_channel_id INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (node_id) REFERENCES nodes(id) ON DELETE CASCADE,
+    UNIQUE(node_id, part_index)
+);
+CREATE INDEX IF NOT EXISTS idx_node_parts_node ON node_parts(node_id);
 ";
 
         private void ApplySchema(SqliteConnection connection)

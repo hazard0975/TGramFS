@@ -1299,7 +1299,8 @@ namespace TelegramWebDAV.Services
                                 uploadResult.PreviewMessageId,
                                 inlineData: null,
                                 lastModified: targetUpdatedAt,
-                                creationDate: targetCreatedAt
+                                creationDate: targetCreatedAt,
+                                parts: uploadResult.Parts
                             );
 
                             node.TgMessageId = uploadResult.MessageId;
@@ -1405,7 +1406,8 @@ namespace TelegramWebDAV.Services
                                     uploadResult.PreviewMessageId,
                                     inlineData: null,
                                     lastModified: targetUpdatedAt,
-                                    creationDate: targetCreatedAt
+                                    creationDate: targetCreatedAt,
+                                    parts: uploadResult.Parts
                                 );
 
                                 node.Size = finalLength;
@@ -1589,7 +1591,7 @@ namespace TelegramWebDAV.Services
                 {
                     // Прямой стриминг в предоставленный ядром Windows буфер без создания промежуточных файлов на диске C:!
                     using var memStream = new UnmanagedMemoryStream((byte*)buffer.ToPointer(), toRead, toRead, FileAccess.Write);
-                    _telegramService.DownloadFileAsync(node.TgMessageId.Value, memStream, (long)offset, (long)toRead, node.Name, node.Size, node.TgChannelId)
+                    _telegramService.DownloadFileAsync(node.TgMessageId.Value, memStream, (long)offset, (long)toRead, node.Name, node.Size, node.TgChannelId, node.Id)
                                     .GetAwaiter().GetResult();
                     bytesTransferred = (uint)memStream.Position;
                 }

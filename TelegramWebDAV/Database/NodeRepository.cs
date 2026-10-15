@@ -754,6 +754,30 @@ namespace TelegramWebDAV.Database
             {
                 try
                 {
+                    // Гарантированно подтягиваем все сегменты составных файлов (node_parts) для удаляемых узлов
+                    if (dbNodeIds != null && dbNodeIds.Count > 0)
+                    {
+                        using (var partCmd = connection.CreateCommand())
+                        {
+                            partCmd.Transaction = transaction;
+                            partCmd.CommandText = $"SELECT tg_message_id, tg_channel_id FROM node_parts WHERE node_id IN ({string.Join(",", dbNodeIds.Select((_, idx) => $"@nid{idx}"))});";
+                            for (int i = 0; i < dbNodeIds.Count; i++)
+                            {
+                                partCmd.Parameters.AddWithValue($"@nid{i}", dbNodeIds[i]);
+                            }
+                            using var partReader = partCmd.ExecuteReader();
+                            while (partReader.Read())
+                            {
+                                int pMsgId = partReader.GetInt32(0);
+                                long pChId = partReader.GetInt64(1);
+                                if (pMsgId > 0 && !uniqueItems.Any(u => u.MessageId == pMsgId))
+                                {
+                                    uniqueItems.Add((pMsgId, pChId));
+                                }
+                            }
+                        }
+                    }
+
                     if (uniqueItems.Count > 0)
                     {
                         using (var insertCmd = connection.CreateCommand())
@@ -1081,13 +1105,15 @@ namespace TelegramWebDAV.Database
         }
 
         /// <summary>
-        /// Создание или перезапись файла с поддержкой версионирования, локального inline_data для микрофайлов и сохранения оригинальных дат
+        /// Создание или перезапись файла с поддержкой версионирования, локального inline_data для микрофайлов, частей файла (parts) и сохранения оригинальных дат
         /// </summary>
-        public void CreateOrUpdateFile(int parentId, string name, long size, int? tgMessageId, int? tgPreviewMessageId = null, byte[]? inlineData = null, DateTime? lastModified = null, DateTime? creationDate = null, long? tgChannelId = null)
+        public int CreateOrUpdateFile(int parentId, string name, long size, int? tgMessageId, int? tgPreviewMessageId = null, byte[]? inlineData = null, DateTime? lastModified = null, DateTime? creationDate = null, long? tgChannelId = null, IEnumerable<NodePart>? parts = null)
         {
             long? effectiveTgChannelId = (tgChannelId.HasValue && tgChannelId.Value != 0) 
                 ? tgChannelId.Value 
                 : GetEffectiveChannelId(parentId);
+
+            int targetNodeId = 0;
 
             using (var connection = _dbManager.GetConnection())
             {
@@ -1136,8 +1162,13 @@ namespace TelegramWebDAV.Database
                             }
                             updateCmd.ExecuteNonQuery();
                         }
+                        targetNodeId = existingNode.Id;
+                        if (parts != null)
+                        {
+                            SaveNodePartsInternal(connection, targetNodeId, parts);
+                        }
                         NotifyNodeChanged();
-                        return;
+                        return targetNodeId;
                     }
 
                     // Версионирование: Отправляем старый в корзину, создаем новый с версией + 1
@@ -1178,7 +1209,7 @@ namespace TelegramWebDAV.Database
                                 ) VALUES (
                                     @parentId, @originalId, @name, 0, @version, 0,
                                     @tgMessageId, @tgPreviewMessageId, @tgChannelId, @size, @createdAt, @updatedAt, @inlineData
-                                );";
+                                ); SELECT last_insert_rowid();";
                             insertCmd.Parameters.AddWithValue("@parentId", parentId);
                             insertCmd.Parameters.AddWithValue("@name", name);
                             insertCmd.Parameters.AddWithValue("@size", size);
@@ -1195,7 +1226,13 @@ namespace TelegramWebDAV.Database
                                 ? lastModified.Value.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss") 
                                 : DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"));
                             
-                            insertCmd.ExecuteNonQuery();
+                            object? scalar = insertCmd.ExecuteScalar();
+                            targetNodeId = scalar != null && scalar != DBNull.Value ? Convert.ToInt32(scalar) : 0;
+                        }
+
+                        if (parts != null && targetNodeId > 0)
+                        {
+                            SaveNodePartsInternal(connection, targetNodeId, parts, transaction);
                         }
 
                         // Старая версия отправляется в корзину: обновляем её подпись в Telegram на #trash (для документа и фото-превью)
@@ -1256,7 +1293,7 @@ namespace TelegramWebDAV.Database
                             ) VALUES (
                                 @parentId, NULL, @name, 0, 1, 0,
                                 @tgMessageId, @tgPreviewMessageId, @tgChannelId, @size, @createdAt, @updatedAt, @inlineData
-                            );";
+                            ); SELECT last_insert_rowid();";
                         command.Parameters.AddWithValue("@parentId", parentId);
                         command.Parameters.AddWithValue("@name", name);
                         command.Parameters.AddWithValue("@size", size);
@@ -1271,11 +1308,18 @@ namespace TelegramWebDAV.Database
                             ? lastModified.Value.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss") 
                             : DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"));
                         
-                        command.ExecuteNonQuery();
+                        object? scalar = command.ExecuteScalar();
+                        targetNodeId = scalar != null && scalar != DBNull.Value ? Convert.ToInt32(scalar) : 0;
+                    }
+
+                    if (parts != null && targetNodeId > 0)
+                    {
+                        SaveNodePartsInternal(connection, targetNodeId, parts);
                     }
                 }
             }
             NotifyNodeChanged();
+            return targetNodeId;
         }
 
         /// <summary>
@@ -2033,6 +2077,137 @@ namespace TelegramWebDAV.Database
                 command.Parameters.AddWithValue("@id", id);
                 command.ExecuteNonQuery();
             }
+        }
+
+        #endregion
+
+        #region Составные части больших файлов (node_parts)
+
+        public void SaveNodeParts(int nodeId, IEnumerable<NodePart> parts)
+        {
+            if (parts == null) return;
+            using var connection = _dbManager.GetConnection();
+            SaveNodePartsInternal(connection, nodeId, parts);
+        }
+
+        private void SaveNodePartsInternal(SqliteConnection connection, int nodeId, IEnumerable<NodePart> parts, SqliteTransaction? transaction = null)
+        {
+            if (parts == null) return;
+            using (var deleteCmd = connection.CreateCommand())
+            {
+                if (transaction != null) deleteCmd.Transaction = transaction;
+                deleteCmd.CommandText = "DELETE FROM node_parts WHERE node_id = @nodeId;";
+                deleteCmd.Parameters.AddWithValue("@nodeId", nodeId);
+                deleteCmd.ExecuteNonQuery();
+            }
+
+            using (var insertCmd = connection.CreateCommand())
+            {
+                if (transaction != null) insertCmd.Transaction = transaction;
+                insertCmd.CommandText = @"
+                    INSERT INTO node_parts (node_id, part_index, part_size, tg_message_id, tg_channel_id)
+                    VALUES (@nodeId, @partIndex, @partSize, @tgMessageId, @tgChannelId);";
+                var pNodeId = insertCmd.Parameters.Add("@nodeId", SqliteType.Integer);
+                var pIndex = insertCmd.Parameters.Add("@partIndex", SqliteType.Integer);
+                var pSize = insertCmd.Parameters.Add("@partSize", SqliteType.Integer);
+                var pMsgId = insertCmd.Parameters.Add("@tgMessageId", SqliteType.Integer);
+                var pChId = insertCmd.Parameters.Add("@tgChannelId", SqliteType.Integer);
+
+                foreach (var part in parts)
+                {
+                    pNodeId.Value = nodeId;
+                    pIndex.Value = part.PartIndex;
+                    pSize.Value = part.PartSize;
+                    pMsgId.Value = part.TgMessageId;
+                    pChId.Value = part.TgChannelId;
+                    insertCmd.ExecuteNonQuery();
+                }
+            }
+        }
+
+        public List<NodePart> GetNodeParts(int nodeId)
+        {
+            var list = new List<NodePart>();
+            using var connection = _dbManager.GetConnection();
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+                SELECT id, node_id, part_index, part_size, tg_message_id, tg_channel_id, created_at 
+                FROM node_parts 
+                WHERE node_id = @nodeId 
+                ORDER BY part_index ASC;";
+            command.Parameters.AddWithValue("@nodeId", nodeId);
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                list.Add(new NodePart
+                {
+                    Id = reader.GetInt32(0),
+                    NodeId = reader.GetInt32(1),
+                    PartIndex = reader.GetInt32(2),
+                    PartSize = reader.GetInt64(3),
+                    TgMessageId = reader.GetInt32(4),
+                    TgChannelId = reader.GetInt64(5),
+                    CreatedAt = DateTime.SpecifyKind(reader.GetDateTime(6), DateTimeKind.Utc)
+                });
+            }
+            return list;
+        }
+
+        public List<NodePart> GetNodePartsByMessageId(int tgMessageId)
+        {
+            var list = new List<NodePart>();
+            if (tgMessageId <= 0) return list;
+
+            using var connection = _dbManager.GetConnection();
+            using var command = connection.CreateCommand();
+            // Ищем node_id, у которого tgMessageId либо в nodes, либо в node_parts
+            command.CommandText = @"
+                SELECT np.id, np.node_id, np.part_index, np.part_size, np.tg_message_id, np.tg_channel_id, np.created_at
+                FROM node_parts np
+                WHERE np.node_id = (
+                    SELECT id FROM nodes WHERE tg_message_id = @msgId LIMIT 1
+                )
+                OR np.node_id = (
+                    SELECT node_id FROM node_parts WHERE tg_message_id = @msgId LIMIT 1
+                )
+                ORDER BY np.part_index ASC;";
+            command.Parameters.AddWithValue("@msgId", tgMessageId);
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                list.Add(new NodePart
+                {
+                    Id = reader.GetInt32(0),
+                    NodeId = reader.GetInt32(1),
+                    PartIndex = reader.GetInt32(2),
+                    PartSize = reader.GetInt64(3),
+                    TgMessageId = reader.GetInt32(4),
+                    TgChannelId = reader.GetInt64(5),
+                    CreatedAt = DateTime.SpecifyKind(reader.GetDateTime(6), DateTimeKind.Utc)
+                });
+            }
+            return list;
+        }
+
+        public List<(int MessageId, long ChannelId)> GetPartsForNodes(IEnumerable<int> nodeIds)
+        {
+            var result = new List<(int MessageId, long ChannelId)>();
+            var idList = nodeIds?.Distinct().ToList();
+            if (idList == null || idList.Count == 0) return result;
+
+            using var connection = _dbManager.GetConnection();
+            using var command = connection.CreateCommand();
+            command.CommandText = $"SELECT tg_message_id, tg_channel_id FROM node_parts WHERE node_id IN ({string.Join(",", idList.Select((_, i) => $"@id{i}"))});";
+            for (int i = 0; i < idList.Count; i++)
+            {
+                command.Parameters.AddWithValue($"@id{i}", idList[i]);
+            }
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                result.Add((reader.GetInt32(0), reader.GetInt64(1)));
+            }
+            return result;
         }
 
         #endregion
