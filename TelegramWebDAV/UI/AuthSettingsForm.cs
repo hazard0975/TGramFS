@@ -501,12 +501,15 @@ namespace TelegramWebDAV.UI
             var grpAutoBackup = UIFactory.CreateGroupBox("Политика автоматического бэкапа");
             var pnlAutoBackupInner = UIFactory.CreateVerticalContainer();
 
+            _chkBackupOnExit = UIFactory.CreateCheckBox("Создавать резервную копию при выходе из программы", _settings.Database.Backup.BackupOnExit);
+
             _chkEnableAutoBackup = UIFactory.CreateCheckBox("Включить автоматическую выгрузку бэкапа в Telegram", _settings.Database.Backup.EnableAutoBackup);
             
             _numDebounceMinutes = UIFactory.CreateNumericInput(1, 120, _settings.Database.Backup.DebounceMinutes > 0 ? _settings.Database.Backup.DebounceMinutes : 15, 80);
             var rowDebounce = UIFactory.CreateSettingRow("Таймер тишины после записи (мин):", _numDebounceMinutes, 240);
+            _numDebounceMinutes.Enabled = _chkEnableAutoBackup.Checked;
+            _chkEnableAutoBackup.CheckedChanged += (s, e) => _numDebounceMinutes.Enabled = _chkEnableAutoBackup.Checked;
 
-            _chkBackupOnExit = UIFactory.CreateCheckBox("Создавать резервную копию при выходе из программы", _settings.Database.Backup.BackupOnExit);
             _chkCheckOnStartup = UIFactory.CreateCheckBox("Проверять наличие свежей базы в Telegram (сценарий Дом/Работа)", _settings.Database.Backup.CheckForRemoteOnStartup);
 
             _numRemoteCheckInterval = UIFactory.CreateNumericInput(1, 120, _settings.Database.Backup.RemoteCheckIntervalMinutes > 0 ? _settings.Database.Backup.RemoteCheckIntervalMinutes : 5, 80);
@@ -514,7 +517,7 @@ namespace TelegramWebDAV.UI
             _numRemoteCheckInterval.Enabled = _chkCheckOnStartup.Checked;
             _chkCheckOnStartup.CheckedChanged += (s, e) => _numRemoteCheckInterval.Enabled = _chkCheckOnStartup.Checked;
 
-            pnlAutoBackupInner.Controls.AddRange(new Control[] { _chkEnableAutoBackup, rowDebounce, _chkBackupOnExit, _chkCheckOnStartup, rowRemoteCheck });
+            pnlAutoBackupInner.Controls.AddRange(new Control[] { _chkBackupOnExit, _chkEnableAutoBackup, rowDebounce, _chkCheckOnStartup, rowRemoteCheck });
             grpAutoBackup.Controls.Add(pnlAutoBackupInner);
 
             // 3. Рамка: Ручные действия
