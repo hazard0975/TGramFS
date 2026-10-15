@@ -139,6 +139,7 @@ namespace TelegramWebDAV.Services
         {
             public string FileName { get; set; } = string.Empty;
             public long FileSize { get; set; }
+            public DateTime LastActivityTime { get; set; } = DateTime.UtcNow;
             private long _networkBytesDownloaded;
             private long _ramBytesDelivered;
             private int _completionLogged;
@@ -146,6 +147,8 @@ namespace TelegramWebDAV.Services
 
             private readonly System.Collections.Concurrent.ConcurrentDictionary<int, bool> _receivedChunkIndexes = new();
             private readonly System.Collections.Concurrent.ConcurrentDictionary<int, long> _chunkBytesAccumulator = new();
+
+            public void TouchActivity() => LastActivityTime = DateTime.UtcNow;
 
             public int TotalChunks => FileSize > 0 ? (int)Math.Ceiling((double)FileSize / 1048576.0) : 1;
             public int ReceivedChunksCount => _receivedChunkIndexes.Count;
@@ -158,8 +161,17 @@ namespace TelegramWebDAV.Services
                 }
             }
 
-            public void AddNetworkBytes(long bytes) => Interlocked.Add(ref _networkBytesDownloaded, bytes);
-            public void AddRamBytes(long bytes) => Interlocked.Add(ref _ramBytesDelivered, bytes);
+            public void AddNetworkBytes(long bytes)
+            {
+                TouchActivity();
+                Interlocked.Add(ref _networkBytesDownloaded, bytes);
+            }
+
+            public void AddRamBytes(long bytes)
+            {
+                TouchActivity();
+                Interlocked.Add(ref _ramBytesDelivered, bytes);
+            }
 
             public long NetworkBytes => Interlocked.Read(ref _networkBytesDownloaded);
             public long RamBytes => Interlocked.Read(ref _ramBytesDelivered);
@@ -170,6 +182,7 @@ namespace TelegramWebDAV.Services
             /// </summary>
             public bool MarkRangeReceived(long offset, long length)
             {
+                TouchActivity();
                 if (FileSize <= 0) return true;
                 if (length <= 0) return IsAllChunksReceived();
 
@@ -386,6 +399,53 @@ namespace TelegramWebDAV.Services
                     {
                         _chunkMemoryCache.TryRemove(kvp.Key, out _);
                     }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Ограничивает размер словарей аудита передачи и контекстов чтения в ОЗУ (LRU + TTL).
+        /// Предотвращает накопление объектов в памяти при длительной непрерывной работе ПК без перезагрузки (в т.ч. в режиме гибернации).
+        /// </summary>
+        private void EnsureAuditCacheCapacity()
+        {
+            const int maxAudits = 100;
+            var now = DateTime.UtcNow;
+            int ttlMinutes = Math.Max(15, _currentSettings?.Server?.ChunkMemoryCacheTtlMinutes ?? 30);
+
+            // 1. Очистка по TTL (неактивность дольше ttlMinutes)
+            foreach (var kvp in _networkAudits)
+            {
+                if ((now - kvp.Value.LastActivityTime).TotalMinutes > ttlMinutes)
+                {
+                    if (_networkAudits.TryRemove(kvp.Key, out _))
+                    {
+                        _fileReadSequences.TryRemove(kvp.Key, out _);
+                        _fileDownloadLocks.TryRemove(kvp.Key, out _);
+                    }
+                }
+            }
+
+            // 2. Вытеснение самых старых по LRU при превышении лимита maxAudits
+            if (_networkAudits.Count > maxAudits)
+            {
+                var oldest = _networkAudits.OrderBy(k => k.Value.LastActivityTime).Take(_networkAudits.Count - maxAudits).ToList();
+                foreach (var kvp in oldest)
+                {
+                    if (_networkAudits.TryRemove(kvp.Key, out _))
+                    {
+                        _fileReadSequences.TryRemove(kvp.Key, out _);
+                        _fileDownloadLocks.TryRemove(kvp.Key, out _);
+                    }
+                }
+            }
+
+            // 3. Очистка устаревших дескрипторов документов Telegram
+            foreach (var docKvp in _documentCache)
+            {
+                if (docKvp.Value.expiresAt <= now)
+                {
+                    _documentCache.TryRemove(docKvp.Key, out _);
                 }
             }
         }
@@ -2868,12 +2928,20 @@ namespace TelegramWebDAV.Services
             long currentChunkIdx = offset / 1048576;
             long totalChunks = actualTotalSize > 0 ? (long)Math.Ceiling((double)actualTotalSize / 1048576.0) : 1;
 
+            EnsureAuditCacheCapacity();
+
+            int cacheTtlMinutes = _currentSettings.Server.ChunkMemoryCacheTtlMinutes;
+            if (_networkAudits.TryGetValue(messageId, out var existingAudit) && (DateTime.UtcNow - existingAudit.LastActivityTime).TotalMinutes > cacheTtlMinutes)
+            {
+                _networkAudits.TryRemove(messageId, out _);
+            }
+
             var audit = _networkAudits.GetOrAdd(messageId, _ => new NetworkTransferAudit { FileName = fileName, FileSize = actualTotalSize });
             audit.FileName = fileName;
             audit.FileSize = actualTotalSize;
+            audit.TouchActivity();
 
             var readSeq = _fileReadSequences.GetOrAdd(messageId, _ => new FileReadSequence());
-            int cacheTtlMinutes = _currentSettings.Server.ChunkMemoryCacheTtlMinutes;
             long activationThresholdBytes = Math.Max(1, _currentSettings.Server.StreamingActivationThresholdMb) * 1048576L;
             lock (readSeq)
             {
