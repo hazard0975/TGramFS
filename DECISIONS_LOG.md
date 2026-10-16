@@ -2009,4 +2009,26 @@ _telegramService.UpdateSettings(_settings);
    - Добавлена инициализация `_numDebounceMinutes.Enabled = _chkEnableAutoBackup.Checked;` и подписка на событие `_chkEnableAutoBackup.CheckedChanged += (s, e) => _numDebounceMinutes.Enabled = _chkEnableAutoBackup.Checked;`.
    - Теперь при снятии галочки поле таймера тишины немедленно переходит в неактивное затемненное состояние.
 
+---
+
+## 53. Реализация автозапуска сервиса при входе в Windows через пользовательский реестр HKCU (`AutoStartHelper`)
+
+### Контекст и проблема:
+На первой вкладке «Сервер и Диск» в рамке «Интеграция с Windows и проводником» присутствовал чекбокс «Автозапуск сервиса при входе в Windows», привязанный к параметру `_settings.Server.AutoStartWithWindows`. Однако фактической регистрации приложения в операционной системе Windows не происходило: параметр сохранялся в `config.json`, но в реестр автозапуска Windows запись не вносилась и оттуда не удалялась.
+
+### Архитектурное решение (Root Cause First):
+1. **Утилита `AutoStartHelper` (`TelegramWebDAV/Utils/AutoStartHelper.cs`):**
+   - Использует стандартную пользовательскую ветку реестра Windows `HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run`.
+   - Работает под учетной записью текущего пользователя без необходимости повышения прав администратора (UAC).
+   - Метод `IsAutoStartEnabled()` проверяет наличие и валидность строкового параметра `TelegramWebDAV`.
+   - Метод `SetAutoStart(bool enable)`:
+     - При `enable = true`: получает актуальный путь к текущему исполняемому файлу (`Environment.ProcessPath ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "TelegramWebDAV.exe")`), экранирует кавычками и записывает в `Run`.
+     - При `enable = false`: безопасно удаляет параметр `TelegramWebDAV` из реестра.
+2. **Интеграция в окно настроек (`AuthSettingsForm.cs`):**
+   - При инициализации формы статус чекбокса синхронизируется с реальным состоянием реестра Windows (`AutoStartHelper.IsAutoStartEnabled() || _settings.Server.AutoStartWithWindows`).
+   - В обработчике `BtnSave_Click` вызывается `AutoStartHelper.SetAutoStart(_chkAutoStart.Checked)`, мгновенно применяя настройку в реестре Windows.
+3. **Самовосстановление при запуске (`TrayContext.cs`):**
+   - При старте трея, если в настройках включен автозапуск, вызывается `AutoStartHelper.SetAutoStart(true)`, автоматически обновляя путь к исполняемому файлу в реестре (например, при перемещении папки с программой на другой диск или путь).
+
+
 

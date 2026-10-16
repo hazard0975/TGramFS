@@ -93,6 +93,11 @@ namespace TelegramWebDAV.UI
                 ShellContextMenuHelper.RegisterTrashContextMenu(letter);
             }
 
+            if (_settings.Server.AutoStartWithWindows)
+            {
+                AutoStartHelper.SetAutoStart(true);
+            }
+
             _telegramService.OnUploadProgress += (fileName, current, total) =>
             {
                 _activeUploadFileName = fileName;

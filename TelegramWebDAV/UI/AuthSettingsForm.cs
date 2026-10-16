@@ -175,7 +175,8 @@ namespace TelegramWebDAV.UI
             var grpIntegration = UIFactory.CreateGroupBox("Интеграция с Windows и проводником");
             var pnlIntegrationInner = UIFactory.CreateVerticalContainer();
 
-            _chkAutoStart = UIFactory.CreateCheckBox("Автозапуск сервиса при входе в Windows", _settings.Server.AutoStartWithWindows);
+            bool isAutoStart = AutoStartHelper.IsAutoStartEnabled();
+            _chkAutoStart = UIFactory.CreateCheckBox("Автозапуск сервиса при входе в Windows", isAutoStart || _settings.Server.AutoStartWithWindows);
             _chkHideTrash = UIFactory.CreateCheckBox("Скрывать папку .Trash из корня диска (чистый корень)", _settings.Server.HideTrashFromRoot);
             _chkContextMenu = UIFactory.CreateCheckBox("Пункт «Открыть корзину WebDAV» в контекстном меню Windows", _settings.Server.AddTrashToContextMenu);
             _chkAutoShowPopup = UIFactory.CreateCheckBox("Автоматически открывать карточку прогресса при отправке файлов", _settings.Server.AutoShowUploadPopup);
@@ -1206,6 +1207,8 @@ namespace TelegramWebDAV.UI
             {
                 ShellContextMenuHelper.UnregisterTrashContextMenu();
             }
+
+            AutoStartHelper.SetAutoStart(_chkAutoStart.Checked);
 
             _configManager.Save(_settings);
             _backupService?.StartCloudSyncTimer();
