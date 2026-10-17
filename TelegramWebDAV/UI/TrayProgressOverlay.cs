@@ -139,6 +139,8 @@ namespace TelegramWebDAV.UI
         private double _bytesPerSecond = 0;
         private DateTime _lastProgressUpdateTime = DateTime.UtcNow;
         private string? _lastMetadataCompletedFile;
+        private DateTime _marqueeStartTime = DateTime.UtcNow;
+        private string _marqueeLastFileName = string.Empty;
 
         public TrayProgressOverlay()
         {
@@ -154,13 +156,13 @@ namespace TelegramWebDAV.UI
             ShowInTaskbar = false;
             TopMost = true;
             StartPosition = FormStartPosition.Manual;
-            Size = new Size(325, 96);
+            Size = new Size(370, 96);
             BackColor = Color.FromArgb(30, 41, 59); // Slate 800
 
             // Принудительно создаем дескриптор Win32 HWND
             CreateControl();
 
-            _updateTimer = new System.Windows.Forms.Timer { Interval = 250 };
+            _updateTimer = new System.Windows.Forms.Timer { Interval = 35 };
             _updateTimer.Tick += (s, e) => Invalidate();
 
             _hideCheckTimer = new System.Windows.Forms.Timer { Interval = 200 };
@@ -254,6 +256,8 @@ namespace TelegramWebDAV.UI
             if (_currentFileName != fileName)
             {
                 _currentFileName = fileName;
+                _marqueeLastFileName = fileName;
+                _marqueeStartTime = DateTime.UtcNow;
                 _lastMetadataCompletedFile = null;
                 _currentBytes = current;
                 _lastSpeedBytes = 0;
@@ -522,13 +526,71 @@ namespace TelegramWebDAV.UI
                 g.DrawString(header, titleFont, titleBrush, new PointF(12, 10));
             }
 
-            // 3. Имя файла
+            // 3. Имя файла с плавной бегущей строкой (Marquee / Ping-Pong)
             using (var nameFont = new Font("Segoe UI", 9.5f, FontStyle.Bold))
             using (var nameBrush = new SolidBrush(Color.White))
             {
                 string displayName = string.IsNullOrEmpty(_currentFileName) ? "Готов к передаче" : _currentFileName;
-                if (displayName.Length > 32) displayName = displayName.Substring(0, 30) + "...";
-                g.DrawString(displayName, nameFont, nameBrush, new PointF(12, 28));
+                float textX = 12f;
+                float textY = 28f;
+                float availableWidth = Width - 24f;
+
+                if (displayName != _marqueeLastFileName)
+                {
+                    _marqueeLastFileName = displayName;
+                    _marqueeStartTime = DateTime.UtcNow;
+                }
+
+                // Замеряем точную физическую ширину текста
+                var textSize = g.MeasureString(displayName, nameFont, PointF.Empty, StringFormat.GenericTypographic);
+                float textWidth = textSize.Width;
+
+                if (textWidth <= availableWidth || _isCompleted)
+                {
+                    // Текст полностью помещается либо передача завершена — отрисовываем статично
+                    g.DrawString(displayName, nameFont, nameBrush, textX, textY, StringFormat.GenericTypographic);
+                }
+                else
+                {
+                    // Бегущая строка (Marquee Ping-Pong):
+                    // 1. Пауза 1.8 сек в начале (читаем имя)
+                    // 2. Плавный скролл влево со скоростью 32 px/сек
+                    // 3. Пауза 1.8 сек в конце (читаем расширение и часть)
+                    // 4. Плавный возврат на старт
+                    float maxScroll = textWidth - availableWidth + 8f;
+                    float pauseStartMs = 1800f;
+                    float scrollSpeed = 32f;
+                    float scrollDurationMs = (maxScroll / scrollSpeed) * 1000f;
+                    float pauseEndMs = 1800f;
+                    float returnDurationMs = (maxScroll / (scrollSpeed * 1.5f)) * 1000f;
+                    float totalCycleMs = pauseStartMs + scrollDurationMs + pauseEndMs + returnDurationMs;
+
+                    float elapsedMs = (float)(DateTime.UtcNow - _marqueeStartTime).TotalMilliseconds % totalCycleMs;
+                    float scrollOffset;
+
+                    if (elapsedMs < pauseStartMs)
+                    {
+                        scrollOffset = 0f;
+                    }
+                    else if (elapsedMs < pauseStartMs + scrollDurationMs)
+                    {
+                        scrollOffset = ((elapsedMs - pauseStartMs) / scrollDurationMs) * maxScroll;
+                    }
+                    else if (elapsedMs < pauseStartMs + scrollDurationMs + pauseEndMs)
+                    {
+                        scrollOffset = maxScroll;
+                    }
+                    else
+                    {
+                        float returnProgress = (elapsedMs - (pauseStartMs + scrollDurationMs + pauseEndMs)) / returnDurationMs;
+                        scrollOffset = maxScroll * (1f - returnProgress);
+                    }
+
+                    var oldClip = g.Clip;
+                    g.SetClip(new RectangleF(textX, textY - 2, availableWidth, 22));
+                    g.DrawString(displayName, nameFont, nameBrush, textX - scrollOffset, textY, StringFormat.GenericTypographic);
+                    g.Clip = oldClip;
+                }
             }
 
             // 4. Шкала прогресса

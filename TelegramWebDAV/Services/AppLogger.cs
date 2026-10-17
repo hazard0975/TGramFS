@@ -292,7 +292,7 @@ namespace TelegramWebDAV.Services
                 string sizeStr = size >= 1048576 
                     ? $"{size:N0} байт ({size / (1024.0 * 1024.0):F2} МБ)" 
                     : $"{size:N0} байт ({size / 1024.0:F2} КБ)";
-                string line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [УТРАЧЕН В TELEGRAM] Путь: '{fullPath}' | Размер: {sizeStr} | TgMsgId: {tgMessageId?.ToString() ?? "null"} | NodeId: {nodeId?.ToString() ?? "null"} | Причина: {reason} | Статус: перемещен в .Trash{Environment.NewLine}";
+                string line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [УДАЛЁН В TELEGRAM] Путь: '{fullPath}' | Размер: {sizeStr} | TgMsgId: {tgMessageId?.ToString() ?? "null"} | NodeId: {nodeId?.ToString() ?? "null"} | Причина: {reason} | Статус: перемещен в .Trash{Environment.NewLine}";
                 
                 lock (_lostFilesLock)
                 {
