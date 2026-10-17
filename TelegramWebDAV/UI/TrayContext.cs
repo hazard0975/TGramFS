@@ -48,7 +48,7 @@ namespace TelegramWebDAV.UI
             _settings = _configManager.Load();
             _progressOverlay = new TrayProgressOverlay
             {
-                AutoShowOnUpload = _settings.Server.AutoShowUploadPopup
+                AutoShowOverlay = _settings.Server.AutoShowProgressOverlay
             };
 
             _notifyIcon = new NotifyIcon
@@ -249,7 +249,7 @@ namespace TelegramWebDAV.UI
             _settingsForm.SettingsSaved += () =>
             {
                 _settings = _configManager.Load();
-                _progressOverlay.AutoShowOnUpload = _settings.Server.AutoShowUploadPopup;
+                _progressOverlay.AutoShowOverlay = _settings.Server.AutoShowProgressOverlay;
                 BuildContextMenu();
             };
             _settingsForm.FormClosed += (s, e) =>

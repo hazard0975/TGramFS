@@ -52,7 +52,7 @@ namespace TelegramWebDAV.UI
         private CheckBox _chkAutoStart = null!;
         private CheckBox _chkHideTrash = null!;
         private CheckBox _chkContextMenu = null!;
-        private CheckBox _chkAutoShowPopup = null!;
+        private CheckBox _chkAutoShowProgressOverlay = null!;
         private CheckBox _chkGalleryPreview = null!;
         private CheckBox _chkAutoVacuum = null!;
         private CheckBox _chkEnableDiskCache = null!;
@@ -179,11 +179,11 @@ namespace TelegramWebDAV.UI
             _chkAutoStart = UIFactory.CreateCheckBox("Автозапуск сервиса при входе в Windows", isAutoStart || _settings.Server.AutoStartWithWindows);
             _chkHideTrash = UIFactory.CreateCheckBox("Скрывать папку .Trash из корня диска (чистый корень)", _settings.Server.HideTrashFromRoot);
             _chkContextMenu = UIFactory.CreateCheckBox("Пункт «Открыть корзину WebDAV» в контекстном меню Windows", _settings.Server.AddTrashToContextMenu);
-            _chkAutoShowPopup = UIFactory.CreateCheckBox("Автоматически открывать карточку прогресса при отправке файлов", _settings.Server.AutoShowUploadPopup);
+            _chkAutoShowProgressOverlay = UIFactory.CreateCheckBox("Отображать индикатор прогресса операций с файлами", _settings.Server.AutoShowProgressOverlay);
             _chkGalleryPreview = UIFactory.CreateCheckBox("Создавать фото-превью для галереи Telegram", _settings.Server.CreatePhotoGalleryPreview);
 
             pnlIntegrationInner.Controls.AddRange(new Control[] {
-                _chkAutoStart, _chkHideTrash, _chkContextMenu, _chkAutoShowPopup, _chkGalleryPreview
+                _chkAutoStart, _chkHideTrash, _chkContextMenu, _chkAutoShowProgressOverlay, _chkGalleryPreview
             });
             grpIntegration.Controls.Add(pnlIntegrationInner);
 
@@ -1126,7 +1126,7 @@ namespace TelegramWebDAV.UI
             _settings.Server.AutoStartWithWindows = _chkAutoStart.Checked;
             _settings.Server.HideTrashFromRoot = _chkHideTrash.Checked;
             _settings.Server.AddTrashToContextMenu = _chkContextMenu.Checked;
-            _settings.Server.AutoShowUploadPopup = _chkAutoShowPopup.Checked;
+            _settings.Server.AutoShowProgressOverlay = _chkAutoShowProgressOverlay.Checked;
             _settings.Server.CreatePhotoGalleryPreview = _chkGalleryPreview.Checked;
             _settings.Server.EnableDiskReadCache = _chkEnableDiskCache.Checked;
             _settings.Server.DownloadWorkerCount = (int)_numDownloadWorkers.Value;

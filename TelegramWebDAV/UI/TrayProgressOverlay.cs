@@ -123,7 +123,7 @@ namespace TelegramWebDAV.UI
         private readonly System.Windows.Forms.Timer _completionTimer;
         private readonly SynchronizationContext? _syncContext;
 
-        public bool AutoShowOnUpload { get; set; } = true;
+        public bool AutoShowOverlay { get; set; } = true;
 
         private TransferDirection _direction = TransferDirection.Upload;
         private string _currentFileName = string.Empty;
@@ -298,10 +298,10 @@ namespace TelegramWebDAV.UI
                 }
             }
 
-            // Если окно скрыто — позиционируем и показываем (если нет полноэкранного режима)
+            // Если окно скрыто — позиционируем и показываем (если включено в настройках и нет полноэкранного режима)
             if (!Visible)
             {
-                if (!TryShowOverlay())
+                if (!AutoShowOverlay || !TryShowOverlay())
                 {
                     return;
                 }
@@ -379,7 +379,7 @@ namespace TelegramWebDAV.UI
 
             if (!Visible)
             {
-                if (!TryShowOverlay())
+                if (!AutoShowOverlay || !TryShowOverlay())
                 {
                     return;
                 }

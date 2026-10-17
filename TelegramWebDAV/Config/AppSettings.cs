@@ -38,7 +38,7 @@ namespace TelegramWebDAV.Config
         public bool AutoStartWithWindows { get; set; } = true;
         public bool HideTrashFromRoot { get; set; } = true;
         public bool AddTrashToContextMenu { get; set; } = true;
-        public bool AutoShowUploadPopup { get; set; } = true;
+        public bool AutoShowProgressOverlay { get; set; } = true;
 
         // Настройки емкости виртуального диска
         public long VirtualDiskCapacityGb { get; set; } = 1024;
