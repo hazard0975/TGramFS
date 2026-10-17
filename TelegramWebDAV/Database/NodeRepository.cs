@@ -618,6 +618,68 @@ namespace TelegramWebDAV.Database
         }
 
         /// <summary>
+        /// Обрабатывает обнаружение утраченного в Telegram файла (сообщение удалено или не содержит медиа):
+        /// 1. Фиксирует запись в logs/lost_files.txt
+        /// 2. Перемещает узел в корзину .Trash с сохранением структуры каталогов
+        /// </summary>
+        public void HandleLostFile(int nodeId, int tgMessageId, string reason)
+        {
+            var node = GetNodeById(nodeId);
+            if (node == null || node.InTrash) return;
+
+            string fullPath = GetNodeFullPath(nodeId);
+            AppLogger.LogLostFile(fullPath, node.Size, tgMessageId, nodeId, reason);
+            AppLogger.Warn("NodeRepository", $"[LostFile] Файл '{fullPath}' (ID {nodeId}, MsgId: {tgMessageId}) отсутствует в Telegram. Перемещение в .Trash...");
+
+            try
+            {
+                SoftDeleteNode(nodeId);
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("NodeRepository", $"Ошибка перемещения утерянного файла ID {nodeId} в корзину: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// Обрабатывает обнаружение утраченного в Telegram сообщения по его Message ID:
+        /// находит все ассоциированные узлы и перемещает их в .Trash
+        /// </summary>
+        public void HandleLostFileByMessageId(int messageId, string reason, int? specificNodeId = null)
+        {
+            if (specificNodeId.HasValue && specificNodeId.Value > 0)
+            {
+                HandleLostFile(specificNodeId.Value, messageId, reason);
+                return;
+            }
+
+            using var connection = _dbManager.GetConnection();
+            using var command = connection.CreateCommand();
+            command.CommandText = "SELECT id FROM nodes WHERE tg_message_id = @msgId AND in_trash = 0;";
+            command.Parameters.AddWithValue("@msgId", messageId);
+            var nodeIds = new List<int>();
+            using (var reader = command.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    nodeIds.Add(reader.GetInt32(0));
+                }
+            }
+
+            if (nodeIds.Count > 0)
+            {
+                foreach (int nId in nodeIds)
+                {
+                    HandleLostFile(nId, messageId, reason);
+                }
+            }
+            else
+            {
+                AppLogger.LogLostFile("Неизвестный путь (узел не найден)", 0, messageId, null, reason);
+            }
+        }
+
+        /// <summary>
         /// Одиночное перманентное удаление из базы данных
         /// </summary>
         public void PermanentDeleteNode(int nodeId)

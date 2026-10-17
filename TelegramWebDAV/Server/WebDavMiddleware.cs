@@ -213,6 +213,11 @@ namespace TelegramWebDAV.Server
                 {
                     await telegramService.DownloadFileAsync(node.TgMessageId.Value, context.Response.OutputStream, start, length, node.Name, totalSize, node.TgChannelId, node.Id);
                 }
+                catch (FileNotFoundException fnfEx)
+                {
+                    AppLogger.Warn("WebDAV", $"[GET] Файл '{node.Name}' (ID {node.Id}) утрачен в Telegram: {fnfEx.Message}");
+                    repository.HandleLostFile(node.Id, node.TgMessageId.Value, fnfEx.Message);
+                }
                 catch (Exception ex)
                 {
                     AppLogger.Debug("WebDAV", $"[GET] Передача '{node.Name}' завершена/прервана: {ex.Message}");

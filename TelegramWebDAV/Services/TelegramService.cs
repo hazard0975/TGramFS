@@ -115,8 +115,8 @@ namespace TelegramWebDAV.Services
         /// </summary>
         public int PendingUploadsCount => _pendingUploadsCount;
 
-        // Кэш дескрипторов документов Telegram (TL.Document) для устранения лишних сетевых вызовов Channels_GetMessages
-        private readonly System.Collections.Concurrent.ConcurrentDictionary<int, (TL.Document document, DateTime expiresAt)> _documentCache = new();
+        // Кэш дескрипторов документов Telegram (TL.Document) для устранения лишних сетевых вызовов Channels_GetMessages (включая негативный кэш)
+        private readonly System.Collections.Concurrent.ConcurrentDictionary<int, (TL.Document? document, DateTime expiresAt)> _documentCache = new();
 
         // Быстрый кольцевой кэш чанков MTProto в оперативной памяти (настраивается в UI, по умолчанию 128 МБ) для мгновенного чтения плеерами без повторных обращений к сети
         private readonly System.Collections.Concurrent.ConcurrentDictionary<string, (byte[] data, DateTime expiresAt)> _chunkMemoryCache = new();
@@ -2777,6 +2777,12 @@ namespace TelegramWebDAV.Services
             {
                 _documentCache[messageId] = (document, DateTime.UtcNow.AddMinutes(15));
             }
+            else
+            {
+                // Негативный кэш: фиксируем отсутствие документа на 10 минут, предотвращая шквал повторных RPC-запросов и FLOOD_WAIT
+                _documentCache[messageId] = (null, DateTime.UtcNow.AddMinutes(10));
+                AppLogger.Warn("TelegramService", $"[GetDocumentFromMessageAsync] Медиа-документ для сообщения ID {messageId} не найден в Telegram. Сохранено в негативный кэш.");
+            }
 
             return document;
         }
@@ -2835,7 +2841,7 @@ namespace TelegramWebDAV.Services
                 return;
             }
 
-            await DownloadSingleDocumentSliceAsync(messageId, destination, offset, length, fileName, totalFileSize, channelId);
+            await DownloadSingleDocumentSliceAsync(messageId, destination, offset, length, fileName, totalFileSize, channelId, nodeId);
         }
 
         private async Task DownloadMultiPartFileAsync(
@@ -2888,12 +2894,12 @@ namespace TelegramWebDAV.Services
                     string partDisplayName = $"{fileName} [Часть {p.PartIndex + 1}/{sortedParts.Count}]";
                     AppLogger.Debug("TelegramService", $"[MultiPart Read] Чтение диапазона [{overlapStart}..{overlapEnd}) ({overlapLength:N0} байт) из части {p.PartIndex + 1} (Msg ID {p.TgMessageId}, localOffset={localOffset}).");
 
-                    await DownloadSingleDocumentSliceAsync(p.TgMessageId, destination, localOffset, overlapLength, partDisplayName, localTotalSize, partChannelId);
+                    await DownloadSingleDocumentSliceAsync(p.TgMessageId, destination, localOffset, overlapLength, partDisplayName, localTotalSize, partChannelId, p.NodeId);
                 }
             }
         }
 
-        private async Task DownloadSingleDocumentSliceAsync(int messageId, Stream destination, long offset, long length, string fileName = "файл", long totalFileSize = -1, long? channelId = null)
+        private async Task DownloadSingleDocumentSliceAsync(int messageId, Stream destination, long offset, long length, string fileName = "файл", long totalFileSize = -1, long? channelId = null, int? nodeId = null)
         {
             await EnsureFloodWaitDelayAsync();
 
@@ -2920,7 +2926,9 @@ namespace TelegramWebDAV.Services
             var document = await GetDocumentFromMessageAsync(messageId, channelId);
             if (document == null)
             {
-                throw new FileNotFoundException($"Не удалось найти медиа-документ для сообщения ID {messageId} в Telegram.");
+                string reason = $"Не удалось найти медиа-документ для сообщения ID {messageId} в Telegram.";
+                _repository?.HandleLostFileByMessageId(messageId, reason, nodeId);
+                throw new FileNotFoundException(reason);
             }
 
             long actualTotalSize = totalFileSize > 0 ? totalFileSize : (document.size > 0 ? document.size : offset + length);

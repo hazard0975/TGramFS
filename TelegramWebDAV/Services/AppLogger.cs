@@ -279,6 +279,29 @@ namespace TelegramWebDAV.Services
             }
         }
 
+        private static readonly object _lostFilesLock = new();
+
+        /// <summary>
+        /// Записывает строку в отдельный человекочитаемый файл журнала утраченных файлов logs/lost_files.txt
+        /// </summary>
+        public static void LogLostFile(string fullPath, long size, int? tgMessageId, int? nodeId, string reason)
+        {
+            try
+            {
+                string filePath = Path.Combine(LogDirectory, "lost_files.txt");
+                string sizeStr = size >= 1048576 
+                    ? $"{size:N0} байт ({size / (1024.0 * 1024.0):F2} МБ)" 
+                    : $"{size:N0} байт ({size / 1024.0:F2} КБ)";
+                string line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [УТРАЧЕН В TELEGRAM] Путь: '{fullPath}' | Размер: {sizeStr} | TgMsgId: {tgMessageId?.ToString() ?? "null"} | NodeId: {nodeId?.ToString() ?? "null"} | Причина: {reason} | Статус: перемещен в .Trash{Environment.NewLine}";
+                
+                lock (_lostFilesLock)
+                {
+                    File.AppendAllText(filePath, line, Encoding.UTF8);
+                }
+            }
+            catch { }
+        }
+
         public static void Shutdown()
         {
             try

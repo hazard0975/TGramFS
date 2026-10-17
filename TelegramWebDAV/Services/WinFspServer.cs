@@ -1597,6 +1597,14 @@ namespace TelegramWebDAV.Services
                 }
                 return STATUS_SUCCESS;
             }
+            catch (Exception ex) when (ex is FileNotFoundException || ex.InnerException is FileNotFoundException)
+            {
+                var fnf = (ex as FileNotFoundException) ?? (ex.InnerException as FileNotFoundException)!;
+                AppLogger.Warn("WinFsp", $"Файл '{node.Name}' (ID {node.Id}, MsgId: {node.TgMessageId}) не найден в Telegram: {fnf.Message}");
+                _repository.HandleLostFile(node.Id, node.TgMessageId ?? 0, fnf.Message);
+                bytesTransferred = 0;
+                return NT_STATUS_OBJECT_NAME_NOT_FOUND;
+            }
             catch (Exception ex)
             {
                 AppLogger.Error("WinFsp", $"Ошибка прямого чтения '{node.Name}' (смещение {offset}, длина {toRead}): {ex.Message}", ex);
