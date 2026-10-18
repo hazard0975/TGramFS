@@ -109,7 +109,7 @@ namespace TelegramWebDAV.UI
 
         private void InitializeComponents()
         {
-            this.Text = "Telegram WebDAV Service - Настройки";
+            this.Text = "TGramFS — Настройки";
             this.Size = new Size(570, 640);
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
@@ -152,7 +152,7 @@ namespace TelegramWebDAV.UI
             _cmbEngine.SelectedIndex = _settings.Server.Engine == DriveEngine.WinFsp ? 0 : 1;
             var rowEngine = UIFactory.CreateSettingRow("Драйвер диска:", _cmbEngine, 140);
 
-            _txtVolumeName = new TextBox { Text = _settings.Server.DriveName ?? "Telegram Drive", Width = 260, Font = UITheme.BaseFont };
+            _txtVolumeName = new TextBox { Text = _settings.Server.DriveName ?? "TGramFS Drive", Width = 260, Font = UITheme.BaseFont };
             var rowVolumeName = UIFactory.CreateSettingRow("Имя тома:", _txtVolumeName, 140);
 
             _cmbDriveLetter = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 80, Font = UITheme.BaseFont };
@@ -178,7 +178,7 @@ namespace TelegramWebDAV.UI
             bool isAutoStart = AutoStartHelper.IsAutoStartEnabled();
             _chkAutoStart = UIFactory.CreateCheckBox("Автозапуск сервиса при входе в Windows", isAutoStart || _settings.Server.AutoStartWithWindows);
             _chkHideTrash = UIFactory.CreateCheckBox("Скрывать папку .Trash из корня диска (чистый корень)", _settings.Server.HideTrashFromRoot);
-            _chkContextMenu = UIFactory.CreateCheckBox("Пункт «Открыть корзину WebDAV» в контекстном меню Windows", _settings.Server.AddTrashToContextMenu);
+            _chkContextMenu = UIFactory.CreateCheckBox("Пункт «Открыть корзину TGramFS» в контекстном меню Windows", _settings.Server.AddTrashToContextMenu);
             _chkAutoShowProgressOverlay = UIFactory.CreateCheckBox("Отображать индикатор прогресса операций с файлами", _settings.Server.AutoShowProgressOverlay);
             _chkGalleryPreview = UIFactory.CreateCheckBox("Создавать фото-превью для галереи Telegram", _settings.Server.CreatePhotoGalleryPreview);
 
@@ -261,7 +261,7 @@ namespace TelegramWebDAV.UI
             _txtApiHash = new TextBox { Text = currentAccount?.ApiHash ?? "", Width = 150, UseSystemPasswordChar = true, Font = UITheme.BaseFont };
             var rowApiHash = UIFactory.CreateSettingRow("API Hash:", _txtApiHash, 90, 240);
 
-            _txtChannelTitle = new TextBox { Text = primaryChannel != null && !string.IsNullOrWhiteSpace(primaryChannel.Title) ? primaryChannel.Title : "Telegram WebDAV Drive", Width = 150, Font = UITheme.BaseFont };
+            _txtChannelTitle = new TextBox { Text = primaryChannel != null && !string.IsNullOrWhiteSpace(primaryChannel.Title) ? primaryChannel.Title : "TGramFS Storage", Width = 150, Font = UITheme.BaseFont };
             var rowChannel = UIFactory.CreateSettingRow("Имя канала:", _txtChannelTitle, 90, 240);
 
             var btnSaveApi = UIFactory.CreateButton("Сохранить параметры Telegram", (s, e) => SaveTelegramApiKeys(), width: 240);
@@ -477,7 +477,7 @@ namespace TelegramWebDAV.UI
 
             _txtBackupChannelTitle = new TextBox 
             { 
-                Text = currentBackupCh?.Title ?? "Telegram Drive Backups", 
+                Text = currentBackupCh?.Title ?? "TGramFS Backups", 
                 Width = 260, 
                 Font = UITheme.BaseFont 
             };
@@ -1089,7 +1089,7 @@ namespace TelegramWebDAV.UI
 
                 if (_telegramService.IsAuthorized)
                 {
-                    MessageBox.Show("Авторизация в Telegram успешно завершена!", "Telegram WebDAV", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("Авторизация в Telegram успешно завершена!", "TGramFS", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
             catch (Exception ex)
@@ -1220,7 +1220,7 @@ namespace TelegramWebDAV.UI
             {
                 msg += $"\n\nДрайвер диска изменен на {_settings.Server.Engine}. Выполните «Переподключить сетевой диск» в трее или перезапустите сервис для применения изменений.";
             }
-            MessageBox.Show(msg, "Telegram WebDAV", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(msg, "TGramFS", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
     }
 }

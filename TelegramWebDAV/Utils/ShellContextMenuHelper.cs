@@ -52,9 +52,9 @@ namespace TelegramWebDAV.Utils
 
                 string driveWithoutSlash = cleanDrive.TrimEnd('\\');
                 string trashLocalPath = Path.Combine(cleanDrive, ".Trash");
-                string menuText = "Открыть корзину WebDAV";
+                string menuText = "Открыть корзину TGramFS";
                 string explorerCommand = $"explorer.exe \"{trashLocalPath}\"";
-                string exePath = Environment.ProcessPath ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "TelegramWebDAV.exe");
+                string exePath = Environment.ProcessPath ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "TGramFS.exe");
                 string appliesToCondition = $"System.ItemPathDisplay:~<\"{driveWithoutSlash}\" OR System.ParsingPath:~<\"{driveWithoutSlash}\" OR System.ItemFolderPathDisplay:~<\"{driveWithoutSlash}\" OR System.ItemPathDisplay:=\"{cleanDrive}\" OR System.ParsingPath:=\"{cleanDrive}\"";
 
                 // 1. Контекстное меню для диска (ПКМ по диску в "Этот компьютер")

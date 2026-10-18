@@ -1,6 +1,6 @@
-# ROADMAP & Progress Tracker (Universal WebDAV & Network Drive Service)
+# ROADMAP & Progress Tracker (TGramFS — Telegram Virtual Drive & Cloud Filesystem)
 
-Документ отслеживания этапов разработки универсального C# WebDAV-сервиса и сетевого диска Telegram.
+Документ отслеживания этапов разработки виртуальной файловой системы и сетевого диска Telegram (TGramFS).
 
 * Реестр принятых технических решений, исследованных гипотез и первопричин (Root Causes): [`DECISIONS_LOG.md`](./DECISIONS_LOG.md).
 * Архивная дорожная карта версии V1 (AIMP Plugin) сохранена в файле: [`ROADMAP_V1_AIMP_PLUGIN.md`](./ROADMAP_V1_AIMP_PLUGIN.md).
@@ -959,5 +959,16 @@
      3. В `AppSettings.cs` и `TrayContext.cs` параметр переименован в `AutoShowProgressOverlay` без удержания устаревшего легаси-кода.
      4. В `AuthSettingsForm.cs` чекбокс переименован в профессиональный и понятный вид: «Отображать индикатор прогресса операций с файлами».
      5. Успешно выполнена сборка проекта `dotnet build` (`0 Warning(s), 0 Error(s)`).
+
+- [x] **8.54. Официальный ребрендинг проекта в TGramFS (Telegram Virtual File System)**:
+   - **Реализовано**:
+     1. В `TelegramWebDAV.csproj` выходное имя сборки переведено на `<AssemblyName>TGramFS</AssemblyName>` (бинарный исполняемый файл `TGramFS.exe`).
+     2. В `AppSettings.cs` имя тома по умолчанию обновлено до `TGramFS Drive`.
+     3. В `AutoStartHelper.cs` регистрация в реестре Windows переведена на имя `TGramFS` с авто-очисткой старого ключа `TelegramWebDAV`.
+     4. В `ShellContextMenuHelper.cs` пункт меню Проводника обновлен на «Открыть корзину TGramFS».
+     5. В `AuthSettingsForm.cs`, `TrayContext.cs`, `TrayProgressOverlay.cs` обновлены заголовки окон, тултипы и диалоги на `TGramFS`.
+     6. В `README.md`, `ROADMAP.md` и веб-оболочке `index.html` синхронизировано официальное название.
+     7. Успешно выполнена сборка проекта `dotnet build` (`0 Warning(s), 0 Error(s)`).
+
 
 

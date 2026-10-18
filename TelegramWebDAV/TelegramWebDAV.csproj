@@ -9,7 +9,7 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationIcon>icon.ico</ApplicationIcon>
     <RootNamespace>TelegramWebDAV</RootNamespace>
-    <AssemblyName>TelegramWebDAV</AssemblyName>
+    <AssemblyName>TGramFS</AssemblyName>
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
 

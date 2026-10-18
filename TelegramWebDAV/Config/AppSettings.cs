@@ -34,7 +34,7 @@ namespace TelegramWebDAV.Config
         public int Port { get; set; } = 37000;
         public bool MountDrive { get; set; } = true;
         public string DriveLetter { get; set; } = "Z:";
-        public string DriveName { get; set; } = "Telegram Drive";
+        public string DriveName { get; set; } = "TGramFS Drive";
         public bool AutoStartWithWindows { get; set; } = true;
         public bool HideTrashFromRoot { get; set; } = true;
         public bool AddTrashToContextMenu { get; set; } = true;
@@ -89,7 +89,7 @@ namespace TelegramWebDAV.Config
     {
         public int Port { get; set; } = 37000;
         public string DriveLetter { get; set; } = "Z:";
-        public string DriveName { get; set; } = "Telegram Drive";
+        public string DriveName { get; set; } = "TGramFS Drive";
         public bool AutoMountOnStartup { get; set; } = true;
     }
 

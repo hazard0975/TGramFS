@@ -521,7 +521,7 @@ namespace TelegramWebDAV.UI
                 }
                 else
                 {
-                    header = "TELEGRAM WEBDAV";
+                    header = "TGRAMFS";
                 }
                 g.DrawString(header, titleFont, titleBrush, new PointF(12, 10));
             }

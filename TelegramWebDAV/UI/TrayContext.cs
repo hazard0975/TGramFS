@@ -28,8 +28,6 @@ namespace TelegramWebDAV.UI
         private readonly TrayProgressOverlay _progressOverlay;
         private AppSettings _settings;
         private AuthSettingsForm? _settingsForm;
-        private string? _activeUploadFileName;
-        private int _activeUploadPercent;
 
         public TrayContext(
             ConfigManager configManager,
@@ -54,7 +52,7 @@ namespace TelegramWebDAV.UI
             _notifyIcon = new NotifyIcon
             {
                 Icon = SystemIcons.Application,
-                Text = "Telegram WebDAV & Network Drive",
+                Text = "TGramFS — Telegram Virtual Drive",
                 Visible = true
             };
             _notifyIcon.DoubleClick += (s, e) => OpenDriveInExplorer();
@@ -100,20 +98,12 @@ namespace TelegramWebDAV.UI
 
             _telegramService.OnUploadProgress += (fileName, current, total) =>
             {
-                _activeUploadFileName = fileName;
-                if (total > 0)
-                {
-                    _activeUploadPercent = (int)(current * 100 / total);
-                }
-
                 _progressOverlay.UpdateProgress(fileName, current, total, TransferDirection.Upload, _telegramService.PendingUploadsCount);
             };
 
             _telegramService.OnUploadCompleted += (fileName) =>
             {
                 AppLogger.Info("TrayContext", $"Событие OnUploadCompleted для '{fileName}' получено из TelegramService.");
-                _activeUploadFileName = null;
-                _activeUploadPercent = 0;
                 _progressOverlay.CompleteTransfer(fileName, TransferDirection.Upload);
             };
 
@@ -332,11 +322,11 @@ namespace TelegramWebDAV.UI
             {
                 string engineName = _virtualDriveManager.ActiveEngine == DriveEngine.WinFsp ? "WinFsp" : "WebDAV";
                 string letter = _virtualDriveManager.MountedLetter ?? _settings.Server.DriveLetter ?? "Z:";
-                _notifyIcon.ShowBalloonTip(2000, "Telegram Drive", $"Диск {letter} успешно переподключен [{engineName}]", ToolTipIcon.Info);
+                _notifyIcon.ShowBalloonTip(2000, "TGramFS", $"Диск {letter} успешно переподключен [{engineName}]", ToolTipIcon.Info);
             }
             else
             {
-                _notifyIcon.ShowBalloonTip(3000, "Telegram Drive", $"Ошибка подключения: {error}", ToolTipIcon.Warning);
+                _notifyIcon.ShowBalloonTip(3000, "TGramFS", $"Ошибка подключения: {error}", ToolTipIcon.Warning);
             }
         }
 
@@ -346,7 +336,7 @@ namespace TelegramWebDAV.UI
             {
                 if (_backupService != null && _backupService.HasUnsavedChanges && _telegramService.IsAuthorized)
                 {
-                    _notifyIcon.ShowBalloonTip(1500, "Telegram Drive", "Сохранение резервной копии базы данных перед выходом...", ToolTipIcon.Info);
+                    _notifyIcon.ShowBalloonTip(1500, "TGramFS", "Сохранение резервной копии базы данных перед выходом...", ToolTipIcon.Info);
                     bool success = await _backupService.HandleApplicationExitAsync();
                     if (success)
                     {

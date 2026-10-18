@@ -12,7 +12,7 @@ namespace TelegramWebDAV.Utils
     public static class AutoStartHelper
     {
         private const string RunKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
-        private const string AppName = "TelegramWebDAV";
+        private const string AppName = "TGramFS";
 
         /// <summary>
         /// Проверяет, зарегистрировано ли приложение в автозагрузке HKCU.
@@ -23,7 +23,7 @@ namespace TelegramWebDAV.Utils
             {
                 using var key = Registry.CurrentUser.OpenSubKey(RunKeyPath, writable: false);
                 if (key == null) return false;
-                var val = key.GetValue(AppName) as string;
+                var val = key.GetValue(AppName) as string ?? key.GetValue("TelegramWebDAV") as string;
                 return !string.IsNullOrEmpty(val);
             }
             catch (Exception ex)
@@ -48,9 +48,12 @@ namespace TelegramWebDAV.Utils
                     return false;
                 }
 
+                // Очищаем старую запись от предыдущих версий, если осталась
+                try { key.DeleteValue("TelegramWebDAV", false); } catch { }
+
                 if (enable)
                 {
-                    string exePath = Environment.ProcessPath ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "TelegramWebDAV.exe");
+                    string exePath = Environment.ProcessPath ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "TGramFS.exe");
                     string command = $"\"{exePath}\"";
                     key.SetValue(AppName, command, RegistryValueKind.String);
                     AppLogger.Info("AutoStartHelper", $"Автозапуск при входе в Windows активирован: {command}");
