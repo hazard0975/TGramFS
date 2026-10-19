@@ -23,7 +23,7 @@ namespace TelegramWebDAV.Utils
             {
                 using var key = Registry.CurrentUser.OpenSubKey(RunKeyPath, writable: false);
                 if (key == null) return false;
-                var val = key.GetValue(AppName) as string ?? key.GetValue("TelegramWebDAV") as string;
+                var val = key.GetValue(AppName) as string;
                 return !string.IsNullOrEmpty(val);
             }
             catch (Exception ex)
@@ -47,9 +47,6 @@ namespace TelegramWebDAV.Utils
                     AppLogger.Warn("AutoStartHelper", "Не удалось открыть ключ реестра HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run для записи.");
                     return false;
                 }
-
-                // Очищаем старую запись от предыдущих версий, если осталась
-                try { key.DeleteValue("TelegramWebDAV", false); } catch { }
 
                 if (enable)
                 {

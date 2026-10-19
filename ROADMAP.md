@@ -964,7 +964,7 @@
    - **Реализовано**:
      1. В `TelegramWebDAV.csproj` выходное имя сборки переведено на `<AssemblyName>TGramFS</AssemblyName>` (бинарный исполняемый файл `TGramFS.exe`).
      2. В `AppSettings.cs` имя тома по умолчанию обновлено до `TGramFS Drive`.
-     3. В `AutoStartHelper.cs` регистрация в реестре Windows переведена на имя `TGramFS` с авто-очисткой старого ключа `TelegramWebDAV`.
+     3. В `AutoStartHelper.cs` регистрация в реестре Windows переведена на имя `TGramFS`.
      4. В `ShellContextMenuHelper.cs` пункт меню Проводника обновлен на «Открыть корзину TGramFS».
      5. В `AuthSettingsForm.cs`, `TrayContext.cs`, `TrayProgressOverlay.cs` обновлены заголовки окон, тултипы и диалоги на `TGramFS`.
      6. В `README.md`, `ROADMAP.md` и веб-оболочке `index.html` синхронизировано официальное название.
