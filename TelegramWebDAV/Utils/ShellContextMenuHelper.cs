@@ -155,33 +155,27 @@ namespace TelegramWebDAV.Utils
                 using (var driveShellKey = Registry.CurrentUser.OpenSubKey(@"Software\Classes\Drive\shell", true))
                 {
                     driveShellKey?.DeleteSubKeyTree(TrashMenuKeyName, false);
-                    driveShellKey?.DeleteSubKeyTree("TelegramWebDAVTrash", false);
                 }
 
                 using (var driveBgShellKey = Registry.CurrentUser.OpenSubKey(@"Software\Classes\Drive\Background\shell", true))
                 {
                     driveBgShellKey?.DeleteSubKeyTree(TrashMenuKeyName, false);
-                    driveBgShellKey?.DeleteSubKeyTree("TelegramWebDAVTrash", false);
                 }
 
                 using (var bgShellKey = Registry.CurrentUser.OpenSubKey(@"Software\Classes\Directory\Background\shell", true))
                 {
                     bgShellKey?.DeleteSubKeyTree(TrashMenuKeyName, false);
-                    bgShellKey?.DeleteSubKeyTree("TelegramWebDAVTrash", false);
                 }
 
                 using (var dirShellKey = Registry.CurrentUser.OpenSubKey(@"Software\Classes\Directory\shell", true))
                 {
                     dirShellKey?.DeleteSubKeyTree(TrashMenuKeyName, false);
-                    dirShellKey?.DeleteSubKeyTree("TelegramWebDAVTrash", false);
                     dirShellKey?.DeleteSubKeyTree(BindChannelMenuKeyName, false);
-                    dirShellKey?.DeleteSubKeyTree("TelegramWebDAVBindChannel", false);
                 }
 
                 using (var fileShellKey = Registry.CurrentUser.OpenSubKey(@"Software\Classes\*\shell", true))
                 {
                     fileShellKey?.DeleteSubKeyTree(OpenInTgMenuKeyName, false);
-                    fileShellKey?.DeleteSubKeyTree("TelegramWebDAVOpenInTg", false);
                 }
 
                 AppLogger.Info("Shell", "Контекстное меню TGramFS и 'Открыть в Telegram' удалено из реестра.");

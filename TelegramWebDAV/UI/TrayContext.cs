@@ -361,6 +361,15 @@ namespace TelegramWebDAV.UI
 
         private void ExitApplication()
         {
+            try
+            {
+                ShellContextMenuHelper.UnregisterTrashContextMenu();
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Debug("TrayContext", $"Ошибка при удалении контекстного меню при выходе: {ex.Message}");
+            }
+
             _notifyIcon.Visible = false;
             _notifyIcon.Dispose();
             _progressOverlay.Dispose();
