@@ -155,9 +155,33 @@ namespace TelegramWebDAV.UI
             _txtVolumeName = new TextBox { Text = _settings.Server.DriveName ?? "TGramFS Drive", Width = 260, Font = UITheme.BaseFont };
             var rowVolumeName = UIFactory.CreateSettingRow("Имя тома:", _txtVolumeName, 140);
 
-            _cmbDriveLetter = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 80, Font = UITheme.BaseFont };
-            _cmbDriveLetter.Items.AddRange(new object[] { "Z:", "T:", "Y:", "X:", "W:", "AUTO" });
-            _cmbDriveLetter.SelectedItem = _settings.Server.DriveLetter ?? "Z:";
+            _cmbDriveLetter = new ComboBox 
+            { 
+                DropDownStyle = ComboBoxStyle.DropDownList, 
+                Width = 80, 
+                Font = UITheme.BaseFont,
+                MaxDropDownItems = 12
+            };
+            for (char c = 'Z'; c >= 'D'; c--)
+            {
+                _cmbDriveLetter.Items.Add($"{c}:");
+            }
+            _cmbDriveLetter.Items.Add("AUTO");
+
+            string currentConfigLetter = _settings.Server.DriveLetter?.Trim().ToUpper() ?? "Z:";
+            if (!currentConfigLetter.EndsWith(":") && currentConfigLetter != "AUTO")
+            {
+                currentConfigLetter += ":";
+            }
+            if (!_cmbDriveLetter.Items.Contains(currentConfigLetter))
+            {
+                _cmbDriveLetter.Items.Insert(0, currentConfigLetter);
+            }
+            _cmbDriveLetter.SelectedItem = currentConfigLetter;
+            if (_cmbDriveLetter.SelectedIndex == -1)
+            {
+                _cmbDriveLetter.SelectedItem = "Z:";
+            }
             var rowDriveLetter = UIFactory.CreateSettingRow("Буква диска:", _cmbDriveLetter, 140);
 
             _numCapacityGb = UIFactory.CreateNumericInput(10, 1048576, _settings.Server.VirtualDiskCapacityGb > 0 ? _settings.Server.VirtualDiskCapacityGb : 1024, 80);
@@ -1114,6 +1138,7 @@ namespace TelegramWebDAV.UI
         private void SaveAllSettings()
         {
             var oldEngine = _settings.Server.Engine;
+            var oldDriveLetter = _settings.Server.DriveLetter;
             _settings.Server.Engine = _cmbEngine.SelectedIndex == 0 ? DriveEngine.WinFsp : DriveEngine.WebDav;
             _settings.Server.WebDavEnabled = _chkWebDavEnabled.Checked;
             _settings.Server.Port = (int)_numPort.Value;
@@ -1216,9 +1241,12 @@ namespace TelegramWebDAV.UI
             SettingsSaved?.Invoke();
 
             string msg = "Все настройки успешно сохранены!";
-            if (oldEngine != _settings.Server.Engine)
+            bool engineChanged = oldEngine != _settings.Server.Engine;
+            bool letterChanged = !string.Equals(oldDriveLetter, _settings.Server.DriveLetter, StringComparison.OrdinalIgnoreCase);
+
+            if (engineChanged || letterChanged)
             {
-                msg += $"\n\nДрайвер диска изменен на {_settings.Server.Engine}. Выполните «Переподключить сетевой диск» в трее или перезапустите сервис для применения изменений.";
+                msg += $"\n\nПараметры диска обновлены (Буква: {_settings.Server.DriveLetter}, Драйвер: {_settings.Server.Engine}). Выполните «Переподключить сетевой диск» в трее или перезапустите сервис для применения изменений.";
             }
             MessageBox.Show(msg, "TGramFS", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
