@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Threading.Tasks;
@@ -162,17 +163,47 @@ namespace TelegramWebDAV.UI
                 Font = UITheme.BaseFont,
                 MaxDropDownItems = 12
             };
-            for (char c = 'Z'; c >= 'D'; c--)
-            {
-                _cmbDriveLetter.Items.Add($"{c}:");
-            }
-            _cmbDriveLetter.Items.Add("AUTO");
-
             string currentConfigLetter = _settings.Server.DriveLetter?.Trim().ToUpper() ?? "Z:";
             if (!currentConfigLetter.EndsWith(":") && currentConfigLetter != "AUTO")
             {
                 currentConfigLetter += ":";
             }
+
+            char currentConfigChar = (!string.IsNullOrEmpty(currentConfigLetter) && currentConfigLetter != "AUTO" && char.IsLetter(currentConfigLetter[0]))
+                ? char.ToUpperInvariant(currentConfigLetter[0])
+                : '\0';
+
+            char activeMountChar = (!string.IsNullOrEmpty(WinFspServer.ActiveMountPoint) && char.IsLetter(WinFspServer.ActiveMountPoint[0]))
+                ? char.ToUpperInvariant(WinFspServer.ActiveMountPoint[0])
+                : '\0';
+
+            var occupiedLetters = new HashSet<char>();
+            try
+            {
+                foreach (string drive in Environment.GetLogicalDrives())
+                {
+                    if (!string.IsNullOrEmpty(drive) && char.IsLetter(drive[0]))
+                    {
+                        occupiedLetters.Add(char.ToUpperInvariant(drive[0]));
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Warn("AuthSettingsForm", $"Не удалось получить список занятых дисков: {ex.Message}");
+            }
+
+            for (char c = 'Z'; c >= 'D'; c--)
+            {
+                // Добавляем букву, только если она свободна в системе,
+                // либо если это наш собственный активный виртуальный диск/текущая настройка
+                if (!occupiedLetters.Contains(c) || c == activeMountChar || c == currentConfigChar)
+                {
+                    _cmbDriveLetter.Items.Add($"{c}:");
+                }
+            }
+            _cmbDriveLetter.Items.Add("AUTO");
+
             if (!_cmbDriveLetter.Items.Contains(currentConfigLetter))
             {
                 _cmbDriveLetter.Items.Insert(0, currentConfigLetter);
@@ -180,7 +211,7 @@ namespace TelegramWebDAV.UI
             _cmbDriveLetter.SelectedItem = currentConfigLetter;
             if (_cmbDriveLetter.SelectedIndex == -1)
             {
-                _cmbDriveLetter.SelectedItem = "Z:";
+                _cmbDriveLetter.SelectedItem = _cmbDriveLetter.Items.Count > 0 ? _cmbDriveLetter.Items[0] : "AUTO";
             }
             var rowDriveLetter = UIFactory.CreateSettingRow("Буква диска:", _cmbDriveLetter, 140);
 
@@ -1137,13 +1168,46 @@ namespace TelegramWebDAV.UI
 
         private void SaveAllSettings()
         {
+            string chosenLetter = _cmbDriveLetter.SelectedItem?.ToString() ?? "Z:";
+            if (chosenLetter != "AUTO" && chosenLetter.Length >= 2 && char.IsLetter(chosenLetter[0]))
+            {
+                char chosenChar = char.ToUpperInvariant(chosenLetter[0]);
+                char activeChar = (!string.IsNullOrEmpty(WinFspServer.ActiveMountPoint) && char.IsLetter(WinFspServer.ActiveMountPoint[0]))
+                    ? char.ToUpperInvariant(WinFspServer.ActiveMountPoint[0])
+                    : '\0';
+
+                bool isConflict = false;
+                try
+                {
+                    foreach (string d in Environment.GetLogicalDrives())
+                    {
+                        if (!string.IsNullOrEmpty(d) && char.ToUpperInvariant(d[0]) == chosenChar && chosenChar != activeChar)
+                        {
+                            isConflict = true;
+                            break;
+                        }
+                    }
+                }
+                catch { }
+
+                if (isConflict)
+                {
+                    MessageBox.Show(
+                        $"Буква {chosenLetter} уже занята другим диском или сетевым подключением в Windows.\nПожалуйста, выберите свободную букву диска или режим AUTO.",
+                        "Конфликт буквы диска",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                    return;
+                }
+            }
+
             var oldEngine = _settings.Server.Engine;
             var oldDriveLetter = _settings.Server.DriveLetter;
             _settings.Server.Engine = _cmbEngine.SelectedIndex == 0 ? DriveEngine.WinFsp : DriveEngine.WebDav;
             _settings.Server.WebDavEnabled = _chkWebDavEnabled.Checked;
             _settings.Server.Port = (int)_numPort.Value;
             _settings.Server.MountDrive = _chkMountDrive.Checked;
-            _settings.Server.DriveLetter = _cmbDriveLetter.SelectedItem?.ToString() ?? "Z:";
+            _settings.Server.DriveLetter = chosenLetter;
             _settings.Server.DriveName = _txtVolumeName.Text.Trim();
             _settings.Server.VirtualDiskCapacityGb = (long)_numCapacityGb.Value;
             _settings.Server.AutoExpandDiskCapacity = _chkAutoExpand.Checked;
