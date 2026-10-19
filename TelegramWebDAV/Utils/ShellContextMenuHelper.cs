@@ -12,9 +12,9 @@ namespace TelegramWebDAV.Utils
     /// </summary>
     public static class ShellContextMenuHelper
     {
-        private const string TrashMenuKeyName = "TelegramWebDAVTrash";
-        private const string OpenInTgMenuKeyName = "TelegramWebDAVOpenInTg";
-        private const string BindChannelMenuKeyName = "TelegramWebDAVBindChannel";
+        private const string TrashMenuKeyName = "TGramFSTrash";
+        private const string OpenInTgMenuKeyName = "TGramFSOpenInTg";
+        private const string BindChannelMenuKeyName = "TGramFSBindChannel";
         
         private const string DriveKeyPath = @"Software\Classes\Drive\shell\" + TrashMenuKeyName;
         private const string DriveBackgroundKeyPath = @"Software\Classes\Drive\Background\shell\" + TrashMenuKeyName;
@@ -135,7 +135,7 @@ namespace TelegramWebDAV.Utils
                     }
                 }
 
-                AppLogger.Info("Shell", $"Контекстное меню WebDAV и 'Открыть в Telegram' успешно зарегистрировано в реестре для {cleanDrive}");
+                AppLogger.Info("Shell", $"Контекстное меню TGramFS и 'Открыть в Telegram' успешно зарегистрировано в реестре для {cleanDrive}");
                 return true;
             }
             catch (Exception ex)
@@ -155,30 +155,36 @@ namespace TelegramWebDAV.Utils
                 using (var driveShellKey = Registry.CurrentUser.OpenSubKey(@"Software\Classes\Drive\shell", true))
                 {
                     driveShellKey?.DeleteSubKeyTree(TrashMenuKeyName, false);
+                    driveShellKey?.DeleteSubKeyTree("TelegramWebDAVTrash", false);
                 }
 
                 using (var driveBgShellKey = Registry.CurrentUser.OpenSubKey(@"Software\Classes\Drive\Background\shell", true))
                 {
                     driveBgShellKey?.DeleteSubKeyTree(TrashMenuKeyName, false);
+                    driveBgShellKey?.DeleteSubKeyTree("TelegramWebDAVTrash", false);
                 }
 
                 using (var bgShellKey = Registry.CurrentUser.OpenSubKey(@"Software\Classes\Directory\Background\shell", true))
                 {
                     bgShellKey?.DeleteSubKeyTree(TrashMenuKeyName, false);
+                    bgShellKey?.DeleteSubKeyTree("TelegramWebDAVTrash", false);
                 }
 
                 using (var dirShellKey = Registry.CurrentUser.OpenSubKey(@"Software\Classes\Directory\shell", true))
                 {
                     dirShellKey?.DeleteSubKeyTree(TrashMenuKeyName, false);
+                    dirShellKey?.DeleteSubKeyTree("TelegramWebDAVTrash", false);
                     dirShellKey?.DeleteSubKeyTree(BindChannelMenuKeyName, false);
+                    dirShellKey?.DeleteSubKeyTree("TelegramWebDAVBindChannel", false);
                 }
 
                 using (var fileShellKey = Registry.CurrentUser.OpenSubKey(@"Software\Classes\*\shell", true))
                 {
                     fileShellKey?.DeleteSubKeyTree(OpenInTgMenuKeyName, false);
+                    fileShellKey?.DeleteSubKeyTree("TelegramWebDAVOpenInTg", false);
                 }
 
-                AppLogger.Info("Shell", "Контекстное меню WebDAV и 'Открыть в Telegram' удалено из реестра.");
+                AppLogger.Info("Shell", "Контекстное меню TGramFS и 'Открыть в Telegram' удалено из реестра.");
                 return true;
             }
             catch (Exception ex)

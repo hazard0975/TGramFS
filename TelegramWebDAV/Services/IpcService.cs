@@ -27,7 +27,7 @@ namespace TelegramWebDAV.Services
     /// </summary>
     public class IpcServer : IDisposable
     {
-        public const string PipeName = "TelegramWebDAV_IPC_Pipe";
+        public const string PipeName = "TGramFS_IPC_Pipe";
 
         private readonly Func<IpcRequest, Task<IpcResponse>> _handler;
         private CancellationTokenSource? _cts;

@@ -63,10 +63,10 @@ namespace TelegramWebDAV
             };
 
             AppLogger.Info("Program", "=================================================");
-            AppLogger.Info("Program", " Telegram WebDAV & Network Drive Service v2.0");
+            AppLogger.Info("Program", " TGramFS — Telegram Virtual Drive & Cloud Filesystem v2.0");
             AppLogger.Info("Program", "=================================================");
 
-            const string mutexName = @"Global\TelegramWebDAV_SingleInstance_Mutex";
+            const string mutexName = @"Global\TGramFS_SingleInstance_Mutex";
             bool createdNew = false;
             try
             {

@@ -108,7 +108,7 @@ namespace TelegramWebDAV.Server
                 // Добавляем обязательные заголовки для WebDAV
                 response.AppendHeader("DAV", "1, 2"); // Теперь мы полностью поддерживаем локи и свойства на словах и на деле!
                 response.AppendHeader("Allow", "OPTIONS, PROPFIND, GET, PUT, MKCOL, DELETE, MOVE, COPY, HEAD, LOCK, UNLOCK, PROPPATCH");
-                response.AppendHeader("Server", "TelegramWebDAV/1.0");
+                response.AppendHeader("Server", "TGramFS/1.0");
 
                 switch (request.HttpMethod)
                 {

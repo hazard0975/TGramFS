@@ -1713,7 +1713,7 @@ namespace TelegramWebDAV.Services
                     else
                     {
                         // Буферизация во временный файл: для потоков неизвестного размера, а также для картинок галереи (чтобы создать превью и отправить оригинал)
-                        string subDir = Path.Combine(Path.GetTempPath(), "TelegramWebDAV_Buffer", Guid.NewGuid().ToString("N"));
+                        string subDir = Path.Combine(Path.GetTempPath(), "TGramFS_Buffer", Guid.NewGuid().ToString("N"));
                         Directory.CreateDirectory(subDir);
                         tempFilePath = Path.Combine(subDir, effectiveFileName);
                         
@@ -2911,7 +2911,7 @@ namespace TelegramWebDAV.Services
             // 1. Если дисковый кэш включен и файл уже закэширован на диске полностью
             if (enableDiskCache)
             {
-                string cacheDir = Path.Combine(Path.GetTempPath(), "TelegramWebDAV_ReadCache");
+                string cacheDir = Path.Combine(Path.GetTempPath(), "TGramFS_ReadCache");
                 Directory.CreateDirectory(cacheDir);
                 string cacheFilePath = Path.Combine(cacheDir, $"{messageId}.bin");
 
@@ -3001,7 +3001,7 @@ namespace TelegramWebDAV.Services
             // Если дисковый кэш включен в настройках: скачиваем файл в дисковый кэш %TEMP%
             if (enableDiskCache && offset == 0 && !isMetadataProbe && actualTotalSize > 262144)
             {
-                string cacheDir = Path.Combine(Path.GetTempPath(), "TelegramWebDAV_ReadCache");
+                string cacheDir = Path.Combine(Path.GetTempPath(), "TGramFS_ReadCache");
                 Directory.CreateDirectory(cacheDir);
                 string cacheFilePath = Path.Combine(cacheDir, $"{messageId}.bin");
 
