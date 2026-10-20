@@ -124,6 +124,29 @@ namespace TelegramWebDAV.UI
             this.StartPosition = FormStartPosition.CenterScreen;
             this.Font = UITheme.BaseFont;
 
+            try
+            {
+                string? exePath = Environment.ProcessPath ?? Application.ExecutablePath;
+                if (!string.IsNullOrEmpty(exePath) && File.Exists(exePath))
+                {
+                    this.Icon = Icon.ExtractAssociatedIcon(exePath);
+                }
+            }
+            catch { }
+
+            if (this.Icon == null)
+            {
+                try
+                {
+                    string localIcon = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "icon.ico");
+                    if (File.Exists(localIcon))
+                    {
+                        this.Icon = new Icon(localIcon);
+                    }
+                }
+                catch { }
+            }
+
             // Нижняя фиксированная панель действий формы со стандартными кнопками
             var btnSaveAll = UIFactory.CreateButton("Сохранить", (s, e) => SaveAllSettings());
             var btnClose = UIFactory.CreateButton("Закрыть", (s, e) => this.Close());
