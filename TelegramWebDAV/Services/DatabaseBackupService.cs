@@ -78,6 +78,12 @@ namespace TelegramWebDAV.Services
 
         private void HandleTelegramConnectionRestored()
         {
+            var settings = _configManager.CurrentSettings?.Database?.Backup;
+            if (settings == null || !settings.CheckForRemoteOnStartup)
+            {
+                return;
+            }
+
             // Cooldown защита от повторного спама запросами (минимум 30 сек между проверками по реконнекту)
             if ((DateTime.UtcNow - _lastConnectionSyncAttemptUtc).TotalSeconds < 30)
             {
@@ -116,7 +122,7 @@ namespace TelegramWebDAV.Services
                 // значит система спала или находилась в гибернации
                 if (elapsed.TotalSeconds >= 30)
                 {
-                    AppLogger.Info("DatabaseBackup", $"[Синхронизация] Зафиксирован выход Windows из сна/гибернации (временной скачок: {elapsed.TotalSeconds:F0} сек). Ожидание подключения к Telegram...");
+                    AppLogger.Info("TelegramService", $"Зафиксирован выход Windows из сна/гибернации (временной скачок: {elapsed.TotalSeconds:F0} сек). Проверка связи с Telegram...");
                     try
                     {
                         // Провоцируем реактор Telegram на выявление разорванного сокета и переподключение
