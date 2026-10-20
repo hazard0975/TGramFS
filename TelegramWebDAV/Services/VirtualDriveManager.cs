@@ -18,6 +18,10 @@ namespace TelegramWebDAV.Services
 
         public bool IsMounted => !string.IsNullOrEmpty(_activeMountedLetter);
         public string? MountedLetter => _activeMountedLetter;
+        public string? RequestedLetter { get; private set; }
+        public bool IsFallbackActive => !string.IsNullOrEmpty(RequestedLetter) &&
+                                        !string.IsNullOrEmpty(_activeMountedLetter) &&
+                                        !string.Equals(RequestedLetter, _activeMountedLetter, StringComparison.OrdinalIgnoreCase);
         public DriveEngine ActiveEngine => _activeEngine;
 
         public VirtualDriveManager(ConfigManager configManager, WinFspServer winFspServer)
@@ -28,18 +32,60 @@ namespace TelegramWebDAV.Services
 
         /// <summary>
         /// Монтирует виртуальный диск согласно текущей конфигурации приложения.
+        /// Если запрошенная буква занята внешним устройством (флешкой/диском), автоматически
+        /// выбирает первую свободную букву, предотвращая сбой запуска диска.
         /// </summary>
         public bool Mount(string? targetDriveLetter, out string errorMessage)
         {
             errorMessage = string.Empty;
             var settings = _configManager.Load();
 
-            string letter = string.IsNullOrWhiteSpace(targetDriveLetter) || targetDriveLetter == "AUTO"
-                ? (settings.Server.DriveLetter == "AUTO" ? NetworkDriveMounter.GetFirstAvailableDriveLetter() : settings.Server.DriveLetter ?? "Z:")
-                : targetDriveLetter;
+            string rawTarget = string.IsNullOrWhiteSpace(targetDriveLetter) ? settings.Server.DriveLetter : targetDriveLetter;
+            string desiredLetter = string.IsNullOrWhiteSpace(rawTarget) || rawTarget == "AUTO"
+                ? NetworkDriveMounter.GetFirstAvailableDriveLetter()
+                : rawTarget.Trim().ToUpper();
+
+            if (!desiredLetter.EndsWith(":") && desiredLetter != "AUTO")
+            {
+                desiredLetter += ":";
+            }
+
+            RequestedLetter = desiredLetter;
 
             // Сначала размонтируем старое подключение, если оно было
             Unmount();
+
+            // Проверяем, не занята ли желаемая буква внешним физическим устройством / диском в Windows
+            string letter = desiredLetter;
+            if (desiredLetter != "AUTO" && desiredLetter.Length >= 2 && char.IsLetter(desiredLetter[0]))
+            {
+                char desiredChar = char.ToUpperInvariant(desiredLetter[0]);
+                bool isOccupiedByExternal = false;
+                try
+                {
+                    foreach (string d in Environment.GetLogicalDrives())
+                    {
+                        if (!string.IsNullOrEmpty(d) && char.ToUpperInvariant(d[0]) == desiredChar)
+                        {
+                            isOccupiedByExternal = true;
+                            break;
+                        }
+                    }
+                }
+                catch { }
+
+                if (isOccupiedByExternal)
+                {
+                    string fallbackLetter = NetworkDriveMounter.GetFirstAvailableDriveLetter();
+                    AppLogger.Warn("VirtualDriveManager", 
+                        $"Запрошенная буква {desiredLetter} занята другим устройством в Windows. Временный переход на свободную букву {fallbackLetter}.");
+                    letter = fallbackLetter;
+                }
+            }
+            else if (letter == "AUTO")
+            {
+                letter = NetworkDriveMounter.GetFirstAvailableDriveLetter();
+            }
 
             if (settings.Server.Engine == DriveEngine.WinFsp)
             {

@@ -57,8 +57,9 @@ namespace TelegramWebDAV.UI
             };
             _notifyIcon.DoubleClick += (s, e) => OpenDriveInExplorer();
 
-            BuildContextMenu();
             CheckDriveMounting();
+            BuildContextMenu();
+            UpdateTrayTooltip();
 
             if (_backupService != null)
             {
@@ -134,7 +135,7 @@ namespace TelegramWebDAV.UI
             var menu = new ContextMenuStrip();
 
             // Статус подключения
-            string driveLetter = _settings.Server.DriveLetter ?? "Z:";
+            string driveLetter = _virtualDriveManager.MountedLetter ?? _settings.Server.DriveLetter ?? "Z:";
             var itemStatus = new ToolStripLabel
             {
                 Text = _telegramService.IsAuthorized ? "Статус: Авторизовано ✔" : "Статус: Не авторизовано ❌"
@@ -241,6 +242,7 @@ namespace TelegramWebDAV.UI
                 _settings = _configManager.Load();
                 _progressOverlay.AutoShowOverlay = _settings.Server.AutoShowProgressOverlay;
                 BuildContextMenu();
+                UpdateTrayTooltip();
             };
             _settingsForm.FormClosed += (s, e) =>
             {
@@ -253,7 +255,7 @@ namespace TelegramWebDAV.UI
 
         private void OpenDriveInExplorer()
         {
-            string drive = _settings.Server.DriveLetter ?? "Z:";
+            string drive = _virtualDriveManager.MountedLetter ?? _settings.Server.DriveLetter ?? "Z:";
             if (drive == "AUTO") drive = "Z:";
             if (!drive.EndsWith("\\")) drive += "\\";
 
@@ -281,7 +283,7 @@ namespace TelegramWebDAV.UI
 
         private void OpenTrashInExplorer()
         {
-            string drive = _settings.Server.DriveLetter ?? "Z:";
+            string drive = _virtualDriveManager.MountedLetter ?? _settings.Server.DriveLetter ?? "Z:";
             if (drive == "AUTO") drive = "Z:";
             if (!drive.EndsWith("\\")) drive += "\\";
 
@@ -312,21 +314,74 @@ namespace TelegramWebDAV.UI
         {
             if (_settings.Server.MountDrive)
             {
-                _virtualDriveManager.Mount(_settings.Server.DriveLetter, out _);
+                bool success = _virtualDriveManager.Mount(_settings.Server.DriveLetter, out string error);
+                NotifyMountResult(success, error, isManual: false);
             }
         }
 
         private void RemountDrive()
         {
-            if (_virtualDriveManager.Remount(out string error))
+            bool success = _virtualDriveManager.Remount(out string error);
+            NotifyMountResult(success, error, isManual: true);
+        }
+
+        private void NotifyMountResult(bool success, string error, bool isManual)
+        {
+            BuildContextMenu();
+            UpdateTrayTooltip();
+
+            if (success)
             {
                 string engineName = _virtualDriveManager.ActiveEngine == DriveEngine.WinFsp ? "WinFsp" : "WebDAV";
                 string letter = _virtualDriveManager.MountedLetter ?? _settings.Server.DriveLetter ?? "Z:";
-                _notifyIcon.ShowBalloonTip(2000, "TGramFS", $"Диск {letter} успешно переподключен [{engineName}]", ToolTipIcon.Info);
+
+                if (_virtualDriveManager.IsFallbackActive)
+                {
+                    _notifyIcon.ShowBalloonTip(5000, "TGramFS — Временная буква диска",
+                        $"Буква {_virtualDriveManager.RequestedLetter} занята другим устройством.\nДиск временно смонтирован как {letter} [{engineName}].",
+                        ToolTipIcon.Warning);
+                }
+                else if (isManual)
+                {
+                    _notifyIcon.ShowBalloonTip(2500, "TGramFS", $"Диск {letter} успешно переподключен [{engineName}]", ToolTipIcon.Info);
+                }
             }
             else
             {
-                _notifyIcon.ShowBalloonTip(3000, "TGramFS", $"Ошибка подключения: {error}", ToolTipIcon.Warning);
+                _notifyIcon.ShowBalloonTip(4000, "TGramFS — Ошибка подключения",
+                    $"Не удалось смонтировать виртуальный диск: {error}",
+                    ToolTipIcon.Error);
+            }
+        }
+
+        private void UpdateTrayTooltip()
+        {
+            if (_virtualDriveManager.IsMounted)
+            {
+                string engineName = _virtualDriveManager.ActiveEngine == DriveEngine.WinFsp ? "WinFsp" : "WebDAV";
+                string letter = _virtualDriveManager.MountedLetter ?? _settings.Server.DriveLetter ?? "Z:";
+                SetTrayText($"TGramFS — Telegram Virtual Drive\nДиск {letter} подключен в режиме {engineName}");
+            }
+            else
+            {
+                SetTrayText("TGramFS — Telegram Virtual Drive\nДиск не подключен");
+            }
+        }
+
+        private void SetTrayText(string text)
+        {
+            try
+            {
+                // Ограничение WinForms/Shell NOTIFYICONDATA: до 127 символов
+                if (text.Length >= 128)
+                {
+                    text = text.Substring(0, 127);
+                }
+                _notifyIcon.Text = text;
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Warn("TrayContext", $"Не удалось обновить подсказку трея: {ex.Message}");
             }
         }
 
