@@ -18,6 +18,8 @@ namespace TelegramWebDAV.UI
         private readonly ConfigManager _configManager;
         private readonly TelegramService _telegramService;
         private readonly Database.NodeRepository _repository;
+        private readonly DatabaseBackupService? _backupService;
+        private readonly VirtualDriveManager? _virtualDriveManager;
         private AppSettings _settings;
 
         public event Action? SettingsSaved;
@@ -38,7 +40,6 @@ namespace TelegramWebDAV.UI
         private CheckBox _chkCheckOnStartup = null!;
         private NumericUpDown _numRemoteCheckInterval = null!;
         private Label _lblBackupStatus = null!;
-        private readonly DatabaseBackupService? _backupService;
 
         // General Tab
         private CheckBox _chkWebDavEnabled = null!;
@@ -96,12 +97,18 @@ namespace TelegramWebDAV.UI
         private NumericUpDown _numMaxLogFiles = null!;
         private Label _lblLogStats = null!;
 
-        public AuthSettingsForm(ConfigManager configManager, TelegramService telegramService, Database.NodeRepository repository, DatabaseBackupService? backupService = null)
+        public AuthSettingsForm(
+            ConfigManager configManager, 
+            TelegramService telegramService, 
+            Database.NodeRepository repository, 
+            DatabaseBackupService? backupService = null,
+            VirtualDriveManager? virtualDriveManager = null)
         {
             _configManager = configManager;
             _telegramService = telegramService;
             _repository = repository;
             _backupService = backupService;
+            _virtualDriveManager = virtualDriveManager;
             _settings = _configManager.Load();
 
             InitializeComponents();
@@ -1203,6 +1210,7 @@ namespace TelegramWebDAV.UI
 
             var oldEngine = _settings.Server.Engine;
             var oldDriveLetter = _settings.Server.DriveLetter;
+            var oldMountDrive = _settings.Server.MountDrive;
             _settings.Server.Engine = _cmbEngine.SelectedIndex == 0 ? DriveEngine.WinFsp : DriveEngine.WebDav;
             _settings.Server.WebDavEnabled = _chkWebDavEnabled.Checked;
             _settings.Server.Port = (int)_numPort.Value;
@@ -1302,16 +1310,34 @@ namespace TelegramWebDAV.UI
             _configManager.Save(_settings);
             _backupService?.StartCloudSyncTimer();
             _telegramService.UpdateSettings(_settings);
-            SettingsSaved?.Invoke();
-
             string msg = "Все настройки успешно сохранены!";
             bool engineChanged = oldEngine != _settings.Server.Engine;
             bool letterChanged = !string.Equals(oldDriveLetter, _settings.Server.DriveLetter, StringComparison.OrdinalIgnoreCase);
+            bool mountChanged = oldMountDrive != _settings.Server.MountDrive;
 
-            if (engineChanged || letterChanged)
+            if (_virtualDriveManager != null)
             {
-                msg += $"\n\nПараметры диска обновлены (Буква: {_settings.Server.DriveLetter}, Драйвер: {_settings.Server.Engine}). Выполните «Переподключить сетевой диск» в трее или перезапустите сервис для применения изменений.";
+                if (!_settings.Server.MountDrive && oldMountDrive)
+                {
+                    _virtualDriveManager.Unmount();
+                    msg += "\n\nВиртуальный диск отключен.";
+                }
+                else if (_settings.Server.MountDrive && (engineChanged || letterChanged || mountChanged))
+                {
+                    if (_virtualDriveManager.Remount(out string remountError))
+                    {
+                        string activeEngine = _virtualDriveManager.ActiveEngine == DriveEngine.WinFsp ? "WinFsp" : "WebDAV";
+                        string activeLetter = _virtualDriveManager.MountedLetter ?? _settings.Server.DriveLetter ?? "Z:";
+                        msg += $"\n\nДиск успешно переподключен: {activeLetter} [{activeEngine}].";
+                    }
+                    else
+                    {
+                        msg += $"\n\nНе удалось автоматически переподключить диск: {remountError}\nВы можете повторить попытку через меню трея.";
+                    }
+                }
             }
+
+            SettingsSaved?.Invoke();
             MessageBox.Show(msg, "TGramFS", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
     }
