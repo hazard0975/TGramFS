@@ -1546,9 +1546,6 @@ _telegramService.UpdateSettings(_settings);
 4. **Очистка `settings.json` и обновление UI**:
    - Поле `BackupChannelId` удалено из конфигурации `settings.json` (`AppSettings.cs`).
    - В интерфейсе настроек `AuthSettingsForm.cs` поле ID канала сделано информационным (Read-Only) с пояснением, что канал привязан непосредственно в `base.db`.
-5. **Валидация**:
-   - Сборка C# проекта `dotnet build /app/applet/TelegramWebDAV/TelegramWebDAV.csproj -p:EnableWindowsTargeting=true` выполнена успешно (`0 Warning(s), 0 Error(s)`).
-   - Сборка TypeScript/React `npm run build` выполнена успешно.
 
 ---
 
@@ -1565,8 +1562,6 @@ _telegramService.UpdateSettings(_settings);
    - Добавлен компактный текстовый статус:
      - При наличии канала в `base.db`: `✓ Канал подключен` (зеленый шрифт `DarkGreen`).
      - Если канал еще не создан: `• Канал будет создан автоматически при первом бэкапе` (приглушенный шрифт `UITheme.TextMuted`).
-3. **Валидация**:
-   - Сборка C# проекта `dotnet build /app/applet/TelegramWebDAV/TelegramWebDAV.csproj -p:EnableWindowsTargeting=true` прошла без ошибок и предупреждений (`0 Warning(s), 0 Error(s)`).
 
 ---
 
@@ -1589,9 +1584,6 @@ _telegramService.UpdateSettings(_settings);
    - Автоматическая замена пустого значения или пробелов на дефолтное название `Telegram Drive Backups` во избежание ошибки `CHAT_TITLE_EMPTY`.
 3. **Синхронизация при выполнении бэкапа (`TelegramService.GetBackupStoragePeerAsync`)**:
    - Перед возвращением peer-дескриптора бэкап-канала проверяется, совпадает ли текущий заголовок в базе данных с желаемым (`specificTitle`). Если они отличаются (например, настройки были изменены офлайн или при старте на другом ПК), заголовок обновляется в Telegram и локальной базе данных.
-4. **Валидация**:
-   - Сборка C# проекта `dotnet build /app/applet/TelegramWebDAV/TelegramWebDAV.csproj -p:EnableWindowsTargeting=true` выполнена успешно (`0 Warning(s), 0 Error(s)`).
-   - Сборка TypeScript/React `npm run build` выполнена успешно.
 
 ---
 
@@ -1617,8 +1609,6 @@ _telegramService.UpdateSettings(_settings);
 2. **Асинхронный метод `HandleApplicationExitAsync` в `DatabaseBackupService.cs`**:
    - Добавлен метод `public async Task HandleApplicationExitAsync()` с использованием `ConfigureAwait(false)`.
    - Для синхронного вызова оставлен безопасный метод `HandleApplicationExit()`, использующий `Task.Run` с таймаутом в пуле потоков без блокировки UI-контекста.
-3. **Валидация**:
-   - Сборка C# проекта `dotnet build /app/applet/TelegramWebDAV/TelegramWebDAV.csproj -p:EnableWindowsTargeting=true` выполнена успешно (`0 Warning(s), 0 Error(s)`).
 
 ---
 
@@ -1745,9 +1735,7 @@ _telegramService.UpdateSettings(_settings);
    - В `CheckAndSyncFromTelegramAsync` добавлено детальное логирование: причина вызова (при старте/пробуждении или по фоновому таймеру), текущие значения `LastSyncedBackupMessageId` и облачного `MessageId`, сообщение о совпадении имени устройства или о том, что база уже актуальна.
 2. `TelegramWebDAV/Services/TelegramService.cs`:
    - В `GetLatestBackupDocumentAsync` добавлено логирование отправки запроса в Telegram, получения сообщений из канала (с указанием ID канала и количества сообщений), параметров найденного файла бэкапа (`MessageId`, имя файла, дата, размер в КБ) или явная фиксация отсутствия подходящих файлов.
-3. **Валидация**:
-   - Выполнена сборка C# проекта `dotnet build /app/applet/TelegramWebDAV/TelegramWebDAV.csproj -p:EnableWindowsTargeting=true`: `0 Warning(s), 0 Error(s)`.
-   - *Статус:* Пересмотрено в пользу Варианта А (решение 44) — проверка при старте перенесена непосредственно в точку входа перед монтированием диска, без использования задержек таймера.
+3. - *Статус:* Пересмотрено в пользу Варианта А (решение 44) — проверка при старте перенесена непосредственно в точку входа перед монтированием диска, без использования задержек таймера.
 
 ---
 
@@ -2299,5 +2287,4 @@ _telegramService.UpdateSettings(_settings);
 2. **Копирование иконки в билд:** В `TelegramWebDAV.csproj` файл `icon.ico` включен в `<None Update="icon.ico"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>`, обеспечивая доступность как в ресурсах `.exe`, так и в рабочей директории.
 3. **Загрузка иконки в системный трей:** В `TrayContext.cs` реализовано автоматическое извлечение ассоциированной иконки приложения через `Icon.ExtractAssociatedIcon(Environment.ProcessPath ?? Application.ExecutablePath)` с безопасным откатом на `Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "icon.ico")` и лишь затем на `SystemIcons.Application`.
 4. **Загрузка иконки формы настроек:** В `AuthSettingsForm.InitializeComponents()` свойству `this.Icon` явно присваивается извлеченная иконка приложения, гарантируя отображение правильного логотипа в заголовке окна и на панели задач Windows.
-5. Проведена компиляция и проверка проекта: `dotnet build /app/applet/TelegramWebDAV/TelegramWebDAV.csproj -p:EnableWindowsTargeting=true` (`0 Warning(s), 0 Error(s)`).
 
