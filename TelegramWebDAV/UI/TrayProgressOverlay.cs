@@ -689,7 +689,8 @@ namespace TelegramWebDAV.UI
                     string currStr = FormatBytes(_currentBytes);
                     string totalStr = FormatBytes(_totalBytes);
                     string speedStr = FormatDualSpeed(_bytesPerSecond);
-                    stats = $"{currStr} из {totalStr} ({percent}%) • {speedStr}";
+                    string etaStr = FormatEta(_bytesPerSecond, _totalBytes - _currentBytes);
+                    stats = $"{currStr} из {totalStr} ({percent}%) • {speedStr} • {etaStr}";
                 }
                 else if (_isTransferring)
                 {
@@ -703,6 +704,21 @@ namespace TelegramWebDAV.UI
 
                 g.DrawString(stats, statsFont, statsBrush, new PointF(12, 68));
             }
+        }
+
+        private static string FormatEta(double bytesPerSecond, long remainingBytes)
+        {
+            if (bytesPerSecond < 1024 || remainingBytes <= 0) return string.Empty;
+
+            double totalSeconds = remainingBytes / bytesPerSecond;
+            if (totalSeconds < 0 || double.IsNaN(totalSeconds) || double.IsInfinity(totalSeconds)) return string.Empty;
+
+            long sec = (long)Math.Round(totalSeconds);
+            long hours = sec / 3600;
+            long minutes = (sec % 3600) / 60;
+            long seconds = sec % 60;
+
+            return $"~{hours:D2}:{minutes:D2}:{seconds:D2}";
         }
 
         private static string FormatDualSpeed(double bytesPerSecond)
