@@ -1438,8 +1438,6 @@ _telegramService.UpdateSettings(_settings);
    - Для сторонних процессов (плееры, другие приложения) или копирования с диска `Y:\` на физический диск `C:\` штатное скачивание из Telegram полностью сохранено без изменений.
 3. **Исправление распознавания заготовок в `NodeRepository`**:
    - В `CreateOrUpdateFile` условие обновления заготовки изменено на `if (existingNode.TgMessageId == null && existingNode.InlineData == null)`. Любой узел без содержимого обновляется напрямую без ложного версионирования и без засорения корзины.
-4. **Валидация**:
-   - Проект успешно собран через `dotnet build` (`0 Warning(s), 0 Error(s)`).
 
 ---
 
@@ -1471,8 +1469,6 @@ _telegramService.UpdateSettings(_settings);
      `ID: 236`
      `#latest`
    - Имя файла сохраняет оригинальную версию `_v1` без ложных инкрементов.
-4. **Валидация**:
-   - Сборка C# проекта `dotnet build` и компиляция апплета выполнены успешно (`0 Warning(s), 0 Error(s)`).
 
 ---
 
@@ -1492,8 +1488,6 @@ _telegramService.UpdateSettings(_settings);
    - В методах `EnqueuePermanentDeletion` (`WinFspServer.cs`, `WebDavMiddleware.cs`) в очередь записывается пара `(tg_message_id, channel_id)`.
 2. **Группировка и удаление по каналам в `DeletionQueueWorker`**:
    - В `TelegramService.cs` воркер извлекает пары `(MessageId, ChannelId)`, группирует их по `ChannelId` и отправляет запросы на удаление `Channels_DeleteMessages` точно в тот канал, в котором находились сообщения.
-3. **Валидация**:
-   - Проект успешно собран через `dotnet build` (`0 Warning(s), 0 Error(s)`).
 
 ---
 
@@ -1518,8 +1512,6 @@ _telegramService.UpdateSettings(_settings);
    - Автоматический бэкап при штатном закрытии процесса через системный трей (`HandleApplicationExit`).
    - Ручной пункт в меню трея Windows: «Отправить бэкап базы в Telegram».
    - Новая вкладка «Бэкап базы» в окне настроек `AuthSettingsForm.cs`.
-4. **Валидация:**
-   - Проект успешно скомпилирован через `dotnet build` (`0 Warning(s), 0 Error(s)`).
 
 ---
 
@@ -1620,7 +1612,6 @@ _telegramService.UpdateSettings(_settings);
 ### Реализованное решение:
 1. В `TrayContext.cs` обработчик события двойного клика `_notifyIcon.DoubleClick` изменен с вызова `ShowSettingsDialog()` на вызов `OpenDriveInExplorer()`.
 2. Окно настроек по-прежнему доступно через контекстное меню по первичному/правому клику.
-3. Проведена успешная компиляция и валидация C# проекта `dotnet build` (`0 Warning(s), 0 Error(s)`).
 
 ---
 
@@ -1651,8 +1642,6 @@ _telegramService.UpdateSettings(_settings);
    - Добавлена кнопка «📥 Восстановить базу из Telegram».
    - Выводится подробное диалоговое окно подтверждения с указанием имени файла, даты, размера снимка и предупреждения.
    - Индикация статуса выполнения непосредственно на форме.
-5. **Валидация**:
-   - Проект успешно собран: `dotnet build` (`0 Warning(s), 0 Error(s)`).
 
 ---
 
@@ -1680,7 +1669,6 @@ _telegramService.UpdateSettings(_settings);
    - Внедрены события `OnCloudSyncApplied` и `OnCloudSyncConflict`.
 3. `TrayContext.cs`: подписка на события с выводом информационных BalloonTip-подсказок в системном трее Windows.
 4. `AuthSettingsForm.cs`: обновлен чекбокс и добавлено поле интервала проверки в минутах (активно только при включенном чекбоксе).
-5. Проект скомпилирован и валидирован: `dotnet build` (`0 Warning(s), 0 Error(s)`).
 
 ---
 
