@@ -2276,3 +2276,38 @@ _telegramService.UpdateSettings(_settings);
 3. **Загрузка иконки в системный трей:** В `TrayContext.cs` реализовано автоматическое извлечение ассоциированной иконки приложения через `Icon.ExtractAssociatedIcon(Environment.ProcessPath ?? Application.ExecutablePath)` с безопасным откатом на `Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "icon.ico")` и лишь затем на `SystemIcons.Application`.
 4. **Загрузка иконки формы настроек:** В `AuthSettingsForm.InitializeComponents()` свойству `this.Icon` явно присваивается извлеченная иконка приложения, гарантируя отображение правильного логотипа в заголовке окна и на панели задач Windows.
 
+---
+
+## 67. Устранение зависания при выходе из сна Windows и 100% нагрузки ЦП (Root Cause First)
+
+### Контекст и симптомы:
+1. При включении ноутбука после длительного сна (20+ часов) открытие файлов на виртуальном диске намертво подвешивало Проводник Windows и вызывающую программу.
+2. Процесс `TGramFS` в Диспетчере задач потреблял 99.4–100% ЦП при нулевой активности диска и сети (0 МБ/с, 0 Мбит/с).
+3. В логе `app.log` фиксировались следующие события:
+   ```
+   [ERROR] [WTelegram] 2>An exception occured in the reactor: System.IO.IOException: Unable to read data from the transport connection: Программа на вашем хост-компьютере разорвала установленное подключение.. ---> System.Net.Sockets.SocketException (10053)
+   [INFO ] [TelegramService] Зафиксирован выход Windows из сна/гибернации (временной скачок: 77539 сек). Проверка связи с Telegram...
+   [DEBUG] [TelegramService] Проверка соединения Telegram спровоцировала реакцию сокета: A task was canceled.
+   [INFO ] [WTelegram] Connecting to 149.154.167.41:443...
+   [ERROR] [WTelegram] SocketException HostUnreachable (10065): Сделана попытка выполнить операцию на сокете для недоступного хоста.
+   [INFO ] [WTelegram] Connecting to 149.154.167.50:443...
+   [INFO ] [WTelegram] Connecting to [2001:67c:4e8:f002::a]:443...
+   ```
+   После чего лог замирал на несколько минут без повторных попыток переподключения.
+
+### Первопричина (Root Cause Analysis):
+1. **Гонка готовности Wi-Fi адаптера:** `DatabaseBackupService.StartHeartbeatTimer` при обнаружении скачка времени (`elapsed >= 30s`) немедленно вызывал `PingOrReconnectAsync()` на 0-й миллисекунде, когда сетевой адаптер Windows еще восстанавливал связь с точкой доступа и не получил локальный IP-адрес по DHCP. Это приводило к гарантированному падению основного адреса DC2 (`149.154.167.41`) с ошибкой `SocketException 10065 HostUnreachable`.
+2. **Отсутствие таймаута на сокетах в WTelegramClient:** Стандартный `TcpHandler` библиотеки вызывает `new TcpClient().ConnectAsync(host, port)` без таймаута, полностью полагаясь на таймаут ядра ОС. Когда библиотека перебирала альтернативные адреса DC и доходила до IPv6 `[2001:67c:4e8:f002::a]:443`, отсутствие IPv6-шлюза приводило к безответным TCP SYN запросам. Windows запускала экспоненциальный повтор пакетов (`TcpMaxConnectRetransmissions`), удерживая вызов сокета заблокированным от 21 до 75+ секунд. При этом ошибки сокета во внутреннем цикле `DcOptions` перехватывались библиотекой молча (`catch (SocketException) { continue; }`), создавая иллюзию «зависания» без логов.
+3. **Холостой прожиг процессора на 100% (Tight Loop при `ReactorError`):** В декомпилированном коде `WTelegramClient.Client.Invoke` метод крутится в бесконечном цикле `do { ... } while (true)`. При сбое реактора все ожидающие RPC-задачи получают результат `ReactorError`. Так как `ReactorError` не является ни результатом `T`, ни `RpcError`, метод `Invoke` немедленно уходил на `continue;` и без единой паузы непрерывно спамил попытками отправки по упавшему сокету, разогревая процессор до 100%.
+4. **Синхронная блокировка потоков WinFsp:** При попытке открыть документ Проводник вызывал `WinFspServer.Read()`, который синхронно через `.GetAwaiter().GetResult()` ждал чанк от зависшего воркера Telegram, вешая весь системный Проводник.
+
+### Принятое решение (Root Cause First):
+1. **Асинхронная проверка готовности сети при выходе из сна (`WaitForNetworkAvailableAsync`):**
+   В `DatabaseBackupService.StartHeartbeatTimer` перед отправкой сетевого пинга добавлен вызов `WaitForNetworkAvailableAsync(TimeSpan.FromSeconds(7))`, опрашивающий `NetworkInterface.GetIsNetworkAvailable()` каждые 500 мс. Пинг и восстановление сокета запускаются только тогда, когда Wi-Fi адаптер физически поднялся и стабилизировался. Если сеть недоступна, проверка откладывается до следующего тика таймера.
+2. **Контролируемый таймаут на сокетах (`SafeTcpHandlerAsync`):**
+   В `TelegramService.InitClient` переопределен фабричный делегат `_client.TcpHandler = SafeTcpHandlerAsync`. При вызове `tcpClient.ConnectAsync(host, port, cts.Token)` задан жесткий таймаут в 5 секунд. При его превышении сокет немедленно освобождается, а наверх выбрасывается `SocketException(SocketError.TimedOut)`, благодаря чему WTelegramClient мгновенно переходит к следующему адресу без многоминутных системных зависаний.
+3. **Подписка на сбои реактора (`_client.OnOther`):**
+   В `TelegramService` реализован обработчик `HandleClientOtherAsync`, перехватывающий `TL.ReactorError` и предотвращающий бесконечный цикл за счет плавного отложенного восстановления сессии через `Task.Delay(3000)`.
+4. **Защита потоков файловой системы (`WinFspServer.Read Timeout`):**
+   В методе `WinFspServer.Read` ожидание скачивания чанка защищено таймаутом `downloadTask.Wait(TimeSpan.FromSeconds(25))`. При отсутствии ответа возвращается статус ядра `NT_STATUS_IO_TIMEOUT` (`0xC00000B5`), что предотвращает зависание Проводника Windows.
+

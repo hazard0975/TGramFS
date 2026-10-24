@@ -3,6 +3,8 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Diagnostics;
+using System.Net.NetworkInformation;
 using TelegramWebDAV.Config;
 using TelegramWebDAV.Database;
 
@@ -122,15 +124,47 @@ namespace TelegramWebDAV.Services
                 // значит система спала или находилась в гибернации
                 if (elapsed.TotalSeconds >= 30)
                 {
-                    AppLogger.Info("TelegramService", $"Зафиксирован выход Windows из сна/гибернации (временной скачок: {elapsed.TotalSeconds:F0} сек). Проверка связи с Telegram...");
+                    AppLogger.Info("TelegramService", $"Зафиксирован выход Windows из сна/гибернации (временной скачок: {elapsed.TotalSeconds:F0} сек). Ожидание готовности сети...");
                     try
                     {
+                        bool isNetworkReady = await WaitForNetworkAvailableAsync(TimeSpan.FromSeconds(7));
+                        if (!isNetworkReady)
+                        {
+                            AppLogger.Warn("TelegramService", "Сетевой интерфейс не готов после выхода из сна. Проверка связи с Telegram отложена до следующего тика.");
+                            return;
+                        }
+
+                        AppLogger.Info("TelegramService", "Сетевой интерфейс готов. Проверка связи с Telegram...");
                         // Провоцируем реактор Telegram на выявление разорванного сокета и переподключение
                         await _telegramService.PingOrReconnectAsync();
                     }
                     catch { }
                 }
             }, null, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10));
+        }
+
+        /// <summary>
+        /// Асинхронно ожидает появления активного сетевого подключения после выхода системы из сна.
+        /// Предотвращает преждевременные запросы к сокетам до того, как Wi-Fi получил IP-адрес по DHCP.
+        /// </summary>
+        private static async Task<bool> WaitForNetworkAvailableAsync(TimeSpan timeout)
+        {
+            var sw = Stopwatch.StartNew();
+            while (sw.Elapsed < timeout)
+            {
+                try
+                {
+                    if (NetworkInterface.GetIsNetworkAvailable())
+                    {
+                        // Пауза 500 мс для стабилизации сокетного стека после включения адаптера
+                        await Task.Delay(500);
+                        return true;
+                    }
+                }
+                catch { }
+                await Task.Delay(500);
+            }
+            return false;
         }
 
         /// <summary>

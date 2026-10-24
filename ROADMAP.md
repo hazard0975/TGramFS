@@ -957,4 +957,11 @@
      3. В `TrayContext.cs` устаревшая системная заглушка `SystemIcons.Application` заменена на динамическое извлечение ассоциированной иконки приложения через `Icon.ExtractAssociatedIcon` с надежным фолбэком на локальный `icon.ico`.
      4. В `AuthSettingsForm.cs` свойству `this.Icon` явно присвоена иконка приложения, устраняя синий квадрат на панели задач Windows.
 
+- [x] **8.58. Защита от зависаний и 100% нагрузки ЦП при выходе из сна Windows**:
+   - **Реализовано**:
+     1. В `DatabaseBackupService.StartHeartbeatTimer` внедрен асинхронный опрос `WaitForNetworkAvailableAsync(TimeSpan.FromSeconds(7))` через `NetworkInterface.GetIsNetworkAvailable()`. Пинг сокета MTProto при выходе из сна Windows откладывается до физического поднятия Wi-Fi адаптера и получения IP-адреса, предотвращая немедленный сбой сокета по `HostUnreachable`.
+     2. В `TelegramService` внедрена безопасная фабрика TCP-подключений `SafeTcpHandlerAsync` (`_client.TcpHandler = SafeTcpHandlerAsync`) с жестким таймаутом в 5 секунд. При зависании системного стека Windows на недоступных маршрутах IPv6 сокет принудительно закрывается и выбрасывается `SocketException(TimedOut)`, позволяя WTelegram мгновенно переходить к следующему адресу.
+     3. В `TelegramService` добавлена подписка `_client.OnOther += HandleClientOtherAsync` на событие `TL.ReactorError` с защитой от бесконечного цикла `Invoke` и плавным отложенным переподключением через `Task.Delay(3000)`.
+     4. В `WinFspServer.Read` добавлен защитный таймаут ожидания скачивания чанка `downloadTask.Wait(TimeSpan.FromSeconds(25))` с возвратом статуса ядра `NT_STATUS_IO_TIMEOUT` (`0xC00000B5`), исключающий зависание Проводника Windows при сбоях сети.
+
 

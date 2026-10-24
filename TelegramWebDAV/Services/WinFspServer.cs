@@ -357,6 +357,7 @@ namespace TelegramWebDAV.Services
         private const int NT_STATUS_FILE_IS_A_DIRECTORY = unchecked((int)0xC00000BA);
         private const int NT_STATUS_DIRECTORY_NOT_EMPTY = unchecked((int)0xC0000101);
         private const int NT_STATUS_CANNOT_DELETE = unchecked((int)0xC0000121);
+        private const int NT_STATUS_IO_TIMEOUT = unchecked((int)0xC00000B5);
 
         public TelegramWinFspFileSystem(
             ConfigManager configManager,
@@ -1591,8 +1592,13 @@ namespace TelegramWebDAV.Services
                 {
                     // Прямой стриминг в предоставленный ядром Windows буфер без создания промежуточных файлов на диске C:!
                     using var memStream = new UnmanagedMemoryStream((byte*)buffer.ToPointer(), toRead, toRead, FileAccess.Write);
-                    _telegramService.DownloadFileAsync(node.TgMessageId.Value, memStream, (long)offset, (long)toRead, node.Name, node.Size, node.TgChannelId, node.Id)
-                                    .GetAwaiter().GetResult();
+                    var downloadTask = _telegramService.DownloadFileAsync(node.TgMessageId.Value, memStream, (long)offset, (long)toRead, node.Name, node.Size, node.TgChannelId, node.Id);
+                    if (!downloadTask.Wait(TimeSpan.FromSeconds(25)))
+                    {
+                        AppLogger.Warn("WinFsp", $"[Read Timeout] Чтение '{node.Name}' (смещение {offset}, длина {toRead}) прервано по таймауту 25 сек (сеть Telegram недоступна или восстанавливается).");
+                        bytesTransferred = 0;
+                        return NT_STATUS_IO_TIMEOUT;
+                    }
                     bytesTransferred = (uint)memStream.Position;
                 }
                 return STATUS_SUCCESS;

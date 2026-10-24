@@ -8,6 +8,7 @@ using TelegramWebDAV.Config;
 using TelegramWebDAV.Database;
 using TelegramWebDAV.Models;
 using TL;
+using System.Net.Sockets;
 
 namespace TelegramWebDAV.Services
 {
@@ -1299,6 +1300,61 @@ namespace TelegramWebDAV.Services
                     default: return null;
                 }
             });
+            _client.TcpHandler = SafeTcpHandlerAsync;
+            _client.OnOther += HandleClientOtherAsync;
+        }
+
+        /// <summary>
+        /// Безопасная фабрика создания TCP-подключений с контролируемым таймаутом (5 секунд).
+        /// Защищает приложение от зависания на системных таймаутах Windows TCP SYN (до 75+ сек) при недоступных IPv4/IPv6 маршрутах.
+        /// </summary>
+        private static async Task<TcpClient> SafeTcpHandlerAsync(string host, int port)
+        {
+            var tcpClient = new TcpClient();
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            try
+            {
+                await tcpClient.ConnectAsync(host, port, cts.Token);
+                return tcpClient;
+            }
+            catch (OperationCanceledException)
+            {
+                tcpClient.Dispose();
+                // Выбрасываем SocketException (TimedOut), чтобы WTelegramClient распознал таймаут сокета и перешел к следующему адресу
+                throw new SocketException((int)SocketError.TimedOut);
+            }
+            catch
+            {
+                tcpClient.Dispose();
+                throw;
+            }
+        }
+
+        private Task HandleClientOtherAsync(IObject arg)
+        {
+            if (arg is TL.ReactorError reactorErr)
+            {
+                AppLogger.Warn("TelegramService", $"[Reactor] Зафиксирован сбой реактора Telegram: {reactorErr.Exception?.Message}.");
+
+                // Если реактор исчерпал автореконнекты, запускаем безопасную фоновую попытку переподключения
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await Task.Delay(3000);
+                        if (_client != null && IsAuthorized)
+                        {
+                            AppLogger.Info("TelegramService", "[Reactor] Попытка самовосстановления сессии после фатального сбоя реактора...");
+                            await PingOrReconnectAsync();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        AppLogger.Debug("TelegramService", $"[Reactor] Ошибка самовосстановления: {ex.Message}");
+                    }
+                });
+            }
+            return Task.CompletedTask;
         }
 
         private void InitWorkerPool()
