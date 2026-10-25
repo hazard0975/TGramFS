@@ -512,9 +512,27 @@ namespace TelegramWebDAV.Services
             _repository = repository;
             _currentSettings = _configManager.Load();
             AppLogger.OnWTelegramLog += HandleWTelegramLog;
+            try
+            {
+                System.Net.NetworkInformation.NetworkChange.NetworkAvailabilityChanged += OnNetworkAvailabilityChanged;
+            }
+            catch { }
             StartCaptionQueueWorker();
             StartDeletionQueueWorker();
             StartChannelMigrationQueueWorker();
+        }
+
+        private void OnNetworkAvailabilityChanged(object? sender, System.Net.NetworkInformation.NetworkAvailabilityEventArgs e)
+        {
+            if (e.IsAvailable)
+            {
+                AppLogger.Info("TelegramService", "[Network] Зафиксировано появление активного сетевого подключения Windows.");
+                TriggerReactorReconnect("восстановление сетевого интерфейса Windows");
+            }
+            else
+            {
+                AppLogger.Warn("TelegramService", "[Network] Сетевое подключение Windows разорвано.");
+            }
         }
 
         private void HandleWTelegramLog(int level, string str)
@@ -1271,11 +1289,10 @@ namespace TelegramWebDAV.Services
             {
                 AppLogger.Error("TelegramService", $"Ошибка подключения существующей сессии: {ex.Message}", ex);
                 LastError = ex.Message;
-                IsAuthorized = false;
-                CurrentStep = AuthStep.NeedsPhone;
                 // Сбрасываем экземпляр клиента, чтобы не оставлять его в сбойном (Faulted) состоянии
                 try { _client?.Dispose(); } catch { }
                 _client = null;
+                throw;
             }
         }
 
@@ -1335,26 +1352,94 @@ namespace TelegramWebDAV.Services
             if (arg is TL.ReactorError reactorErr)
             {
                 AppLogger.Warn("TelegramService", $"[Reactor] Зафиксирован сбой реактора Telegram: {reactorErr.Exception?.Message}.");
-
-                // Если реактор исчерпал автореконнекты, запускаем безопасную фоновую попытку переподключения
-                _ = Task.Run(async () =>
-                {
-                    try
-                    {
-                        await Task.Delay(3000);
-                        if (_client != null && IsAuthorized)
-                        {
-                            AppLogger.Info("TelegramService", "[Reactor] Попытка самовосстановления сессии после фатального сбоя реактора...");
-                            await PingOrReconnectAsync();
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        AppLogger.Debug("TelegramService", $"[Reactor] Ошибка самовосстановления: {ex.Message}");
-                    }
-                });
+                TriggerReactorReconnect("сбой реактора TL.ReactorError");
             }
             return Task.CompletedTask;
+        }
+
+        private int _isReconnecting = 0;
+
+        /// <summary>
+        /// Потокобезопасный фоновый процесс самовосстановления сессии Telegram.
+        /// Вызывается при падении реактора сокета или при возвращении сетевого подключения Windows.
+        /// </summary>
+        public void TriggerReactorReconnect(string reason)
+        {
+            var account = _repository?.GetActiveTelegramAccount();
+            if (account == null) return;
+
+            if (Interlocked.CompareExchange(ref _isReconnecting, 1, 0) != 0)
+            {
+                AppLogger.Debug("TelegramService", $"[Reactor] Запрос переподключения ({reason}) пропущен: процесс восстановления уже запущен.");
+                return;
+            }
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    AppLogger.Warn("TelegramService", $"[Reactor] Запуск процедуры самовосстановления сессии ({reason})...");
+
+                    // Если клиент формально существует и авторизован, проверяем сокет быстрым пингом
+                    if (_client != null && IsAuthorized)
+                    {
+                        try
+                        {
+                            await _client.Help_GetNearestDc();
+                            AppLogger.Info("TelegramService", "[Reactor] Соединение живо, реактор успешно ответил.");
+                            return;
+                        }
+                        catch
+                        {
+                            // Сокет действительно мертв, продолжаем процедуру пересоздания
+                        }
+                    }
+
+                    int attempt = 0;
+                    while (true)
+                    {
+                        attempt++;
+                        if (System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable())
+                        {
+                            try
+                            {
+                                AppLogger.Info("TelegramService", $"[Reactor] Попытка #{attempt}: Сеть Windows доступна. Пересоздание клиента WTelegram и переподключение...");
+
+                                // В соответствии с официальным руководством WTelegramClient (Program_ReactorError.cs):
+                                // полностью утилизируем старый экземпляр с аварийным реактором
+                                if (_client != null)
+                                {
+                                    try { _client.Dispose(); } catch { }
+                                    _client = null;
+                                }
+                                _storagePeer = null;
+
+                                await ConnectAsync();
+
+                                if (IsAuthorized && _client != null)
+                                {
+                                    AppLogger.Info("TelegramService", $"[Reactor] Сессия Telegram успешно восстановлена с попытки #{attempt}!");
+                                    break;
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                AppLogger.Warn("TelegramService", $"[Reactor] Попытка #{attempt} переподключения не удалась: {ex.Message}. Ожидание 5 сек...");
+                            }
+                        }
+                        else
+                        {
+                            AppLogger.Debug("TelegramService", $"[Reactor] Попытка #{attempt}: Сеть Windows недоступна. Ожидание подключения к сети...");
+                        }
+
+                        await Task.Delay(5000);
+                    }
+                }
+                finally
+                {
+                    Interlocked.Exchange(ref _isReconnecting, 0);
+                }
+            });
         }
 
         private void InitWorkerPool()
@@ -3648,6 +3733,11 @@ namespace TelegramWebDAV.Services
             try
             {
                 AppLogger.OnWTelegramLog -= HandleWTelegramLog;
+            }
+            catch { }
+            try
+            {
+                System.Net.NetworkInformation.NetworkChange.NetworkAvailabilityChanged -= OnNetworkAvailabilityChanged;
             }
             catch { }
             try

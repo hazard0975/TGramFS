@@ -107,8 +107,16 @@ namespace TelegramWebDAV
                 AppLogger.Info("Program", $"База данных SQLite инициализирована по пути: {settings.Database.Path}");
 
                 // 3. Инициализация сервиса Telegram (WTelegramClient)
-                var telegramService = new TelegramService(configManager, repository);
-                await telegramService.ConnectAsync();
+                var telegramService = new TelegramService(configManager);
+                try
+                {
+                    await telegramService.ConnectAsync();
+                }
+                catch (Exception exInit)
+                {
+                    AppLogger.Warn("Program", $"Начальное подключение к Telegram отложено (сеть недоступна): {exInit.Message}");
+                    telegramService.TriggerReactorReconnect("запуск программы при отсутствии сети");
+                }
 
                 // 4. Инициализация службы резервного копирования базы данных
                 var backupService = new DatabaseBackupService(dbManager, repository, telegramService, configManager);

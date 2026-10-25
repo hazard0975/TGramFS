@@ -964,4 +964,12 @@
      3. В `TelegramService` добавлена подписка `_client.OnOther += HandleClientOtherAsync` на событие `TL.ReactorError` с защитой от бесконечного цикла `Invoke` и плавным отложенным переподключением через `Task.Delay(3000)`.
      4. В `WinFspServer.Read` добавлен защитный таймаут ожидания скачивания чанка `downloadTask.Wait(TimeSpan.FromSeconds(25))` с возвратом статуса ядра `NT_STATUS_IO_TIMEOUT` (`0xC00000B5`), исключающий зависание Проводника Windows при сбоях сети.
 
+- [x] **8.59. Автоматическое самовосстановление сессии Telegram при ручном отключении/включении сети Windows**:
+   - **Реализовано**:
+     1. В `TelegramService` реализована системная подписка на событие ядра Windows `NetworkChange.NetworkAvailabilityChanged` (с корректным снятием подписки в `Dispose()`). При возвращении интернет-соединения служба мгновенно запускает процедуру переподключения.
+     2. Реализован надежный метод `TriggerReactorReconnect(string reason)` с защитой от дублирования через `Interlocked.CompareExchange`: цикл ожидает подтверждения доступности сетевого стека Windows (`NetworkInterface.GetIsNetworkAvailable()`), безопасно утилизирует старый `_client` с упавшим реактором через `Dispose()`, сбрасывает ссылку в `null` и выполняет чистое создание нового экземпляра `WTelegram.Client` и `ConnectAsync()`.
+     3. В `TelegramService.ConnectAsync` устранен ложный сброс шага авторизации в `NeedsPhone` при сетевых ошибках сокета/IO (`SocketException`, `IOException`), что сохраняет текущую валидную сессию пользователя при временных обрывах интернета.
+     4. В `Program.cs` начальный запуск `ConnectAsync()` обернут в перехват сетевых исключений с автоматической передачей в `TriggerReactorReconnect`, обеспечивая стабильный старт службы даже при запуске Windows в офлайн-режиме.
+
+
 
