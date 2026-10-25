@@ -1289,12 +1289,19 @@ namespace TelegramWebDAV.Services
         /// <summary>
         /// Подключение к серверам Telegram и проверка наличия готовой сессии через WTelegramClient.
         /// </summary>
-        public async Task ConnectAsync()
+        public async Task ConnectAsync(bool isSilentRetry = false)
         {
-            AppLogger.Info("TelegramService", "Проверка сессии и подключение к Telegram...");
-            _currentSettings = _configManager.Load();
-            SetPacingDelay(_currentSettings.Server.PacingDelayMs);
-            AppLogger.Info("TelegramService", $"[Streaming Config] Воркеры: {_currentSettings.Server.DownloadWorkerCount} | Пейсинг: {_globalPacingDelayMs} мс | RAM Кэш: {_currentSettings.Server.MemoryCacheSizeMb} МБ (TTL: {_currentSettings.Server.ChunkMemoryCacheTtlMinutes} мин) | Буфер аудио: {_currentSettings.Server.AudioPrefetchWindowMb} МБ | Окно стриминга: {_currentSettings.Server.StreamingPrefetchWindowMb} МБ | Дисковый кэш: {(_currentSettings.Server.EnableDiskReadCache ? "ВКЛ" : "ВЫКЛ (100% RAM)")}");
+            if (!isSilentRetry)
+            {
+                AppLogger.Info("TelegramService", "Проверка сессии и подключение к Telegram...");
+                _currentSettings = _configManager.Load();
+                SetPacingDelay(_currentSettings.Server.PacingDelayMs);
+                AppLogger.Info("TelegramService", $"[Streaming Config] Воркеры: {_currentSettings.Server.DownloadWorkerCount} | Пейсинг: {_globalPacingDelayMs} мс | RAM Кэш: {_currentSettings.Server.MemoryCacheSizeMb} МБ (TTL: {_currentSettings.Server.ChunkMemoryCacheTtlMinutes} мин) | Буфер аудио: {_currentSettings.Server.AudioPrefetchWindowMb} МБ | Окно стриминга: {_currentSettings.Server.StreamingPrefetchWindowMb} МБ | Дисковый кэш: {(_currentSettings.Server.EnableDiskReadCache ? "ВКЛ" : "ВЫКЛ (100% RAM)")}");
+            }
+            else
+            {
+                _currentSettings ??= _configManager.Load();
+            }
             
             var account = _repository?.GetActiveTelegramAccount();
             if (account == null || account.ApiId == 0 || string.IsNullOrWhiteSpace(account.ApiHash))
@@ -1328,7 +1335,14 @@ namespace TelegramWebDAV.Services
             }
             catch (Exception ex)
             {
-                AppLogger.Error("TelegramService", $"Ошибка подключения существующей сессии: {ex.Message}", ex);
+                if (isSilentRetry)
+                {
+                    AppLogger.Debug("TelegramService", $"Фоновая попытка подключения сессии к Telegram: {ex.Message}");
+                }
+                else
+                {
+                    AppLogger.Error("TelegramService", $"Ошибка подключения существующей сессии: {ex.Message}", ex);
+                }
                 LastError = ex.Message;
                 // Сбрасываем экземпляр клиента, чтобы не оставлять его в сбойном (Faulted) состоянии
                 try { _client?.Dispose(); } catch { }
@@ -1398,38 +1412,12 @@ namespace TelegramWebDAV.Services
             return Task.CompletedTask;
         }
 
-        /// <summary>
-        /// Быстрый легковесный зонд сетевой доступности серверов Telegram (порт 443).
-        /// Не читает диск, не трогает сессию и не создает экземпляр WTelegram.Client.
-        /// Возвращает true только если TCP-рукопожатие с дата-центром Telegram успешно состоялось.
-        /// </summary>
-        private static async Task<bool> ProbeTelegramConnectivityAsync(int timeoutMs = 2500)
-        {
-            if (await QuickTcpConnectAsync("149.154.167.50", 443, timeoutMs)) return true;
-            if (await QuickTcpConnectAsync("149.154.167.41", 443, timeoutMs)) return true;
-            return false;
-        }
-
-        private static async Task<bool> QuickTcpConnectAsync(string host, int port, int timeoutMs)
-        {
-            try
-            {
-                using var tcpClient = new TcpClient();
-                using var cts = new CancellationTokenSource(timeoutMs);
-                await tcpClient.ConnectAsync(host, port, cts.Token);
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
         private int _isReconnecting = 0;
 
         /// <summary>
         /// Потокобезопасный фоновый процесс самовосстановления сессии Telegram.
         /// Вызывается при падении реактора сокета или при возвращении сетевого подключения Windows.
+        /// Не содержит захардкоженных IP: WTelegramClient сам выбирает адреса дата-центров из файла сессии.
         /// </summary>
         public void TriggerReactorReconnect(string reason)
         {
@@ -1481,53 +1469,46 @@ namespace TelegramWebDAV.Services
                     while (true)
                     {
                         attempt++;
+                        bool isFirstOrInfrequent = (DateTime.UtcNow - lastLoggedWait).TotalSeconds >= 60 || attempt == 1;
 
-                        // 1. Сначала выполняем сверхлегкий сетевой зонд без создания клиента и без чтения сессии с диска
-                        bool isRouteAvailable = await ProbeTelegramConnectivityAsync();
-                        if (isRouteAvailable)
+                        try
                         {
-                            try
+                            if (_client != null)
                             {
-                                AppLogger.Info("TelegramService", $"[Network] Маршрут к дата-центру Telegram доступен (попытка #{attempt}). Переподключение сессии...");
-
-                                // В соответствии с официальным руководством WTelegramClient (Program_ReactorError.cs):
-                                // полностью утилизируем старый экземпляр с аварийным реактором
-                                if (_client != null)
-                                {
-                                    try { _client.Dispose(); } catch { }
-                                    _client = null;
-                                }
-                                _storagePeer = null;
-
-                                await ConnectAsync();
-
-                                if (IsAuthorized && _client != null)
-                                {
-                                    AppLogger.Info("TelegramService", $"[Reactor] Сессия Telegram успешно восстановлена с попытки #{attempt}!");
-                                    break;
-                                }
+                                try { _client.Dispose(); } catch { }
+                                _client = null;
                             }
-                            catch (Exception ex)
+                            _storagePeer = null;
+
+                            if (isFirstOrInfrequent)
                             {
-                                AppLogger.Warn("TelegramService", $"[Reactor] Ошибка авторизации сессии при переподключении: {ex.Message}. Ожидание стабилизации...");
+                                AppLogger.Info("TelegramService", $"[Reactor] Попытка #{attempt} восстановления связи ({reason}). Подключение через WTelegram...");
+                                lastLoggedWait = DateTime.UtcNow;
+                            }
+
+                            // Триггерим подключение самого WTelegramClient по адресам его DC из сессии
+                            await ConnectAsync(isSilentRetry: !isFirstOrInfrequent);
+
+                            if (IsAuthorized && _client != null)
+                            {
+                                AppLogger.Info("TelegramService", $"[Reactor] Сессия Telegram успешно восстановлена с попытки #{attempt}!");
+                                break;
                             }
                         }
-                        else
+                        catch (Exception ex)
                         {
-                            // Маршрут к Telegram отсутствует (HostUnreachable / таймаут сокета).
-                            // Диск и сессию не трогаем, клиента впустую не создаем.
-                            if ((DateTime.UtcNow - lastLoggedWait).TotalSeconds >= 60 || attempt == 1)
+                            if (isFirstOrInfrequent)
                             {
-                                AppLogger.Info("TelegramService", $"[Network] Связь с серверами Telegram отсутствует (попытка #{attempt}). Ожидание восстановления интернета...");
+                                AppLogger.Info("TelegramService", $"[Reactor] Серверы Telegram пока недоступны ({ex.Message}). Ожидание появления сети...");
                                 lastLoggedWait = DateTime.UtcNow;
                             }
                             else
                             {
-                                AppLogger.Debug("TelegramService", $"[Network] Попытка #{attempt}: Маршрут к Telegram пока недоступен.");
+                                AppLogger.Debug("TelegramService", $"[Reactor] Попытка #{attempt} не удалась: {ex.Message}");
                             }
                         }
 
-                        // 2. Адаптивный бэкофф: Попытка 1: 5 сек; Попытка 2: 10 сек; Попытка 3+: 25 сек.
+                        // Адаптивный бэкофф: Попытка 1: 5 сек; Попытка 2: 10 сек; Попытка 3+: 25 сек.
                         int delayMs = attempt switch
                         {
                             1 => 5000,
@@ -1549,7 +1530,7 @@ namespace TelegramWebDAV.Services
                         }
                         catch (OperationCanceledException)
                         {
-                            AppLogger.Info("TelegramService", "[Network] Системный сигнал Windows: сброс паузы ожидания и немедленная проверка связи...");
+                            AppLogger.Info("TelegramService", "[Network] Системный сигнал Windows: сброс паузы ожидания и немедленная попытка подключения...");
                         }
                     }
                 }
