@@ -107,7 +107,7 @@ namespace TelegramWebDAV
                 AppLogger.Info("Program", $"База данных SQLite инициализирована по пути: {settings.Database.Path}");
 
                 // 3. Инициализация сервиса Telegram (WTelegramClient)
-                var telegramService = new TelegramService(configManager);
+                var telegramService = new TelegramService(configManager, repository);
                 try
                 {
                     await telegramService.ConnectAsync();

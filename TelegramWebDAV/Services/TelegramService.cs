@@ -551,14 +551,31 @@ namespace TelegramWebDAV.Services
         /// </summary>
         public async Task PingOrReconnectAsync()
         {
-            if (_client == null || !IsAuthorized) return;
+            if (_client == null || !IsAuthorized)
+            {
+                AppLogger.Info("TelegramService", "Клиент Telegram не подключен/не авторизован при пробуждении. Запуск восстановления...");
+                TriggerReactorReconnect("пробуждение системы при неактивном клиенте");
+                return;
+            }
+
             try
             {
-                await _client.Help_GetNearestDc();
+                var pingTask = _client.Help_GetNearestDc();
+                if (await Task.WhenAny(pingTask, Task.Delay(5000)) == pingTask)
+                {
+                    await pingTask;
+                    AppLogger.Info("TelegramService", "Проверка связи с Telegram после сна успешна: сокет активен.");
+                }
+                else
+                {
+                    AppLogger.Warn("TelegramService", "Таймаут (5 сек) проверки связи с Telegram после сна. Запуск процедуры самовосстановления...");
+                    TriggerReactorReconnect("таймаут сокета при проверке после сна");
+                }
             }
             catch (Exception ex)
             {
-                AppLogger.Debug("TelegramService", $"Проверка соединения Telegram спровоцировала реакцию сокета: {ex.Message}");
+                AppLogger.Warn("TelegramService", $"Проверка соединения Telegram после сна выявила сбой сокета: {ex.Message}. Запуск восстановления...");
+                TriggerReactorReconnect($"сбой сокета при проверке после сна: {ex.Message}");
             }
         }
 
@@ -1366,7 +1383,11 @@ namespace TelegramWebDAV.Services
         public void TriggerReactorReconnect(string reason)
         {
             var account = _repository?.GetActiveTelegramAccount();
-            if (account == null) return;
+            if (account == null)
+            {
+                AppLogger.Warn("TelegramService", $"[Reactor] Запрос переподключения ({reason}) отклонен: активный аккаунт Telegram не найден в базе данных.");
+                return;
+            }
 
             if (Interlocked.CompareExchange(ref _isReconnecting, 1, 0) != 0)
             {
@@ -1380,14 +1401,22 @@ namespace TelegramWebDAV.Services
                 {
                     AppLogger.Warn("TelegramService", $"[Reactor] Запуск процедуры самовосстановления сессии ({reason})...");
 
-                    // Если клиент формально существует и авторизован, проверяем сокет быстрым пингом
+                    // Если клиент формально существует и авторизован, проверяем сокет быстрым пингом с таймаутом 5 сек
                     if (_client != null && IsAuthorized)
                     {
                         try
                         {
-                            await _client.Help_GetNearestDc();
-                            AppLogger.Info("TelegramService", "[Reactor] Соединение живо, реактор успешно ответил.");
-                            return;
+                            var pingTask = _client.Help_GetNearestDc();
+                            if (await Task.WhenAny(pingTask, Task.Delay(5000)) == pingTask)
+                            {
+                                await pingTask;
+                                AppLogger.Info("TelegramService", "[Reactor] Соединение живо, реактор успешно ответил.");
+                                return;
+                            }
+                            else
+                            {
+                                AppLogger.Warn("TelegramService", "[Reactor] Проверочный пинг существующего сокета превысил 5 сек. Переход к пересозданию сессии...");
+                            }
                         }
                         catch
                         {
