@@ -506,6 +506,9 @@ namespace TelegramWebDAV.Services
         /// </summary>
         public event Action<string>? OnDownloadCompleted;
 
+        private CancellationTokenSource? _reconnectWaitCts;
+        private readonly object _reconnectWaitLock = new();
+
         public TelegramService(ConfigManager configManager, NodeRepository? repository = null)
         {
             _configManager = configManager;
@@ -515,6 +518,7 @@ namespace TelegramWebDAV.Services
             try
             {
                 System.Net.NetworkInformation.NetworkChange.NetworkAvailabilityChanged += OnNetworkAvailabilityChanged;
+                System.Net.NetworkInformation.NetworkChange.NetworkAddressChanged += OnNetworkAddressChanged;
             }
             catch { }
             StartCaptionQueueWorker();
@@ -522,17 +526,37 @@ namespace TelegramWebDAV.Services
             StartChannelMigrationQueueWorker();
         }
 
+        private void WakeUpReconnectWait(string reason)
+        {
+            try
+            {
+                lock (_reconnectWaitLock)
+                {
+                    _reconnectWaitCts?.Cancel();
+                }
+            }
+            catch { }
+        }
+
         private void OnNetworkAvailabilityChanged(object? sender, System.Net.NetworkInformation.NetworkAvailabilityEventArgs e)
         {
             if (e.IsAvailable)
             {
                 AppLogger.Info("TelegramService", "[Network] Зафиксировано появление активного сетевого подключения Windows.");
+                WakeUpReconnectWait("появление сетевого подключения");
                 TriggerReactorReconnect("восстановление сетевого интерфейса Windows");
             }
             else
             {
                 AppLogger.Warn("TelegramService", "[Network] Сетевое подключение Windows разорвано.");
             }
+        }
+
+        private void OnNetworkAddressChanged(object? sender, EventArgs e)
+        {
+            AppLogger.Debug("TelegramService", "[Network] Зафиксировано изменение сетевых адресов/маршрутов Windows (NetworkAddressChanged).");
+            WakeUpReconnectWait("изменение сетевых адресов/маршрутов");
+            TriggerReactorReconnect("изменение сетевых адресов/маршрутов");
         }
 
         private void HandleWTelegramLog(int level, string str)
@@ -1374,6 +1398,33 @@ namespace TelegramWebDAV.Services
             return Task.CompletedTask;
         }
 
+        /// <summary>
+        /// Быстрый легковесный зонд сетевой доступности серверов Telegram (порт 443).
+        /// Не читает диск, не трогает сессию и не создает экземпляр WTelegram.Client.
+        /// Возвращает true только если TCP-рукопожатие с дата-центром Telegram успешно состоялось.
+        /// </summary>
+        private static async Task<bool> ProbeTelegramConnectivityAsync(int timeoutMs = 2500)
+        {
+            if (await QuickTcpConnectAsync("149.154.167.50", 443, timeoutMs)) return true;
+            if (await QuickTcpConnectAsync("149.154.167.41", 443, timeoutMs)) return true;
+            return false;
+        }
+
+        private static async Task<bool> QuickTcpConnectAsync(string host, int port, int timeoutMs)
+        {
+            try
+            {
+                using var tcpClient = new TcpClient();
+                using var cts = new CancellationTokenSource(timeoutMs);
+                await tcpClient.ConnectAsync(host, port, cts.Token);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         private int _isReconnecting = 0;
 
         /// <summary>
@@ -1425,14 +1476,19 @@ namespace TelegramWebDAV.Services
                     }
 
                     int attempt = 0;
+                    DateTime lastLoggedWait = DateTime.MinValue;
+
                     while (true)
                     {
                         attempt++;
-                        if (System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable())
+
+                        // 1. Сначала выполняем сверхлегкий сетевой зонд без создания клиента и без чтения сессии с диска
+                        bool isRouteAvailable = await ProbeTelegramConnectivityAsync();
+                        if (isRouteAvailable)
                         {
                             try
                             {
-                                AppLogger.Info("TelegramService", $"[Reactor] Попытка #{attempt}: Сеть Windows доступна. Пересоздание клиента WTelegram и переподключение...");
+                                AppLogger.Info("TelegramService", $"[Network] Маршрут к дата-центру Telegram доступен (попытка #{attempt}). Переподключение сессии...");
 
                                 // В соответствии с официальным руководством WTelegramClient (Program_ReactorError.cs):
                                 // полностью утилизируем старый экземпляр с аварийным реактором
@@ -1453,15 +1509,48 @@ namespace TelegramWebDAV.Services
                             }
                             catch (Exception ex)
                             {
-                                AppLogger.Warn("TelegramService", $"[Reactor] Попытка #{attempt} переподключения не удалась: {ex.Message}. Ожидание 5 сек...");
+                                AppLogger.Warn("TelegramService", $"[Reactor] Ошибка авторизации сессии при переподключении: {ex.Message}. Ожидание стабилизации...");
                             }
                         }
                         else
                         {
-                            AppLogger.Debug("TelegramService", $"[Reactor] Попытка #{attempt}: Сеть Windows недоступна. Ожидание подключения к сети...");
+                            // Маршрут к Telegram отсутствует (HostUnreachable / таймаут сокета).
+                            // Диск и сессию не трогаем, клиента впустую не создаем.
+                            if ((DateTime.UtcNow - lastLoggedWait).TotalSeconds >= 60 || attempt == 1)
+                            {
+                                AppLogger.Info("TelegramService", $"[Network] Связь с серверами Telegram отсутствует (попытка #{attempt}). Ожидание восстановления интернета...");
+                                lastLoggedWait = DateTime.UtcNow;
+                            }
+                            else
+                            {
+                                AppLogger.Debug("TelegramService", $"[Network] Попытка #{attempt}: Маршрут к Telegram пока недоступен.");
+                            }
                         }
 
-                        await Task.Delay(5000);
+                        // 2. Адаптивный бэкофф: Попытка 1: 5 сек; Попытка 2: 10 сек; Попытка 3+: 25 сек.
+                        int delayMs = attempt switch
+                        {
+                            1 => 5000,
+                            2 => 10000,
+                            _ => 25000
+                        };
+
+                        CancellationToken waitToken;
+                        lock (_reconnectWaitLock)
+                        {
+                            _reconnectWaitCts?.Dispose();
+                            _reconnectWaitCts = new CancellationTokenSource();
+                            waitToken = _reconnectWaitCts.Token;
+                        }
+
+                        try
+                        {
+                            await Task.Delay(delayMs, waitToken);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            AppLogger.Info("TelegramService", "[Network] Системный сигнал Windows: сброс паузы ожидания и немедленная проверка связи...");
+                        }
                     }
                 }
                 finally
@@ -3767,6 +3856,21 @@ namespace TelegramWebDAV.Services
             try
             {
                 System.Net.NetworkInformation.NetworkChange.NetworkAvailabilityChanged -= OnNetworkAvailabilityChanged;
+            }
+            catch { }
+            try
+            {
+                System.Net.NetworkInformation.NetworkChange.NetworkAddressChanged -= OnNetworkAddressChanged;
+            }
+            catch { }
+            try
+            {
+                lock (_reconnectWaitLock)
+                {
+                    _reconnectWaitCts?.Cancel();
+                    _reconnectWaitCts?.Dispose();
+                    _reconnectWaitCts = null;
+                }
             }
             catch { }
             try
