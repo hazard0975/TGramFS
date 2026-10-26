@@ -548,10 +548,8 @@ namespace TelegramWebDAV.Services
         {
             if (e.IsAvailable)
             {
-                AppLogger.Info("TelegramService", "[Network] Зафиксировано появление активного сетевого подключения Windows.");
                 if (_client != null && IsAuthorized && (DateTime.UtcNow - _lastSuccessfulTrafficTime).TotalSeconds < 15)
                 {
-                    AppLogger.Debug("TelegramService", "[Network] Сигнал появления подключения пропущен: сессия Telegram уже активна.");
                     return;
                 }
                 WakeUpReconnectWait("появление сетевого подключения");
@@ -559,16 +557,14 @@ namespace TelegramWebDAV.Services
             }
             else
             {
-                AppLogger.Warn("TelegramService", "[Network] Сетевое подключение Windows разорвано.");
+                WakeUpReconnectWait("отключение сетевого интерфейса Windows");
             }
         }
 
         private void OnNetworkAddressChanged(object? sender, EventArgs e)
         {
-            AppLogger.Debug("TelegramService", "[Network] Зафиксировано изменение сетевых адресов/маршрутов Windows (NetworkAddressChanged).");
             if (_client != null && IsAuthorized && (DateTime.UtcNow - _lastSuccessfulTrafficTime).TotalSeconds < 15)
             {
-                AppLogger.Debug("TelegramService", "[Network] Сигнал смены сетевых адресов пропущен: сессия Telegram уже активна и проверялась недавно.");
                 return;
             }
             WakeUpReconnectWait("изменение сетевых адресов/маршрутов");
@@ -1465,8 +1461,8 @@ namespace TelegramWebDAV.Services
 
         /// <summary>
         /// Потокобезопасный фоновый процесс самовосстановления сессии Telegram.
-        /// Вызывается при падении реактора сокета или при возвращении сетевого подключения Windows.
-        /// Не содержит захардкоженных IP: WTelegramClient сам выбирает адреса дата-центров из файла сессии.
+        /// При отсутствии интернета выводит строго 1 предупреждение в лог, после чего тихо пингует api.telegram.org:443
+        /// каждые 3 секунды без спама в лог. Как только сеть восстанавливается, запускает сессию WTelegram.
         /// </summary>
         public void TriggerReactorReconnect(string reason)
         {
@@ -1479,7 +1475,6 @@ namespace TelegramWebDAV.Services
 
             if (Interlocked.CompareExchange(ref _isReconnecting, 1, 0) != 0)
             {
-                AppLogger.Debug("TelegramService", $"[Reactor] Запрос переподключения ({reason}) пропущен: процесс восстановления уже запущен.");
                 return;
             }
 
@@ -1487,120 +1482,88 @@ namespace TelegramWebDAV.Services
             {
                 try
                 {
-                    AppLogger.Warn("TelegramService", $"[Reactor] Запуск процедуры самовосстановления сессии ({reason})...");
-
-                    // Если клиент формально существует и авторизован, проверяем сокет быстрым пингом с таймаутом 5 сек
+                    // Если клиент формально существует и авторизован, проверяем сокет быстрым пингом с таймаутом 3 сек
                     if (_client != null && IsAuthorized)
                     {
                         try
                         {
                             var pingTask = _client.Help_GetNearestDc();
-                            if (await Task.WhenAny(pingTask, Task.Delay(5000)) == pingTask)
+                            if (await Task.WhenAny(pingTask, Task.Delay(3000)) == pingTask)
                             {
                                 await pingTask;
                                 _lastSuccessfulTrafficTime = DateTime.UtcNow;
                                 AppLogger.Info("TelegramService", "[Reactor] Соединение живо, реактор успешно ответил.");
                                 return;
                             }
-                            else
-                            {
-                                AppLogger.Warn("TelegramService", "[Reactor] Проверочный пинг существующего сокета превысил 5 сек. Переход к пересозданию сессии...");
-                            }
                         }
                         catch
                         {
-                            // Сокет действительно мертв, продолжаем процедуру пересоздания
+                            // Сокет мертв, переходим к процедуре восстановления
                         }
                     }
 
-                    int attempt = 0;
-                    DateTime lastLoggedWait = DateTime.MinValue;
+                    if (_client != null)
+                    {
+                        try { _client.Dispose(); } catch { }
+                        _client = null;
+                    }
+                    _storagePeer = null;
+
+                    bool hasLoggedOffline = false;
 
                     while (true)
                     {
-                        attempt++;
-                        bool isFirstOrInfrequent = (DateTime.UtcNow - lastLoggedWait).TotalSeconds >= 60 || attempt == 1;
-
-                        if (_client != null)
-                        {
-                            try { _client.Dispose(); } catch { }
-                            _client = null;
-                        }
-                        _storagePeer = null;
-
-                        // 1. Проверяем реальное наличие интернета и доступность серверов Telegram через api.telegram.org:443
+                        // 1. Быстрый легковесный TCP-зонд к api.telegram.org:443
                         bool isReachable = await CheckTelegramReachabilityAsync(2500);
                         if (!isReachable)
                         {
-                            if (isFirstOrInfrequent)
+                            if (!hasLoggedOffline)
                             {
-                                AppLogger.Info("TelegramService", $"[Reactor] Серверы Telegram пока недоступны (api.telegram.org не отвечает). Ожидание появления сети...");
-                                lastLoggedWait = DateTime.UtcNow;
+                                AppLogger.Warn("TelegramService", $"[Reactor] Сеть недоступна ({reason}). Ожидание подключения к интернету...");
+                                hasLoggedOffline = true;
                             }
-                            else
+
+                            // Тихо ждем 3 секунды без спама в лог
+                            CancellationToken waitToken;
+                            lock (_reconnectWaitLock)
                             {
-                                AppLogger.Debug("TelegramService", $"[Reactor] Попытка #{attempt}: api.telegram.org пока недоступен.");
+                                _reconnectWaitCts?.Dispose();
+                                _reconnectWaitCts = new CancellationTokenSource();
+                                waitToken = _reconnectWaitCts.Token;
                             }
-                        }
-                        else
-                        {
-                            // 2. Интернет и Telegram доступны! Подключение через WTelegram
+
                             try
                             {
-                                if (isFirstOrInfrequent)
-                                {
-                                    AppLogger.Info("TelegramService", $"[Reactor] Связь с Telegram подтверждена (api.telegram.org доступен). Попытка #{attempt} восстановления связи ({reason}). Подключение через WTelegram...");
-                                    lastLoggedWait = DateTime.UtcNow;
-                                }
-
-                                // Триггерим подключение самого WTelegramClient по адресам его DC из сессии
-                                await ConnectAsync(isSilentRetry: !isFirstOrInfrequent);
-
-                                if (IsAuthorized && _client != null)
-                                {
-                                    _lastSuccessfulTrafficTime = DateTime.UtcNow;
-                                    AppLogger.Info("TelegramService", $"[Reactor] Сессия Telegram успешно восстановлена с попытки #{attempt}!");
-                                    break;
-                                }
+                                await Task.Delay(3000, waitToken);
                             }
-                            catch (Exception ex)
+                            catch (OperationCanceledException)
                             {
-                                if (isFirstOrInfrequent)
-                                {
-                                    AppLogger.Info("TelegramService", $"[Reactor] Ошибка сессии Telegram ({ex.Message}). Ожидание повтора...");
-                                    lastLoggedWait = DateTime.UtcNow;
-                                }
-                                else
-                                {
-                                    AppLogger.Debug("TelegramService", $"[Reactor] Попытка #{attempt} не удалась: {ex.Message}");
-                                }
+                                // Системный сигнал изменения интерфейса Windows мгновенно прерывает ожидание
                             }
+
+                            continue;
                         }
 
-                        // Адаптивный бэкофф: Попытка 1: 5 сек; Попытка 2: 10 сек; Попытка 3+: 25 сек.
-                        int delayMs = attempt switch
-                        {
-                            1 => 5000,
-                            2 => 10000,
-                            _ => 25000
-                        };
-
-                        CancellationToken waitToken;
-                        lock (_reconnectWaitLock)
-                        {
-                            _reconnectWaitCts?.Dispose();
-                            _reconnectWaitCts = new CancellationTokenSource();
-                            waitToken = _reconnectWaitCts.Token;
-                        }
+                        // 2. Интернет и Telegram доступны!
+                        AppLogger.Info("TelegramService", "[Reactor] Подключение к интернету подтверждено (api.telegram.org доступен). Запуск сессии Telegram...");
 
                         try
                         {
-                            await Task.Delay(delayMs, waitToken);
+                            await ConnectAsync(isSilentRetry: false);
+
+                            if (IsAuthorized && _client != null)
+                            {
+                                _lastSuccessfulTrafficTime = DateTime.UtcNow;
+                                AppLogger.Info("TelegramService", "[Reactor] Сессия Telegram успешно восстановлена!");
+                                break;
+                            }
                         }
-                        catch (OperationCanceledException)
+                        catch (Exception ex)
                         {
-                            AppLogger.Debug("TelegramService", "[Network] Системный сигнал Windows: сброс паузы ожидания и немедленная проверка сети...");
+                            AppLogger.Warn("TelegramService", $"[Reactor] Ошибка сессии Telegram: {ex.Message}. Повтор проверки через 3 секунды...");
                         }
+
+                        await Task.Delay(3000);
                     }
                 }
                 finally
