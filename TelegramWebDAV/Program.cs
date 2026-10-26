@@ -136,7 +136,6 @@ namespace TelegramWebDAV
                 if (settings.Server.WebDavEnabled)
                 {
                     webDavServer.Start();
-                    AppLogger.Info("Program", $"Встроенный WebDAV сервер запущен: http://localhost:{settings.Server.Port}/");
                 }
 
                 // 7. Инициализация менеджера виртуального диска (WinFsp / WebDAV)
