@@ -235,9 +235,14 @@ namespace TelegramWebDAV.UI
             }
 
             // Если для этого файла передача уже была завершена на 100%, игнорируем любые остаточные/запоздалые обновления
+            // только пока активен таймер завершения (_completionTimer.Enabled), чтобы не сбивать финальную плашку
             if (_isCompleted && _currentFileName == fileName && _direction == direction)
             {
-                return;
+                if (_completionTimer.Enabled)
+                {
+                    return;
+                }
+                _isCompleted = false;
             }
 
             _queueCount = queueCount;
@@ -252,7 +257,7 @@ namespace TelegramWebDAV.UI
             _direction = direction;
             _isMetadata = false;
 
-            // При смене файла сбрасываем счетчик, иначе гарантируем монотонный рост (защита от сетевого джиттера)
+            // При смене файла сбрасываем счетчик
             if (_currentFileName != fileName)
             {
                 _currentFileName = fileName;
@@ -267,7 +272,18 @@ namespace TelegramWebDAV.UI
             }
             else
             {
-                _currentBytes = Math.Max(_currentBytes, current);
+                // Если произошел резкий откат назад (перемотка видео в плеере назад или старт заново)
+                if (current < _currentBytes - 2097152L || (current < _currentBytes && _currentBytes >= total))
+                {
+                    _currentBytes = current;
+                    _lastSpeedBytes = current;
+                    _lastSpeedCalcTime = DateTime.UtcNow;
+                    _bytesPerSecond = 0;
+                }
+                else
+                {
+                    _currentBytes = Math.Max(_currentBytes, current);
+                }
             }
             _totalBytes = total;
             _isTransferring = true;
@@ -421,6 +437,11 @@ namespace TelegramWebDAV.UI
                 // Запускаем гарантированный таймер скрытия только если оверлей был показан
                 _completionTimer.Stop();
                 _completionTimer.Start();
+            }
+            else
+            {
+                _isCompleted = false;
+                _currentFileName = string.Empty;
             }
         }
 

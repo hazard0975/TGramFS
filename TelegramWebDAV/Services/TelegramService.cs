@@ -258,6 +258,11 @@ namespace TelegramWebDAV.Services
                 }
                 return false;
             }
+
+            public void ResetCompletion()
+            {
+                Interlocked.Exchange(ref _completionLogged, 0);
+            }
         }
 
         private void StoreChunkInMemoryCache(int messageId, long chunkOffset, byte[] raw, int cacheTtlMinutes)
@@ -3303,6 +3308,11 @@ namespace TelegramWebDAV.Services
             bool isSinglePointProbe = length <= 262144 && readSeq.SequentialCount <= 1;
             bool isMetadataProbe = isTailProbe || isFirstMb || isSinglePointProbe;
 
+            if (offset == 0 && !isMetadataProbe && actualTotalSize > 262144)
+            {
+                audit.ResetCompletion();
+            }
+
             // Если дисковый кэш включен в настройках: скачиваем файл в дисковый кэш %TEMP%
             if (enableDiskCache && offset == 0 && !isMetadataProbe && actualTotalSize > 262144)
             {
@@ -3534,7 +3544,7 @@ namespace TelegramWebDAV.Services
                         },
                         onProgress: (transferred, total) =>
                         {
-                            if (!isCurrentChunkProbe && !audit.IsAllChunksReceived())
+                            if (!isCurrentChunkProbe)
                             {
                                 OnDownloadProgress?.Invoke(fileName, chunkOffset + transferred, actualTotalSize);
                             }
@@ -3574,7 +3584,7 @@ namespace TelegramWebDAV.Services
                             readSeq.LastReadTime = DateTime.UtcNow;
                         }
 
-                        if (!isCurrentChunkProbe && !audit.IsAllChunksReceived())
+                        if (!isCurrentChunkProbe)
                         {
                             OnDownloadProgress?.Invoke(fileName, currentPos, actualTotalSize);
                         }
@@ -3740,10 +3750,7 @@ namespace TelegramWebDAV.Services
                         },
                         onProgress: (transferred, total) =>
                         {
-                            if (!audit.IsAllChunksReceived())
-                            {
-                                OnDownloadProgress?.Invoke(fileName, chunkOffsetToQueue + transferred, actualTotalSize);
-                            }
+                            OnDownloadProgress?.Invoke(fileName, chunkOffsetToQueue + transferred, actualTotalSize);
                         });
                 }
             }
