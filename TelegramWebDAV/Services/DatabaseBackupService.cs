@@ -156,9 +156,11 @@ namespace TelegramWebDAV.Services
                 {
                     if (NetworkInterface.GetIsNetworkAvailable())
                     {
-                        // Пауза 500 мс для стабилизации сокетного стека после включения адаптера
-                        await Task.Delay(500);
-                        return true;
+                        // Проверяем реальную доступность серверов Telegram через api.telegram.org:443
+                        if (await TelegramService.CheckTelegramReachabilityAsync(1500))
+                        {
+                            return true;
+                        }
                     }
                 }
                 catch { }

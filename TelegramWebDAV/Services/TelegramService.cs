@@ -508,6 +508,7 @@ namespace TelegramWebDAV.Services
 
         private CancellationTokenSource? _reconnectWaitCts;
         private readonly object _reconnectWaitLock = new();
+        private DateTime _lastSuccessfulTrafficTime = DateTime.MinValue;
 
         public TelegramService(ConfigManager configManager, NodeRepository? repository = null)
         {
@@ -543,6 +544,11 @@ namespace TelegramWebDAV.Services
             if (e.IsAvailable)
             {
                 AppLogger.Info("TelegramService", "[Network] Зафиксировано появление активного сетевого подключения Windows.");
+                if (_client != null && IsAuthorized && (DateTime.UtcNow - _lastSuccessfulTrafficTime).TotalSeconds < 15)
+                {
+                    AppLogger.Debug("TelegramService", "[Network] Сигнал появления подключения пропущен: сессия Telegram уже активна.");
+                    return;
+                }
                 WakeUpReconnectWait("появление сетевого подключения");
                 TriggerReactorReconnect("восстановление сетевого интерфейса Windows");
             }
@@ -555,12 +561,22 @@ namespace TelegramWebDAV.Services
         private void OnNetworkAddressChanged(object? sender, EventArgs e)
         {
             AppLogger.Debug("TelegramService", "[Network] Зафиксировано изменение сетевых адресов/маршрутов Windows (NetworkAddressChanged).");
+            if (_client != null && IsAuthorized && (DateTime.UtcNow - _lastSuccessfulTrafficTime).TotalSeconds < 15)
+            {
+                AppLogger.Debug("TelegramService", "[Network] Сигнал смены сетевых адресов пропущен: сессия Telegram уже активна и проверялась недавно.");
+                return;
+            }
             WakeUpReconnectWait("изменение сетевых адресов/маршрутов");
             TriggerReactorReconnect("изменение сетевых адресов/маршрутов");
         }
 
         private void HandleWTelegramLog(int level, string str)
         {
+            if (!string.IsNullOrEmpty(str) && (str.Contains("Pong") || str.Contains("RpcResult") || str.Contains("Connected to DC") || str.Contains("Receiving Updates")))
+            {
+                _lastSuccessfulTrafficTime = DateTime.UtcNow;
+            }
+
             if (level == 2 && !string.IsNullOrEmpty(str) && str.Contains("Connected to DC", StringComparison.OrdinalIgnoreCase))
             {
                 if (IsAuthorized)
@@ -588,6 +604,7 @@ namespace TelegramWebDAV.Services
                 if (await Task.WhenAny(pingTask, Task.Delay(5000)) == pingTask)
                 {
                     await pingTask;
+                    _lastSuccessfulTrafficTime = DateTime.UtcNow;
                     AppLogger.Info("TelegramService", "Проверка связи с Telegram после сна успешна: сокет активен.");
                 }
                 else
@@ -1402,6 +1419,33 @@ namespace TelegramWebDAV.Services
             }
         }
 
+        /// <summary>
+        /// Быстрый легковесный TCP-зонд к api.telegram.org:443 для проверки реального наличия интернета и доступности серверов Telegram.
+        /// Динамически резолвит официальный домен через DNS (без захардкоженных IP), с таймаутом 2.5 секунды.
+        /// Защищает от преждевременных попыток создания клиента WTelegram и спама ошибками HostUnreachable при согласовании Wi-Fi/DHCP.
+        /// </summary>
+        public static async Task<bool> CheckTelegramReachabilityAsync(int timeoutMs = 2500)
+        {
+            try
+            {
+                using var cts = new CancellationTokenSource(timeoutMs);
+                var addresses = await System.Net.Dns.GetHostAddressesAsync("api.telegram.org", cts.Token);
+                if (addresses == null || addresses.Length == 0) return false;
+
+                // Отдаем приоритет IPv4 для избежания таймаутов на немаршрутизируемых локальных IPv6-сетях
+                var targetIp = addresses.FirstOrDefault(a => a.AddressFamily == AddressFamily.InterNetwork) 
+                               ?? addresses[0];
+
+                using var tcpClient = new TcpClient();
+                await tcpClient.ConnectAsync(targetIp, 443, cts.Token);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         private Task HandleClientOtherAsync(IObject arg)
         {
             if (arg is TL.ReactorError reactorErr)
@@ -1449,6 +1493,7 @@ namespace TelegramWebDAV.Services
                             if (await Task.WhenAny(pingTask, Task.Delay(5000)) == pingTask)
                             {
                                 await pingTask;
+                                _lastSuccessfulTrafficTime = DateTime.UtcNow;
                                 AppLogger.Info("TelegramService", "[Reactor] Соединение живо, реактор успешно ответил.");
                                 return;
                             }
@@ -1471,40 +1516,59 @@ namespace TelegramWebDAV.Services
                         attempt++;
                         bool isFirstOrInfrequent = (DateTime.UtcNow - lastLoggedWait).TotalSeconds >= 60 || attempt == 1;
 
-                        try
+                        if (_client != null)
                         {
-                            if (_client != null)
-                            {
-                                try { _client.Dispose(); } catch { }
-                                _client = null;
-                            }
-                            _storagePeer = null;
-
-                            if (isFirstOrInfrequent)
-                            {
-                                AppLogger.Info("TelegramService", $"[Reactor] Попытка #{attempt} восстановления связи ({reason}). Подключение через WTelegram...");
-                                lastLoggedWait = DateTime.UtcNow;
-                            }
-
-                            // Триггерим подключение самого WTelegramClient по адресам его DC из сессии
-                            await ConnectAsync(isSilentRetry: !isFirstOrInfrequent);
-
-                            if (IsAuthorized && _client != null)
-                            {
-                                AppLogger.Info("TelegramService", $"[Reactor] Сессия Telegram успешно восстановлена с попытки #{attempt}!");
-                                break;
-                            }
+                            try { _client.Dispose(); } catch { }
+                            _client = null;
                         }
-                        catch (Exception ex)
+                        _storagePeer = null;
+
+                        // 1. Проверяем реальное наличие интернета и доступность серверов Telegram через api.telegram.org:443
+                        bool isReachable = await CheckTelegramReachabilityAsync(2500);
+                        if (!isReachable)
                         {
                             if (isFirstOrInfrequent)
                             {
-                                AppLogger.Info("TelegramService", $"[Reactor] Серверы Telegram пока недоступны ({ex.Message}). Ожидание появления сети...");
+                                AppLogger.Info("TelegramService", $"[Reactor] Серверы Telegram пока недоступны (api.telegram.org не отвечает). Ожидание появления сети...");
                                 lastLoggedWait = DateTime.UtcNow;
                             }
                             else
                             {
-                                AppLogger.Debug("TelegramService", $"[Reactor] Попытка #{attempt} не удалась: {ex.Message}");
+                                AppLogger.Debug("TelegramService", $"[Reactor] Попытка #{attempt}: api.telegram.org пока недоступен.");
+                            }
+                        }
+                        else
+                        {
+                            // 2. Интернет и Telegram доступны! Подключение через WTelegram
+                            try
+                            {
+                                if (isFirstOrInfrequent)
+                                {
+                                    AppLogger.Info("TelegramService", $"[Reactor] Связь с Telegram подтверждена (api.telegram.org доступен). Попытка #{attempt} восстановления связи ({reason}). Подключение через WTelegram...");
+                                    lastLoggedWait = DateTime.UtcNow;
+                                }
+
+                                // Триггерим подключение самого WTelegramClient по адресам его DC из сессии
+                                await ConnectAsync(isSilentRetry: !isFirstOrInfrequent);
+
+                                if (IsAuthorized && _client != null)
+                                {
+                                    _lastSuccessfulTrafficTime = DateTime.UtcNow;
+                                    AppLogger.Info("TelegramService", $"[Reactor] Сессия Telegram успешно восстановлена с попытки #{attempt}!");
+                                    break;
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                if (isFirstOrInfrequent)
+                                {
+                                    AppLogger.Info("TelegramService", $"[Reactor] Ошибка сессии Telegram ({ex.Message}). Ожидание повтора...");
+                                    lastLoggedWait = DateTime.UtcNow;
+                                }
+                                else
+                                {
+                                    AppLogger.Debug("TelegramService", $"[Reactor] Попытка #{attempt} не удалась: {ex.Message}");
+                                }
                             }
                         }
 
@@ -1530,7 +1594,7 @@ namespace TelegramWebDAV.Services
                         }
                         catch (OperationCanceledException)
                         {
-                            AppLogger.Info("TelegramService", "[Network] Системный сигнал Windows: сброс паузы ожидания и немедленная попытка подключения...");
+                            AppLogger.Debug("TelegramService", "[Network] Системный сигнал Windows: сброс паузы ожидания и немедленная проверка сети...");
                         }
                     }
                 }
@@ -1593,6 +1657,7 @@ namespace TelegramWebDAV.Services
                 IsAuthorized = true;
                 CurrentStep = AuthStep.Authorized;
                 LastError = null;
+                _lastSuccessfulTrafficTime = DateTime.UtcNow;
                 InitWorkerPool();
 
                 if (_client?.User != null)

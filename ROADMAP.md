@@ -990,6 +990,14 @@
      2. Процедура самовосстановления напрямую триггерит `ConnectAsync(isSilentRetry: ...)`: библиотека `WTelegramClient` сама перебирает актуальные IP/IPv6 адреса целевого дата-центра из параметров сессии `user.session`.
      3. Добавлен параметр `isSilentRetry` в `ConnectAsync` для предотвращения вывода полных stack trace ошибок сокета и повторного спама конфигурации стриминга во время временных сбоев интернета.
 
+- [x] **8.63. Легковесный TCP-зонд к `api.telegram.org:443` перед инициализацией WTelegram и троттлинг сетевых событий ядра Windows**:
+   - **Реализовано**:
+     1. Внедрен статический метод `TelegramService.CheckTelegramReachabilityAsync(int timeoutMs = 2500)`: выполняет быстрый легковесный опрос домена `api.telegram.org:443` по протоколу TCP HTTPS с приоритетом IPv4 для исключения подвисаний на немаршрутизируемых локальных сетях IPv6.
+     2. В `TriggerReactorReconnect` перед созданием экземпляра `WTelegram.Client` и загрузкой сессии выполняется проверка доступности `CheckTelegramReachabilityAsync`. Если сеть еще не настроена роутером (DHCP/шлюз), WTelegram не инициализируется и ошибки `HostUnreachable (10065)` не выводятся в лог.
+     3. Добавлен троттлинг сетевых событий Windows (`_lastSuccessfulTrafficTime`): если сессия уже успешно авторизована и активный сетевой обмен (`Pong`, `RpcResult`, `Updates`) происходил менее 15 секунд назад, входящие события ядра Windows `NetworkAddressChanged` и `NetworkAvailabilityChanged` игнорируются, исключая серию избыточных RPC-запросов `Help_GetNearestDc`.
+     4. В `DatabaseBackupService.WaitForNetworkAvailableAsync` внедрена проверка `CheckTelegramReachabilityAsync(1500)`, исключающая ложное срабатывание проверки базы до реального поднятия связи с серверами Telegram.
+
+
 
 
 
