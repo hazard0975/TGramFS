@@ -1,4 +1,5 @@
 using System;
+using System.Buffers.Binary;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -62,21 +63,48 @@ namespace TelegramWebDAV.Services
                 return result;
             }
 
+            string ext = Path.GetExtension(filePath).ToLowerInvariant();
+
             // Шаг 1: Полный парсинг MP4/MOV структуры по всему файлу через прямой бинарный парсер (без COM, без падений)
-            try
+            if (ext is ".mp4" or ".mov" or ".m4v")
             {
-                ParseMp4Full(filePath, result);
-                if (result.DurationSeconds > 0)
+                try
                 {
-                    // AppLogger.Debug("VideoMetadataExtractor", $"MP4 parser успешно прочитал '{Path.GetFileName(filePath)}': {result.Width}x{result.Height}, {result.DurationSeconds} сек");
+                    ParseMp4Full(filePath, result);
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Warn("VideoMetadataExtractor", $"MP4 parser ошибка '{filePath}': {ex.Message}");
                 }
             }
-            catch (Exception ex)
+
+            // Шаг 2: Полный парсинг MKV/WebM (EBML) структуры через прямой бинарный парсер (чистый C#, без COM, без падений)
+            if (ext is ".mkv" or ".webm")
             {
-                AppLogger.Warn("VideoMetadataExtractor", $"MP4 parser ошибка '{filePath}': {ex.Message}");
+                try
+                {
+                    ParseMkvFull(filePath, result);
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Warn("VideoMetadataExtractor", $"MKV parser ошибка '{filePath}': {ex.Message}");
+                }
             }
 
-            // Шаг 2: Чтение тегов и вшитых обложек/постеров через ATL.NET
+            // Шаг 3: Чтение свойств через Windows Shell Property System (PKEY_Media_Duration, PKEY_Video_FrameWidth, PKEY_Video_FrameHeight)
+            if ((result.DurationSeconds <= 0 || result.Width <= 0 || result.Height <= 0) && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                try
+                {
+                    ReadShellProperties(filePath, result);
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Debug("VideoMetadataExtractor", $"Shell PropertyStore ошибка '{filePath}': {ex.Message}");
+                }
+            }
+
+            // Шаг 4: Чтение тегов и вшитых обложек/постеров через ATL.NET
             try
             {
                 var track = new ATL.Track(filePath);
@@ -104,16 +132,12 @@ namespace TelegramWebDAV.Services
                 AppLogger.Warn("VideoMetadataExtractor", $"ATL чтение '{filePath}': {ex.Message}");
             }
 
-            // Шаг 3: Извлечение стоп-кадра через Shell Thumbnail Provider (K-Lite Codec Pack / Icaros / Windows Shell) - всеяден, поддерживает AV1, HEVC, H.264, VP9, MKV и др.
+            // Шаг 5: Извлечение стоп-кадра через Shell Thumbnail Provider (K-Lite Codec Pack / Icaros / Windows Shell) - всеяден, поддерживает AV1, HEVC, H.264, VP9, MKV и др.
             if (result.Thumbnail == null && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 try
                 {
                     ExtractThumbnailViaShellItem(filePath, result);
-                    if (result.Thumbnail != null)
-                    {
-                        // AppLogger.Debug("VideoMetadataExtractor", $"Shell Thumbnail (K-Lite/Icaros) успешно создал эскиз '{Path.GetFileName(filePath)}' ({result.Thumbnail.Length} байт)");
-                    }
                 }
                 catch (Exception ex)
                 {
@@ -121,7 +145,7 @@ namespace TelegramWebDAV.Services
                 }
             }
 
-            // Шаг 4: Запасной резерв — если Shell/K-Lite не вернул эскиз, пробуем системный Windows Media Foundation (IMFSourceReader)
+            // Шаг 6: Запасной резерв — если Shell/K-Lite не вернул эскиз, пробуем системный Windows Media Foundation (IMFSourceReader)
             if (result.Thumbnail == null && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 try
@@ -138,7 +162,17 @@ namespace TelegramWebDAV.Services
                 }
             }
 
-            // Шаг 5: Безопасные значения по умолчанию для плеера Telegram, если метаданные не найдены
+            // Шаг 7: Резервное чтение свойств через Windows Shell, если после эскиза размеры не заданы
+            if ((result.DurationSeconds <= 0 || result.Width <= 0 || result.Height <= 0) && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                try
+                {
+                    ReadShellProperties(filePath, result);
+                }
+                catch { }
+            }
+
+            // Шаг 8: Безопасные значения по умолчанию для плеера Telegram, если метаданные не найдены
             if (result.Width <= 0 || result.Height <= 0)
             {
                 result.Width = 1280;
@@ -1485,6 +1519,606 @@ namespace TelegramWebDAV.Services
         private static ulong ReadUInt64BE(byte[] buffer, int offset)
         {
             return ((ulong)ReadUInt32BE(buffer, offset) << 32) | ReadUInt32BE(buffer, offset + 4);
+        }
+
+        #endregion
+
+        #region MKV / WebM (EBML) Parser
+
+        private static void ParseMkvFull(string filePath, VideoMetadataResult result)
+        {
+            using var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            long fileLength = fs.Length;
+            if (fileLength < 16) return;
+
+            // 1. Проверяем EBML Header (0x1A45DFA3)
+            if (!ReadEbmlElementHeader(fs, out uint ebmlId, out long ebmlSize)) return;
+            if (ebmlId != 0x1A45DFA3) return;
+
+            if (ebmlSize > 0)
+            {
+                fs.Seek(fs.Position + ebmlSize, SeekOrigin.Begin);
+            }
+
+            // 2. Ищем Segment (0x18538067)
+            if (!ReadEbmlElementHeader(fs, out uint segId, out long segSize)) return;
+            if (segId != 0x18538067) return;
+
+            long segStart = fs.Position;
+            long segEnd = (segSize > 0 && segStart + segSize <= fileLength) ? segStart + segSize : fileLength;
+
+            double timecodeScaleNs = 1_000_000.0; // По умолчанию 1 мс
+            double rawDuration = 0;
+            var seekPoints = new System.Collections.Generic.Dictionary<uint, long>();
+
+            // 3. Сканируем элементы Segment (Info, Tracks, Tags, SeekHead)
+            // Останавливаемся перед первым Cluster (0x1F43B675)
+            while (fs.Position < segEnd)
+            {
+                long elemStart = fs.Position;
+                if (!ReadEbmlElementHeader(fs, out uint id, out long size)) break;
+
+                // Если достигли первого Cluster (фактические видеокадры) - прекращаем линейное сканирование
+                if (id == 0x1F43B675)
+                {
+                    break;
+                }
+
+                long contentStart = fs.Position;
+                long contentEnd = (size >= 0) ? contentStart + size : segEnd;
+
+                if (id == 0x114D9B74) // SeekHead
+                {
+                    ParseMkvSeekHead(fs, contentStart, contentEnd, segStart, seekPoints);
+                }
+                else if (id == 0x1549A966) // Segment Info
+                {
+                    ParseMkvInfo(fs, contentStart, contentEnd, ref timecodeScaleNs, ref rawDuration);
+                }
+                else if (id == 0x1654AE6B) // Tracks
+                {
+                    ParseMkvTracks(fs, contentStart, contentEnd, result);
+                }
+                else if (id == 0x1254C367) // Tags
+                {
+                    ParseMkvTags(fs, contentStart, contentEnd, result);
+                }
+
+                if ((rawDuration > 0 || result.DurationSeconds > 0) && result.Width > 0 && result.Height > 0)
+                {
+                    break;
+                }
+
+                if (size > 0 && contentStart + size > fs.Position)
+                {
+                    fs.Seek(contentStart + size, SeekOrigin.Begin);
+                }
+                else if (size < 0 || fs.Position <= elemStart)
+                {
+                    break;
+                }
+            }
+
+            // Если длительность или разрешение не найдены до первого кластера, проверяем точки индекса SeekHead
+            if ((rawDuration <= 0 && result.DurationSeconds <= 0) && seekPoints.TryGetValue(0x1549A966, out long infoPos) && infoPos < fileLength)
+            {
+                fs.Seek(infoPos, SeekOrigin.Begin);
+                if (ReadEbmlElementHeader(fs, out uint iId, out long iSize) && iId == 0x1549A966)
+                {
+                    long iContentStart = fs.Position;
+                    long iContentEnd = (iSize >= 0) ? iContentStart + iSize : fileLength;
+                    ParseMkvInfo(fs, iContentStart, iContentEnd, ref timecodeScaleNs, ref rawDuration);
+                }
+            }
+
+            if ((result.Width <= 0 || result.Height <= 0) && seekPoints.TryGetValue(0x1654AE6B, out long tracksPos) && tracksPos < fileLength)
+            {
+                fs.Seek(tracksPos, SeekOrigin.Begin);
+                if (ReadEbmlElementHeader(fs, out uint tId, out long tSize) && tId == 0x1654AE6B)
+                {
+                    long tContentStart = fs.Position;
+                    long tContentEnd = (tSize >= 0) ? tContentStart + tSize : fileLength;
+                    ParseMkvTracks(fs, tContentStart, tContentEnd, result);
+                }
+            }
+
+            if (result.DurationSeconds <= 0 && seekPoints.TryGetValue(0x1254C367, out long tagsPos) && tagsPos < fileLength)
+            {
+                fs.Seek(tagsPos, SeekOrigin.Begin);
+                if (ReadEbmlElementHeader(fs, out uint tgId, out long tgSize) && tgId == 0x1254C367)
+                {
+                    long tgContentStart = fs.Position;
+                    long tgContentEnd = (tgSize >= 0) ? tgContentStart + tgSize : fileLength;
+                    ParseMkvTags(fs, tgContentStart, tgContentEnd, result);
+                }
+            }
+
+            if (result.DurationSeconds <= 0 && rawDuration > 0)
+            {
+                double totalSeconds = (rawDuration * timecodeScaleNs) / 1_000_000_000.0;
+                if (totalSeconds > 0)
+                {
+                    result.DurationSeconds = (int)Math.Round(totalSeconds);
+                    AppLogger.Info("VideoMetadataExtractor", $"MKV parser прочитал длительность '{Path.GetFileName(filePath)}': {result.DurationSeconds} сек");
+                }
+            }
+        }
+
+        private static bool ReadEbmlElementHeader(Stream stream, out uint elementId, out long dataSize)
+        {
+            elementId = 0;
+            dataSize = 0;
+
+            int b0 = stream.ReadByte();
+            if (b0 < 0) return false;
+
+            // Длина ID по ведущему биту (1..4 байта)
+            if ((b0 & 0x80) != 0)
+            {
+                elementId = (uint)b0;
+            }
+            else if ((b0 & 0x40) != 0)
+            {
+                int b1 = stream.ReadByte();
+                if (b1 < 0) return false;
+                elementId = (uint)((b0 << 8) | b1);
+            }
+            else if ((b0 & 0x20) != 0)
+            {
+                int b1 = stream.ReadByte();
+                int b2 = stream.ReadByte();
+                if (b1 < 0 || b2 < 0) return false;
+                elementId = (uint)((b0 << 16) | (b1 << 8) | b2);
+            }
+            else if ((b0 & 0x10) != 0)
+            {
+                int b1 = stream.ReadByte();
+                int b2 = stream.ReadByte();
+                int b3 = stream.ReadByte();
+                if (b1 < 0 || b2 < 0 || b3 < 0) return false;
+                elementId = (uint)((b0 << 24) | (b1 << 16) | (b2 << 8) | b3);
+            }
+            else
+            {
+                return false;
+            }
+
+            // Длина Data Size (VINT, от 1 до 8 байт)
+            int sb0 = stream.ReadByte();
+            if (sb0 < 0) return false;
+
+            int sizeLen = 0;
+            int mask = 0;
+            for (int i = 0; i < 8; i++)
+            {
+                int bit = 1 << (7 - i);
+                if ((sb0 & bit) != 0)
+                {
+                    sizeLen = i + 1;
+                    mask = bit - 1;
+                    break;
+                }
+            }
+
+            if (sizeLen == 0) return false;
+
+            long val = (sb0 & mask);
+            bool allOnes = (sb0 & mask) == mask;
+            for (int i = 1; i < sizeLen; i++)
+            {
+                int nb = stream.ReadByte();
+                if (nb < 0) return false;
+                if (nb != 0xFF) allOnes = false;
+                val = (val << 8) | (byte)nb;
+            }
+
+            dataSize = allOnes ? -1 : val;
+            return true;
+        }
+
+        private static void ParseMkvSeekHead(Stream stream, long start, long end, long segStart, System.Collections.Generic.Dictionary<uint, long> seekPoints)
+        {
+            while (stream.Position < end)
+            {
+                long pos = stream.Position;
+                if (!ReadEbmlElementHeader(stream, out uint id, out long size)) break;
+                long cStart = stream.Position;
+                long cEnd = (size >= 0) ? cStart + size : end;
+
+                if (id == 0x4DBB) // Seek
+                {
+                    uint seekId = 0;
+                    long seekPos = -1;
+
+                    while (stream.Position < cEnd)
+                    {
+                        long sPos = stream.Position;
+                        if (!ReadEbmlElementHeader(stream, out uint sid, out long ssize)) break;
+                        long scStart = stream.Position;
+
+                        if (sid == 0x53AB) // SeekID
+                        {
+                            seekId = (uint)ReadEbmlUInt(stream, ssize);
+                        }
+                        else if (sid == 0x53AC) // SeekPosition
+                        {
+                            seekPos = (long)ReadEbmlUInt(stream, ssize);
+                        }
+
+                        if (ssize > 0 && scStart + ssize > stream.Position)
+                        {
+                            stream.Seek(scStart + ssize, SeekOrigin.Begin);
+                        }
+                        else if (ssize <= 0 && stream.Position <= sPos)
+                        {
+                            break;
+                        }
+                    }
+
+                    if (seekId != 0 && seekPos >= 0)
+                    {
+                        seekPoints[seekId] = segStart + seekPos;
+                    }
+                }
+
+                if (size > 0 && cStart + size > stream.Position)
+                {
+                    stream.Seek(cStart + size, SeekOrigin.Begin);
+                }
+                else if (size <= 0 && stream.Position <= pos)
+                {
+                    break;
+                }
+            }
+        }
+
+        private static void ParseMkvInfo(Stream stream, long start, long end, ref double timecodeScaleNs, ref double rawDuration)
+        {
+            while (stream.Position < end)
+            {
+                long pos = stream.Position;
+                if (!ReadEbmlElementHeader(stream, out uint id, out long size)) break;
+                long cStart = stream.Position;
+
+                if (id == 0x2AD7B1) // TimecodeScale
+                {
+                    ulong scale = ReadEbmlUInt(stream, size);
+                    if (scale > 0) timecodeScaleNs = scale;
+                }
+                else if (id == 0x4489) // Duration
+                {
+                    double dur = ReadEbmlFloat(stream, size);
+                    if (dur > 0) rawDuration = dur;
+                }
+
+                if (size > 0 && cStart + size > stream.Position)
+                {
+                    stream.Seek(cStart + size, SeekOrigin.Begin);
+                }
+                else if (size <= 0 && stream.Position <= pos)
+                {
+                    break;
+                }
+            }
+        }
+
+        private static void ParseMkvTracks(Stream stream, long start, long end, VideoMetadataResult result)
+        {
+            while (stream.Position < end)
+            {
+                long pos = stream.Position;
+                if (!ReadEbmlElementHeader(stream, out uint id, out long size)) break;
+                long cStart = stream.Position;
+                long cEnd = (size >= 0) ? cStart + size : end;
+
+                if (id == 0xAE) // TrackEntry
+                {
+                    ParseMkvTrackEntry(stream, cStart, cEnd, result);
+                }
+
+                if (size > 0 && cStart + size > stream.Position)
+                {
+                    stream.Seek(cStart + size, SeekOrigin.Begin);
+                }
+                else if (size <= 0 && stream.Position <= pos)
+                {
+                    break;
+                }
+            }
+        }
+
+        private static void ParseMkvTrackEntry(Stream stream, long start, long end, VideoMetadataResult result)
+        {
+            int trackType = 0;
+            int width = 0;
+            int height = 0;
+
+            while (stream.Position < end)
+            {
+                long pos = stream.Position;
+                if (!ReadEbmlElementHeader(stream, out uint id, out long size)) break;
+                long cStart = stream.Position;
+
+                if (id == 0x83) // TrackType (1 = Video, 2 = Audio)
+                {
+                    trackType = (int)ReadEbmlUInt(stream, size);
+                }
+                else if (id == 0xE0) // VideoSettings
+                {
+                    long vEnd = (size >= 0) ? cStart + size : end;
+                    while (stream.Position < vEnd)
+                    {
+                        long vPos = stream.Position;
+                        if (!ReadEbmlElementHeader(stream, out uint vid, out long vsize)) break;
+                        long vcStart = stream.Position;
+
+                        if (vid == 0xB0) // PixelWidth
+                        {
+                            width = (int)ReadEbmlUInt(stream, vsize);
+                        }
+                        else if (vid == 0xBA) // PixelHeight
+                        {
+                            height = (int)ReadEbmlUInt(stream, vsize);
+                        }
+
+                        if (vsize > 0 && vcStart + vsize > stream.Position)
+                        {
+                            stream.Seek(vcStart + vsize, SeekOrigin.Begin);
+                        }
+                        else if (vsize <= 0 && stream.Position <= vPos)
+                        {
+                            break;
+                        }
+                    }
+                }
+
+                if (size > 0 && cStart + size > stream.Position)
+                {
+                    stream.Seek(cStart + size, SeekOrigin.Begin);
+                }
+                else if (size <= 0 && stream.Position <= pos)
+                {
+                    break;
+                }
+            }
+
+            if (trackType == 1 && width > 0 && height > 0)
+            {
+                result.Width = width;
+                result.Height = height;
+                AppLogger.Info("VideoMetadataExtractor", $"MKV parser прочитал разрешение '{width}x{height}'");
+            }
+        }
+
+        private static void ParseMkvTags(Stream stream, long start, long end, VideoMetadataResult result)
+        {
+            while (stream.Position < end)
+            {
+                long pos = stream.Position;
+                if (!ReadEbmlElementHeader(stream, out uint id, out long size)) break;
+                long cStart = stream.Position;
+                long cEnd = (size >= 0) ? cStart + size : end;
+
+                if (id == 0x7373) // Tag
+                {
+                    while (stream.Position < cEnd)
+                    {
+                        long tagPos = stream.Position;
+                        if (!ReadEbmlElementHeader(stream, out uint tagId, out long tagSize)) break;
+                        long tagContentStart = stream.Position;
+                        long tagContentEnd = (tagSize >= 0) ? tagContentStart + tagSize : cEnd;
+
+                        if (tagId == 0x67C8) // SimpleTag
+                        {
+                            string? tagName = null;
+                            string? tagString = null;
+
+                            while (stream.Position < tagContentEnd)
+                            {
+                                long stPos = stream.Position;
+                                if (!ReadEbmlElementHeader(stream, out uint sId, out long sSize)) break;
+                                long stContentStart = stream.Position;
+
+                                if (sId == 0x45A3) // TagName
+                                {
+                                    tagName = ReadEbmlString(stream, sSize);
+                                }
+                                else if (sId == 0x4487) // TagString
+                                {
+                                    tagString = ReadEbmlString(stream, sSize);
+                                }
+
+                                if (sSize > 0 && stContentStart + sSize > stream.Position)
+                                {
+                                    stream.Seek(stContentStart + sSize, SeekOrigin.Begin);
+                                }
+                                else if (sSize <= 0 && stream.Position <= stPos)
+                                {
+                                    break;
+                                }
+                            }
+
+                            if (string.Equals(tagName, "DURATION", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(tagString))
+                            {
+                                // Формат: 00:12:43.433000000
+                                string cleanTs = tagString.Trim();
+                                if (TimeSpan.TryParse(cleanTs, System.Globalization.CultureInfo.InvariantCulture, out TimeSpan ts))
+                                {
+                                    int durSec = (int)Math.Round(ts.TotalSeconds);
+                                    if (durSec > 0 && durSec > result.DurationSeconds)
+                                    {
+                                        result.DurationSeconds = durSec;
+                                        AppLogger.Info("VideoMetadataExtractor", $"MKV parser прочитал DURATION из тегов: '{cleanTs}' ({durSec} сек)");
+                                    }
+                                }
+                            }
+                        }
+
+                        if (tagSize > 0 && tagContentStart + tagSize > stream.Position)
+                        {
+                            stream.Seek(tagContentStart + tagSize, SeekOrigin.Begin);
+                        }
+                        else if (tagSize <= 0 && stream.Position <= tagPos)
+                        {
+                            break;
+                        }
+                    }
+                }
+
+                if (size > 0 && cStart + size > stream.Position)
+                {
+                    stream.Seek(cStart + size, SeekOrigin.Begin);
+                }
+                else if (size <= 0 && stream.Position <= pos)
+                {
+                    break;
+                }
+            }
+        }
+
+        private static ulong ReadEbmlUInt(Stream stream, long size)
+        {
+            if (size <= 0 || size > 8) return 0;
+            ulong val = 0;
+            for (int i = 0; i < size; i++)
+            {
+                int b = stream.ReadByte();
+                if (b < 0) break;
+                val = (val << 8) | (byte)b;
+            }
+            return val;
+        }
+
+        private static double ReadEbmlFloat(Stream stream, long size)
+        {
+            if (size == 4)
+            {
+                byte[] buf = new byte[4];
+                if (stream.Read(buf, 0, 4) < 4) return 0;
+                return BinaryPrimitives.ReadSingleBigEndian(buf);
+            }
+            else if (size == 8)
+            {
+                byte[] buf = new byte[8];
+                if (stream.Read(buf, 0, 8) < 8) return 0;
+                return BinaryPrimitives.ReadDoubleBigEndian(buf);
+            }
+            return 0;
+        }
+
+        private static string ReadEbmlString(Stream stream, long size)
+        {
+            if (size <= 0 || size > 1024) return string.Empty;
+            byte[] buf = new byte[size];
+            int read = stream.Read(buf, 0, (int)size);
+            if (read <= 0) return string.Empty;
+            return System.Text.Encoding.UTF8.GetString(buf, 0, read).TrimEnd('\0');
+        }
+
+        #endregion
+
+        #region Windows Shell Property System (IPropertyStore)
+
+        [DllImport("shell32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern int SHGetPropertyStoreFromParsingName(
+            [MarshalAs(UnmanagedType.LPWStr)] string pszPath,
+            IntPtr pbc,
+            uint flags,
+            [In, MarshalAs(UnmanagedType.LPStruct)] Guid riid,
+            out IPropertyStore ppv);
+
+        [ComImport]
+        [Guid("886d8eeb-8cf2-4446-8d02-cdba1dbdcf99")]
+        [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+        private interface IPropertyStore
+        {
+            [PreserveSig] int GetCount([Out] out uint cProps);
+            [PreserveSig] int GetAt([In] uint iProp, [Out] out PROPERTYKEY pkey);
+            [PreserveSig] int GetValue([In] ref PROPERTYKEY key, [Out] out PropVariant pv);
+            [PreserveSig] int SetValue([In] ref PROPERTYKEY key, [In] ref PropVariant propvar);
+            [PreserveSig] int Commit();
+        }
+
+        [StructLayout(LayoutKind.Sequential, Pack = 4)]
+        private struct PROPERTYKEY
+        {
+            public Guid fmtid;
+            public uint pid;
+
+            public PROPERTYKEY(Guid guid, uint id)
+            {
+                fmtid = guid;
+                pid = id;
+            }
+        }
+
+        private static void ReadShellProperties(string filePath, VideoMetadataResult result)
+        {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                return;
+
+            try
+            {
+                Guid iidPropStore = new Guid("886d8eeb-8cf2-4446-8d02-cdba1dbdcf99");
+                int hr = SHGetPropertyStoreFromParsingName(filePath, IntPtr.Zero, 0 /* GPS_DEFAULT */, iidPropStore, out IPropertyStore propStore);
+                if (hr == 0 && propStore != null)
+                {
+                    try
+                    {
+                        // PKEY_Media_Duration: {64440490-4C8B-11D7-A531-0004764E613F}, 3
+                        if (result.DurationSeconds <= 0)
+                        {
+                            var keyDuration = new PROPERTYKEY(new Guid("64440490-4c8b-11d7-a531-0004764e613f"), 3);
+                            int hrVal = propStore.GetValue(ref keyDuration, out PropVariant pv);
+                            if (hrVal == 0 && pv.vt == 21 /* VT_UI8 */ && pv.hVal > 0)
+                            {
+                                int durSec = (int)((ulong)pv.hVal / 10_000_000UL);
+                                if (durSec > 0)
+                                {
+                                    result.DurationSeconds = durSec;
+                                    AppLogger.Info("VideoMetadataExtractor", $"Shell PropertyStore прочитал длительность '{Path.GetFileName(filePath)}': {durSec} сек");
+                                }
+                            }
+                        }
+
+                        // PKEY_Video_FrameWidth: {64440491-4C8B-11D7-A531-0004764E613F}, 3
+                        // PKEY_Video_FrameHeight: {64440491-4C8B-11D7-A531-0004764E613F}, 4
+                        if (result.Width <= 0 || result.Height <= 0)
+                        {
+                            var keyWidth = new PROPERTYKEY(new Guid("64440491-4c8b-11d7-a531-0004764e613f"), 3);
+                            int hrW = propStore.GetValue(ref keyWidth, out PropVariant pvW);
+                            int w = 0;
+                            if (hrW == 0 && (pvW.vt == 19 /* VT_UI4 */ || pvW.vt == 23 /* VT_INT */) && pvW.hVal > 0)
+                            {
+                                w = (int)(pvW.hVal & 0xFFFFFFFF);
+                            }
+
+                            var keyHeight = new PROPERTYKEY(new Guid("64440491-4c8b-11d7-a531-0004764e613f"), 4);
+                            int hrH = propStore.GetValue(ref keyHeight, out PropVariant pvH);
+                            int h = 0;
+                            if (hrH == 0 && (pvH.vt == 19 || pvH.vt == 23) && pvH.hVal > 0)
+                            {
+                                h = (int)(pvH.hVal & 0xFFFFFFFF);
+                            }
+
+                            if (w > 0 && h > 0)
+                            {
+                                result.Width = w;
+                                result.Height = h;
+                                AppLogger.Info("VideoMetadataExtractor", $"Shell PropertyStore прочитал разрешение '{Path.GetFileName(filePath)}': {w}x{h}");
+                            }
+                        }
+                    }
+                    finally
+                    {
+                        try { Marshal.ReleaseComObject(propStore); } catch { }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Debug("VideoMetadataExtractor", $"Shell PropertyStore ошибка '{filePath}': {ex.Message}");
+            }
         }
 
         #endregion

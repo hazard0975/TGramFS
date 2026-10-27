@@ -1847,9 +1847,6 @@ namespace TelegramWebDAV.Services
                         string? match = _activeSession.FindAndConsume(targetFileName, relativeVirtualPath);
                         if (match != null)
                         {
-                            long fileSize = 0;
-                            try { fileSize = new System.IO.FileInfo(match).Length; } catch { }
-                            AppLogger.Info("WinFsp", $"[Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл '{match}' существует и доступен для чтения (размер: {fileSize} байт).");
                             AppLogger.Info("WinFsp", $"[Источник] Найдено совпадение в активной сессии (осталось файлов в очереди: {_activeSession.PendingFiles.Count}/{_activeSession.InitialCount}): '{match}'");
                             return (null, match);
                         }
@@ -1893,9 +1890,6 @@ namespace TelegramWebDAV.Services
                     string? match = newSession.FindAndConsume(targetFileName, relativeVirtualPath);
                     if (match != null)
                     {
-                        long fileSize = 0;
-                        try { fileSize = new System.IO.FileInfo(match).Length; } catch { }
-                        AppLogger.Info("WinFsp", $"[Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл '{match}' существует и доступен для чтения (размер: {fileSize} байт).");
 
                         if (_activeSession == null)
                         {
