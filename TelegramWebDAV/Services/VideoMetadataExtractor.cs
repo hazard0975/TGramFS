@@ -104,32 +104,35 @@ namespace TelegramWebDAV.Services
                 }
             }
 
-            // Шаг 4: Чтение тегов и вшитых обложек/постеров через ATL.NET
-            try
+            // Шаг 4: Чтение тегов и вшитых обложек/постеров через ATL.NET (пропускаем для MKV/WebM, где парсер и Shell полностью самодостаточны)
+            if (ext is not (".mkv" or ".webm"))
             {
-                var track = new ATL.Track(filePath);
-                if (result.DurationSeconds <= 0 && track.Duration > 0)
+                try
                 {
-                    result.DurationSeconds = track.Duration;
-                    AppLogger.Info("VideoMetadataExtractor", $"ATL прочитал длительность '{Path.GetFileName(filePath)}': {track.Duration} сек");
-                }
-
-                if (track.EmbeddedPictures != null && track.EmbeddedPictures.Count > 0)
-                {
-                    var pic = track.EmbeddedPictures[0];
-                    if (pic.PictureData != null && pic.PictureData.Length > 0)
+                    var track = new ATL.Track(filePath);
+                    if (result.DurationSeconds <= 0 && track.Duration > 0)
                     {
-                        result.Thumbnail = NormalizeThumbnailForTelegram(pic.PictureData);
-                        if (result.Thumbnail != null)
+                        result.DurationSeconds = track.Duration;
+                        AppLogger.Info("VideoMetadataExtractor", $"ATL прочитал длительность '{Path.GetFileName(filePath)}': {track.Duration} сек");
+                    }
+
+                    if (track.EmbeddedPictures != null && track.EmbeddedPictures.Count > 0)
+                    {
+                        var pic = track.EmbeddedPictures[0];
+                        if (pic.PictureData != null && pic.PictureData.Length > 0)
                         {
-                            AppLogger.Info("VideoMetadataExtractor", $"Найдена встроенная обложка/постер в '{Path.GetFileName(filePath)}' ({result.Thumbnail.Length} байт)");
+                            result.Thumbnail = NormalizeThumbnailForTelegram(pic.PictureData);
+                            if (result.Thumbnail != null)
+                            {
+                                AppLogger.Info("VideoMetadataExtractor", $"Найдена встроенная обложка/постер в '{Path.GetFileName(filePath)}' ({result.Thumbnail.Length} байт)");
+                            }
                         }
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                AppLogger.Warn("VideoMetadataExtractor", $"ATL чтение '{filePath}': {ex.Message}");
+                catch (Exception ex)
+                {
+                    AppLogger.Warn("VideoMetadataExtractor", $"ATL чтение '{filePath}': {ex.Message}");
+                }
             }
 
             // Шаг 5: Извлечение стоп-кадра через Shell Thumbnail Provider (K-Lite Codec Pack / Icaros / Windows Shell) - всеяден, поддерживает AV1, HEVC, H.264, VP9, MKV и др.
@@ -184,7 +187,7 @@ namespace TelegramWebDAV.Services
                 result.DurationSeconds = 0;
             }
 
-            AppLogger.Info("VideoMetadataExtractor", $"Метаданные видео '{Path.GetFileName(filePath)}': {result.Width}x{result.Height}, {result.DurationSeconds} сек, превью: {(result.Thumbnail != null ? $"{result.Thumbnail.Length} байт" : "нет")}");
+            AppLogger.Debug("VideoMetadataExtractor", $"Метаданные видео '{Path.GetFileName(filePath)}': {result.Width}x{result.Height}, {result.DurationSeconds} сек, превью: {(result.Thumbnail != null ? $"{result.Thumbnail.Length} байт" : "нет")}");
 
             return result;
         }
@@ -1639,7 +1642,7 @@ namespace TelegramWebDAV.Services
                 if (totalSeconds > 0)
                 {
                     result.DurationSeconds = (int)Math.Round(totalSeconds);
-                    AppLogger.Info("VideoMetadataExtractor", $"MKV parser прочитал длительность '{Path.GetFileName(filePath)}': {result.DurationSeconds} сек");
+                    AppLogger.Debug("VideoMetadataExtractor", $"MKV parser прочитал длительность '{Path.GetFileName(filePath)}': {result.DurationSeconds} сек");
                 }
             }
         }
@@ -1886,7 +1889,7 @@ namespace TelegramWebDAV.Services
             {
                 result.Width = width;
                 result.Height = height;
-                AppLogger.Info("VideoMetadataExtractor", $"MKV parser прочитал разрешение '{width}x{height}'");
+                AppLogger.Debug("VideoMetadataExtractor", $"MKV parser прочитал разрешение '{width}x{height}'");
             }
         }
 
@@ -1948,7 +1951,7 @@ namespace TelegramWebDAV.Services
                                     if (durSec > 0 && durSec > result.DurationSeconds)
                                     {
                                         result.DurationSeconds = durSec;
-                                        AppLogger.Info("VideoMetadataExtractor", $"MKV parser прочитал DURATION из тегов: '{cleanTs}' ({durSec} сек)");
+                                        AppLogger.Debug("VideoMetadataExtractor", $"MKV parser прочитал DURATION из тегов: '{cleanTs}' ({durSec} сек)");
                                     }
                                 }
                             }
