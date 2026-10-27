@@ -511,8 +511,11 @@ namespace TelegramWebDAV.Services
                 }
             }
 
+            int openPid = 0;
+            try { openPid = FileSystemBase.GetOperationProcessId(); } catch { }
+
             fileNode = node;
-            fileDesc = new FspNodeContext(node);
+            fileDesc = new FspNodeContext(node) { CreatorProcessId = openPid };
             FillFileInfo(node, out fileInfo);
             normalizedName = fileName;
             return STATUS_SUCCESS;
@@ -693,15 +696,19 @@ namespace TelegramWebDAV.Services
 
             int overwritePid = 0;
             try { overwritePid = FileSystemBase.GetOperationProcessId(); } catch { }
-            ctx.CreatorProcessId = overwritePid;
+            if (overwritePid > 0)
+            {
+                ctx.CreatorProcessId = overwritePid;
+            }
+            int effectivePid = ctx.CreatorProcessId;
 
             string fullNodePath = _repository.GetNodeFullPath(node.Id);
-            var (virtualSource, originalSource) = ResolveFileSource(node.Name, fullNodePath, overwritePid, _repository);
+            var (virtualSource, originalSource) = ResolveFileSource(node.Name, fullNodePath, effectivePid, _repository);
             if (virtualSource != null)
             {
                 ctx.VirtualSourceNode = virtualSource;
                 ctx.KnownTargetSize = virtualSource.Size;
-                RegisterActiveVirtualCopy(node.Id, virtualSource.Id, overwritePid);
+                RegisterActiveVirtualCopy(node.Id, virtualSource.Id, effectivePid);
                 if (virtualSource.TgMessageId.HasValue && virtualSource.TgMessageId.Value > 0)
                 {
                     int parentId = node.ParentId ?? 1;
@@ -963,7 +970,7 @@ namespace TelegramWebDAV.Services
             if (newUpdatedAt.HasValue || newCreatedAt.HasValue)
             {
                 _repository.UpdateNodeTimestamps(node.Id, newUpdatedAt, newCreatedAt);
-                AppLogger.Info("WinFsp", $"Обновлены системные даты для '{node.Name}' (ID {node.Id}): Изменен: {node.UpdatedAt:yyyy-MM-dd HH:mm:ss}, Создан: {node.CreatedAt:yyyy-MM-dd HH:mm:ss}");
+                AppLogger.Info("WinFsp", $"Обновлены системные даты для '{node.Name}' (ID {node.Id}): Изменен: {node.UpdatedAt:yyyy-MM-dd HH:mm:ss.fff}, Создан: {node.CreatedAt:yyyy-MM-dd HH:mm:ss.fff}");
             }
 
             FillFileInfo(node, out fileInfo);
@@ -2267,7 +2274,7 @@ namespace TelegramWebDAV.Services
                                                         }
                                                     }
                                                 }
-                                                else if (File.Exists(path) || Directory.Exists(path))
+                                                else if (File.Exists(path))
                                                 {
                                                     string name = Path.GetFileName(path);
                                                     if (string.IsNullOrEmpty(targetFileName) ||
@@ -2284,6 +2291,38 @@ namespace TelegramWebDAV.Services
                                                             {
                                                                 return results;
                                                             }
+                                                        }
+                                                    }
+                                                }
+                                                else if (Directory.Exists(path))
+                                                {
+                                                    if (!string.IsNullOrEmpty(targetFileName))
+                                                    {
+                                                        try
+                                                        {
+                                                            string candidateFile = Path.Combine(path, targetFileName);
+                                                            if (File.Exists(candidateFile))
+                                                            {
+                                                                AppLogger.Info("WinFsp", $"[Handles DragDrop] Обнаружен файл '{targetFileName}' внутри открытой папки процесса PID {processId}: '{candidateFile}'");
+                                                                if (!results.Exists(x => string.Equals(x, candidateFile, StringComparison.OrdinalIgnoreCase)))
+                                                                {
+                                                                    results.Add(candidateFile);
+                                                                }
+                                                                if (!results.Exists(x => string.Equals(x, path, StringComparison.OrdinalIgnoreCase)))
+                                                                {
+                                                                    results.Add(path);
+                                                                }
+                                                                return results;
+                                                            }
+                                                        }
+                                                        catch { }
+                                                    }
+                                                    else
+                                                    {
+                                                        if (!results.Exists(x => string.Equals(x, path, StringComparison.OrdinalIgnoreCase)))
+                                                        {
+                                                            AppLogger.Info("WinFsp", $"[Handles DragDrop] Обнаружена открытая папка в процессе PID {processId}: '{path}'");
+                                                            results.Add(path);
                                                         }
                                                     }
                                                 }

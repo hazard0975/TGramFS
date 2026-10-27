@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using Microsoft.Data.Sqlite;
@@ -11,6 +12,20 @@ namespace TelegramWebDAV.Database
     public class NodeRepository
     {
         private readonly DatabaseManager _dbManager;
+
+        public static string FormatDateTime(DateTime dt) => dt.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture);
+
+        public static DateTime ParseDateTime(object? val)
+        {
+            if (val == null || val == DBNull.Value) return DateTime.UtcNow;
+            if (val is DateTime dt) return DateTime.SpecifyKind(dt, DateTimeKind.Utc);
+            string str = val.ToString()!;
+            if (DateTime.TryParse(str, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out var parsed))
+            {
+                return DateTime.SpecifyKind(parsed, DateTimeKind.Utc);
+            }
+            return DateTime.SpecifyKind(Convert.ToDateTime(val), DateTimeKind.Utc);
+        }
 
         public NodeRepository(DatabaseManager dbManager)
         {
@@ -1033,12 +1048,12 @@ namespace TelegramWebDAV.Database
                 if (modifiedTime.HasValue)
                 {
                     setClauses.Add("updated_at = @updatedAt");
-                    command.Parameters.AddWithValue("@updatedAt", modifiedTime.Value.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss"));
+                    command.Parameters.AddWithValue("@updatedAt", FormatDateTime(modifiedTime.Value));
                 }
                 if (creationTime.HasValue)
                 {
                     setClauses.Add("created_at = @createdAt");
-                    command.Parameters.AddWithValue("@createdAt", creationTime.Value.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss"));
+                    command.Parameters.AddWithValue("@createdAt", FormatDateTime(creationTime.Value));
                 }
 
                 command.CommandText = $"UPDATE nodes SET {string.Join(", ", setClauses)} WHERE id = @nodeId;";
@@ -1216,11 +1231,11 @@ namespace TelegramWebDAV.Database
                             updateCmd.Parameters.AddWithValue("@nodeId", existingNode.Id);
                             if (lastModified.HasValue)
                             {
-                                updateCmd.Parameters.AddWithValue("@updatedAt", lastModified.Value.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss"));
+                                updateCmd.Parameters.AddWithValue("@updatedAt", FormatDateTime(lastModified.Value));
                             }
                             if (creationDate.HasValue)
                             {
-                                updateCmd.Parameters.AddWithValue("@createdAt", creationDate.Value.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss"));
+                                updateCmd.Parameters.AddWithValue("@createdAt", FormatDateTime(creationDate.Value));
                             }
                             updateCmd.ExecuteNonQuery();
                         }
@@ -1282,11 +1297,11 @@ namespace TelegramWebDAV.Database
                             insertCmd.Parameters.AddWithValue("@tgChannelId", (object?)effectiveTgChannelId ?? DBNull.Value);
                             insertCmd.Parameters.AddWithValue("@inlineData", (object?)inlineData ?? DBNull.Value);
                             insertCmd.Parameters.AddWithValue("@createdAt", creationDate.HasValue 
-                                ? creationDate.Value.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss") 
-                                : DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"));
+                                ? FormatDateTime(creationDate.Value) 
+                                : FormatDateTime(DateTime.UtcNow));
                             insertCmd.Parameters.AddWithValue("@updatedAt", lastModified.HasValue 
-                                ? lastModified.Value.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss") 
-                                : DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"));
+                                ? FormatDateTime(lastModified.Value) 
+                                : FormatDateTime(DateTime.UtcNow));
                             
                             object? scalar = insertCmd.ExecuteScalar();
                             targetNodeId = scalar != null && scalar != DBNull.Value ? Convert.ToInt32(scalar) : 0;
@@ -1364,11 +1379,11 @@ namespace TelegramWebDAV.Database
                         command.Parameters.AddWithValue("@tgChannelId", (object?)effectiveTgChannelId ?? DBNull.Value);
                         command.Parameters.AddWithValue("@inlineData", (object?)inlineData ?? DBNull.Value);
                         command.Parameters.AddWithValue("@createdAt", creationDate.HasValue 
-                            ? creationDate.Value.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss") 
-                            : DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"));
+                            ? FormatDateTime(creationDate.Value) 
+                            : FormatDateTime(DateTime.UtcNow));
                         command.Parameters.AddWithValue("@updatedAt", lastModified.HasValue 
-                            ? lastModified.Value.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss") 
-                            : DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"));
+                            ? FormatDateTime(lastModified.Value) 
+                            : FormatDateTime(DateTime.UtcNow));
                         
                         object? scalar = command.ExecuteScalar();
                         targetNodeId = scalar != null && scalar != DBNull.Value ? Convert.ToInt32(scalar) : 0;
@@ -1463,8 +1478,8 @@ namespace TelegramWebDAV.Database
                 TgPreviewMessageId = reader["tg_preview_message_id"] != DBNull.Value ? Convert.ToInt32(reader["tg_preview_message_id"]) : (int?)null,
                 TgChannelId = reader["tg_channel_id"] != DBNull.Value ? Convert.ToInt64(reader["tg_channel_id"]) : (long?)null,
                 Size = Convert.ToInt64(reader["size"]),
-                CreatedAt = DateTime.SpecifyKind(Convert.ToDateTime(reader["created_at"]), DateTimeKind.Utc),
-                UpdatedAt = DateTime.SpecifyKind(Convert.ToDateTime(reader["updated_at"]), DateTimeKind.Utc),
+                CreatedAt = ParseDateTime(reader["created_at"]),
+                UpdatedAt = ParseDateTime(reader["updated_at"]),
                 InlineData = reader["inline_data"] != DBNull.Value ? (byte[])reader["inline_data"] : null
             };
 
