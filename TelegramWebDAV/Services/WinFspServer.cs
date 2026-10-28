@@ -1040,21 +1040,6 @@ namespace TelegramWebDAV.Services
                 _repository.MoveNode(node.Id, targetParent.Id, newName);
                 node.Name = newName;
                 node.ParentId = targetParent.Id;
-                bool isMovedToTrash = _repository.IsTrashFolder(targetParent.Id) || _repository.IsNodeInTrash(targetParent.Id);
-                if (isMovedToTrash)
-                {
-                    node.InTrash = true;
-                    if (fileDesc is FspNodeContext fspCtx && fspCtx.UploadCts != null && !fspCtx.UploadCts.IsCancellationRequested)
-                    {
-                        try
-                        {
-                            AppLogger.Info("WinFsp", $"Файл '{node.Name}' (ID {node.Id}) перемещен в корзину (.Trash) во время выгрузки. Отмена активной потоковой выгрузки в Telegram...");
-                            fspCtx.UploadCts.Cancel();
-                            fspCtx.PipeStream?.Abort();
-                        }
-                        catch { }
-                    }
-                }
                 AppLogger.Info("WinFsp", $"Переименование/перемещение: '{oldClean}' -> '{newClean}'");
 
                 if (node.IsDir)
@@ -1240,8 +1225,9 @@ namespace TelegramWebDAV.Services
                             var fwdResult = ctx.ForwardTask.GetAwaiter().GetResult();
                             if (fwdResult.HasValue)
                             {
-                                var resultStatus = _repository.FinalizeUploadedFile(
-                                    node.Id,
+                                _repository.CreateOrUpdateFile(
+                                    parentId,
+                                    nodeName,
                                     ctx.VirtualSourceNode.Size,
                                     fwdResult.Value.MessageId,
                                     fwdResult.Value.PreviewMessageId,
@@ -1250,36 +1236,13 @@ namespace TelegramWebDAV.Services
                                     creationDate: targetCreatedAt
                                 );
 
-                                if (resultStatus == FinalizeFileResult.NodeNotFound)
-                                {
-                                    AppLogger.Warn("WinFsp", $"[VirtualCopy] Файл '{nodeName}' (ID {node.Id}) был перманентно удален из базы данных до завершения форвардинга. Отзываем сообщение #{fwdResult.Value.MessageId} из Telegram...");
-                                    _ = Task.Run(async () =>
-                                    {
-                                        try
-                                        {
-                                            await _telegramService.DeleteFilesFromTelegramAsync(new List<int> { fwdResult.Value.MessageId });
-                                            if (fwdResult.Value.PreviewMessageId.HasValue)
-                                            {
-                                                await _telegramService.DeleteFilesFromTelegramAsync(new List<int> { fwdResult.Value.PreviewMessageId.Value });
-                                            }
-                                        }
-                                        catch (Exception delEx)
-                                        {
-                                            AppLogger.Warn("WinFsp", $"Не удалось удалить отозванное сообщение #{fwdResult.Value.MessageId}: {delEx.Message}");
-                                        }
-                                    });
-                                }
-                                else
-                                {
-                                    node.TgMessageId = fwdResult.Value.MessageId;
-                                    node.TgPreviewMessageId = fwdResult.Value.PreviewMessageId;
-                                    node.Size = ctx.VirtualSourceNode.Size;
-                                    node.UpdatedAt = targetUpdatedAt;
-                                    node.CreatedAt = targetCreatedAt;
+                                node.TgMessageId = fwdResult.Value.MessageId;
+                                node.TgPreviewMessageId = fwdResult.Value.PreviewMessageId;
+                                node.Size = ctx.VirtualSourceNode.Size;
+                                node.UpdatedAt = targetUpdatedAt;
+                                node.CreatedAt = targetCreatedAt;
 
-                                    string trashNote = (resultStatus == FinalizeFileResult.SuccessInTrash) ? " (узел в корзине .Trash, установлена подпись #trash)" : "";
-                                    AppLogger.Info("WinFsp", $"[VirtualCopy] Файл '{nodeName}' (ID {node.Id}) успешно сохранен через Telegram ForwardMessages (новый Msg ID: {fwdResult.Value.MessageId}, размер: {node.Size} байт){trashNote}.");
-                                }
+                                AppLogger.Info("WinFsp", $"[VirtualCopy] Файл '{nodeName}' успешно сохранен через Telegram ForwardMessages (новый Msg ID: {fwdResult.Value.MessageId}, размер: {node.Size} байт).");
                             }
                             else
                             {
@@ -1294,8 +1257,9 @@ namespace TelegramWebDAV.Services
                     else
                     {
                         // Небольшой файл или inline_data
-                        _repository.FinalizeUploadedFile(
-                            node.Id,
+                        _repository.CreateOrUpdateFile(
+                            parentId,
+                            nodeName,
                             ctx.VirtualSourceNode.Size,
                             tgMessageId: null,
                             tgPreviewMessageId: null,
@@ -1309,7 +1273,7 @@ namespace TelegramWebDAV.Services
                         node.UpdatedAt = targetUpdatedAt;
                         node.CreatedAt = targetCreatedAt;
 
-                        AppLogger.Info("WinFsp", $"[VirtualCopy] Файл '{nodeName}' (ID {node.Id}) сохранен мгновенно из локальных данных ({node.Size} байт).");
+                        AppLogger.Info("WinFsp", $"[VirtualCopy] Файл '{nodeName}' сохранен мгновенно из локальных данных ({node.Size} байт).");
                     }
 
                     ctx.Dispose();
@@ -1335,8 +1299,9 @@ namespace TelegramWebDAV.Services
                         if (uploadResult?.MessageId != null)
                         {
                             long finalLength = node.Size;
-                            var resultStatus = _repository.FinalizeUploadedFile(
-                                node.Id,
+                            _repository.CreateOrUpdateFile(
+                                parentId,
+                                nodeName,
                                 finalLength,
                                 uploadResult.MessageId,
                                 uploadResult.PreviewMessageId,
@@ -1346,36 +1311,13 @@ namespace TelegramWebDAV.Services
                                 parts: uploadResult.Parts
                             );
 
-                            if (resultStatus == FinalizeFileResult.NodeNotFound)
-                            {
-                                AppLogger.Warn("WinFsp", $"Файл '{nodeName}' (ID {node.Id}) был перманентно удален из базы данных до завершения выгрузки в Telegram. Отзываем сообщение #{uploadResult.MessageId} из Telegram...");
-                                _ = Task.Run(async () =>
-                                {
-                                    try
-                                    {
-                                        await _telegramService.DeleteFilesFromTelegramAsync(new List<int> { uploadResult.MessageId });
-                                        if (uploadResult.PreviewMessageId.HasValue)
-                                        {
-                                            await _telegramService.DeleteFilesFromTelegramAsync(new List<int> { uploadResult.PreviewMessageId.Value });
-                                        }
-                                    }
-                                    catch (Exception delEx)
-                                    {
-                                        AppLogger.Warn("WinFsp", $"Не удалось удалить отозванное сообщение #{uploadResult.MessageId}: {delEx.Message}");
-                                    }
-                                });
-                            }
-                            else
-                            {
-                                node.TgMessageId = uploadResult.MessageId;
-                                node.TgPreviewMessageId = uploadResult.PreviewMessageId;
-                                node.InlineData = null;
-                                node.UpdatedAt = targetUpdatedAt;
-                                node.CreatedAt = targetCreatedAt;
+                            node.TgMessageId = uploadResult.MessageId;
+                            node.TgPreviewMessageId = uploadResult.PreviewMessageId;
+                            node.InlineData = null;
+                            node.UpdatedAt = targetUpdatedAt;
+                            node.CreatedAt = targetCreatedAt;
 
-                                string trashNote = (resultStatus == FinalizeFileResult.SuccessInTrash) ? " (узел в корзине .Trash, установлена подпись #trash)" : "";
-                                AppLogger.Info("WinFsp", $"Файл '{nodeName}' (ID {node.Id}) успешно сохранен в Telegram (Msg ID: {uploadResult.MessageId}" + (uploadResult.PreviewMessageId != null ? $", Preview ID: {uploadResult.PreviewMessageId}" : "") + $", дата изменения: {targetUpdatedAt:yyyy-MM-dd HH:mm:ss}){trashNote}. Загрузка на лету (Zero-Temp) завершена.");
-                            }
+                            AppLogger.Info("WinFsp", $"Файл '{nodeName}' успешно сохранен в Telegram (Msg ID: {uploadResult.MessageId}" + (uploadResult.PreviewMessageId != null ? $", Preview ID: {uploadResult.PreviewMessageId}" : "") + $", дата изменения: {targetUpdatedAt:yyyy-MM-dd HH:mm:ss}). Загрузка на лету (Zero-Temp) завершена.");
                         }
                     }
                     catch (Exception ex)
@@ -1399,8 +1341,9 @@ namespace TelegramWebDAV.Services
                         if (finalLength <= 1)
                         {
                             byte[]? inlineBytes = finalLength == 1 ? fileBytes : null;
-                            _repository.FinalizeUploadedFile(
-                                node.Id,
+                            _repository.CreateOrUpdateFile(
+                                parentId,
+                                nodeName,
                                 finalLength,
                                 tgMessageId: null,
                                 tgPreviewMessageId: null,
@@ -1415,7 +1358,7 @@ namespace TelegramWebDAV.Services
                             node.UpdatedAt = targetUpdatedAt;
                             node.CreatedAt = targetCreatedAt;
 
-                            AppLogger.Info("WinFsp", $"Файл '{nodeName}' (ID {node.Id}, {finalLength} байт) сохранен в базе данных без отправки в Telegram (inline_data).");
+                            AppLogger.Info("WinFsp", $"Файл '{nodeName}' ({finalLength} байт) сохранен в базе данных без отправки в Telegram (inline_data).");
                         }
                         else
                         {
@@ -1463,8 +1406,9 @@ namespace TelegramWebDAV.Services
 
                             if (uploadResult?.MessageId != null)
                             {
-                                var resultStatus = _repository.FinalizeUploadedFile(
-                                    node.Id,
+                                _repository.CreateOrUpdateFile(
+                                    parentId,
+                                    nodeName,
                                     finalLength,
                                     uploadResult.MessageId,
                                     uploadResult.PreviewMessageId,
@@ -1474,37 +1418,14 @@ namespace TelegramWebDAV.Services
                                     parts: uploadResult.Parts
                                 );
 
-                                if (resultStatus == FinalizeFileResult.NodeNotFound)
-                                {
-                                    AppLogger.Warn("WinFsp", $"Файл '{nodeName}' (ID {node.Id}) был перманентно удален из базы данных до завершения выгрузки в Telegram. Отзываем сообщение #{uploadResult.MessageId} из Telegram...");
-                                    _ = Task.Run(async () =>
-                                    {
-                                        try
-                                        {
-                                            await _telegramService.DeleteFilesFromTelegramAsync(new List<int> { uploadResult.MessageId });
-                                            if (uploadResult.PreviewMessageId.HasValue)
-                                            {
-                                                await _telegramService.DeleteFilesFromTelegramAsync(new List<int> { uploadResult.PreviewMessageId.Value });
-                                            }
-                                        }
-                                        catch (Exception delEx)
-                                        {
-                                            AppLogger.Warn("WinFsp", $"Не удалось удалить отозванное сообщение #{uploadResult.MessageId}: {delEx.Message}");
-                                        }
-                                    });
-                                }
-                                else
-                                {
-                                    node.Size = finalLength;
-                                    node.TgMessageId = uploadResult.MessageId;
-                                    node.TgPreviewMessageId = uploadResult.PreviewMessageId;
-                                    node.InlineData = null;
-                                    node.UpdatedAt = targetUpdatedAt;
-                                    node.CreatedAt = targetCreatedAt;
+                                node.Size = finalLength;
+                                node.TgMessageId = uploadResult.MessageId;
+                                node.TgPreviewMessageId = uploadResult.PreviewMessageId;
+                                node.InlineData = null;
+                                node.UpdatedAt = targetUpdatedAt;
+                                node.CreatedAt = targetCreatedAt;
 
-                                    string trashNote = (resultStatus == FinalizeFileResult.SuccessInTrash) ? " (узел в корзине .Trash, установлена подпись #trash)" : "";
-                                    AppLogger.Info("WinFsp", $"Файл '{nodeName}' (ID {node.Id}) успешно сохранен в Telegram (Msg ID: {uploadResult.MessageId}" + (uploadResult.PreviewMessageId != null ? $", Preview ID: {uploadResult.PreviewMessageId}" : "") + $", дата изменения: {targetUpdatedAt:yyyy-MM-dd HH:mm:ss}){trashNote}.");
-                                }
+                                AppLogger.Info("WinFsp", $"Файл '{nodeName}' успешно сохранен в Telegram (Msg ID: {uploadResult.MessageId}" + (uploadResult.PreviewMessageId != null ? $", Preview ID: {uploadResult.PreviewMessageId}" : "") + $", дата изменения: {targetUpdatedAt:yyyy-MM-dd HH:mm:ss}).");
                             }
                         }
                     }
