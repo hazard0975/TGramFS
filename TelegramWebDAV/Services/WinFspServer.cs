@@ -298,6 +298,8 @@ namespace TelegramWebDAV.Services
         }
 
         private static readonly ConcurrentDictionary<int, ActiveVirtualCopyInfo> _activeVirtualCopies = new();
+        private static readonly ConcurrentDictionary<string, Node> _activeUploadNodes = new(StringComparer.OrdinalIgnoreCase);
+        private static int _nextTempNodeId = 0;
 
         public static void RegisterActiveVirtualCopy(int targetNodeId, int sourceNodeId, int creatorPid)
         {
@@ -354,6 +356,7 @@ namespace TelegramWebDAV.Services
         private const int NT_STATUS_OBJECT_NAME_NOT_FOUND = unchecked((int)0xC0000034);
         private const int NT_STATUS_OBJECT_NAME_COLLISION = unchecked((int)0xC0000035);
         private const int NT_STATUS_OBJECT_PATH_NOT_FOUND = unchecked((int)0xC000003A);
+        private const int NT_STATUS_SHARING_VIOLATION = unchecked((int)0xC0000043);
         private const int NT_STATUS_FILE_IS_A_DIRECTORY = unchecked((int)0xC00000BA);
         private const int NT_STATUS_DIRECTORY_NOT_EMPTY = unchecked((int)0xC0000101);
         private const int NT_STATUS_CANNOT_DELETE = unchecked((int)0xC0000121);
@@ -454,6 +457,11 @@ namespace TelegramWebDAV.Services
             }
 
             var node = _repository.GetNodeByPath(cleanPath);
+            if (node == null && _activeUploadNodes.TryGetValue(cleanPath, out var activeNode))
+            {
+                node = activeNode;
+            }
+
             if (node == null)
             {
                 fileAttributes = 0;
@@ -502,6 +510,15 @@ namespace TelegramWebDAV.Services
                 node = _repository.GetNodeByPath(cleanPath);
                 if (node == null)
                 {
+                    if (_activeUploadNodes.ContainsKey(cleanPath))
+                    {
+                        fileNode = null!;
+                        fileDesc = null!;
+                        fileInfo = default;
+                        normalizedName = null!;
+                        return NT_STATUS_SHARING_VIOLATION;
+                    }
+
                     AppLogger.Warn("WinFsp", $"[Open NOT FOUND] Проводник пытается открыть элемент '{fileName}' (path: '{cleanPath}'), но узел равен NULL.");
                     fileNode = null!;
                     fileDesc = null!;
@@ -593,16 +610,20 @@ namespace TelegramWebDAV.Services
                 {
                     AppLogger.Info("WinFsp", $"[VirtualCopy] Обнаружен исходный виртуальный файл для '{cleanPath}': ID {virtualSource.Id} ('{virtualSource.Name}'), размер: {virtualSource.Size} байт, MsgId: {virtualSource.TgMessageId?.ToString() ?? "null"}.");
 
-                    _repository.CreateOrUpdateFile(parentNode.Id, itemName, virtualSource.Size, null);
-                    var vNode = _repository.GetNodeByPath(cleanPath);
-                    if (vNode == null)
+                    int tempVirtualId = Interlocked.Decrement(ref _nextTempNodeId);
+                    var vNode = new Node
                     {
-                        fileNode = null!;
-                        fileDesc = null!;
-                        fileInfo = default;
-                        normalizedName = null!;
-                        return NT_STATUS_UNSUCCESSFUL;
-                    }
+                        Id = tempVirtualId,
+                        ParentId = parentNode.Id,
+                        Name = itemName,
+                        IsDir = false,
+                        Version = _repository.GetNextVersionForFile(parentNode.Id, itemName),
+                        InTrash = false,
+                        Size = virtualSource.Size,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+                    _activeUploadNodes[cleanPath] = vNode;
 
                     var vCtx = new FspNodeContext(vNode)
                     {
@@ -641,20 +662,24 @@ namespace TelegramWebDAV.Services
                     fileDesc = vCtx;
                     FillFileInfo(vNode, out fileInfo);
                     normalizedName = fileName;
-                    AppLogger.Info("WinFsp", $"Создан файл виртуальной копии: '{cleanPath}' (ID {vNode.Id}, размер: {virtualSource.Size})");
+                    AppLogger.Info("WinFsp", $"Создан файл виртуальной копии (в памяти): '{cleanPath}' (размер: {virtualSource.Size})");
                     return STATUS_SUCCESS;
                 }
 
-                _repository.CreateOrUpdateFile(parentNode.Id, itemName, 0, null);
-                var node = _repository.GetNodeByPath(cleanPath);
-                if (node == null)
+                int tempNodeId = Interlocked.Decrement(ref _nextTempNodeId);
+                var node = new Node
                 {
-                    fileNode = null!;
-                    fileDesc = null!;
-                    fileInfo = default;
-                    normalizedName = null!;
-                    return NT_STATUS_UNSUCCESSFUL;
-                }
+                    Id = tempNodeId,
+                    ParentId = parentNode.Id,
+                    Name = itemName,
+                    IsDir = false,
+                    Version = _repository.GetNextVersionForFile(parentNode.Id, itemName),
+                    InTrash = false,
+                    Size = allocationSize > 0 ? (long)allocationSize : 0,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+                _activeUploadNodes[cleanPath] = node;
 
                 var ctx = new FspNodeContext(node)
                 {
@@ -668,7 +693,7 @@ namespace TelegramWebDAV.Services
                 fileDesc = ctx;
                 FillFileInfo(node, out fileInfo);
                 normalizedName = fileName;
-                AppLogger.Info("WinFsp", $"Создан файл для записи: '{cleanPath}' (ID {node.Id}, alloc: {allocationSize})" + (!string.IsNullOrEmpty(ctx.OriginalSourcePath) ? $", источник: '{ctx.OriginalSourcePath}'" : ""));
+                AppLogger.Info("WinFsp", $"Создан файл для записи (в памяти): '{cleanPath}' (alloc: {allocationSize})" + (!string.IsNullOrEmpty(ctx.OriginalSourcePath) ? $", источник: '{ctx.OriginalSourcePath}'" : ""));
                 return STATUS_SUCCESS;
             }
         }
@@ -969,7 +994,10 @@ namespace TelegramWebDAV.Services
 
             if (newUpdatedAt.HasValue || newCreatedAt.HasValue)
             {
-                _repository.UpdateNodeTimestamps(node.Id, newUpdatedAt, newCreatedAt);
+                if (node.Id > 0)
+                {
+                    _repository.UpdateNodeTimestamps(node.Id, newUpdatedAt, newCreatedAt);
+                }
                 AppLogger.Info("WinFsp", $"Обновлены системные даты для '{node.Name}' (ID {node.Id}): Изменен: {node.UpdatedAt:yyyy-MM-dd HH:mm:ss.fff}, Создан: {node.CreatedAt:yyyy-MM-dd HH:mm:ss.fff}");
             }
 
@@ -980,6 +1008,10 @@ namespace TelegramWebDAV.Services
         public override int CanDelete(object fileNode, object fileDesc, string fileName)
         {
             var node = (Node)fileNode;
+            if (node.Id <= 0)
+            {
+                return STATUS_SUCCESS;
+            }
             AppLogger.Info("WinFsp", $"[CanDelete] Проводник запрашивает возможность удаления '{fileName}' (ID {node.Id}, Name '{node.Name}', InTrash={node.InTrash}).");
 
             // Защита системной папки .Trash от удаления снаружи
@@ -1034,6 +1066,16 @@ namespace TelegramWebDAV.Services
 
             try
             {
+                if (node.Id <= 0)
+                {
+                    _activeUploadNodes.TryRemove(oldClean, out _);
+                    _activeUploadNodes[newClean] = node;
+                    node.Name = newName;
+                    node.ParentId = targetParent.Id;
+                    AppLogger.Info("WinFsp", $"Переименование активного файла в памяти: '{oldClean}' -> '{newClean}'");
+                    return STATUS_SUCCESS;
+                }
+
                 long? sourceChannelId = _repository.GetEffectiveChannelId(node.ParentId);
                 long? targetChannelId = _repository.GetEffectiveChannelId(targetParent.Id);
 
@@ -1099,6 +1141,17 @@ namespace TelegramWebDAV.Services
 
             if ((flags & CleanupDelete) != 0 || ctx.DeleteOnClose)
             {
+                if (node.Id <= 0)
+                {
+                    string cleanCancelPath = NormalizePath(fileName);
+                    _activeUploadNodes.TryRemove(cleanCancelPath, out _);
+                    ctx.UploadCts?.Cancel();
+                    try { ctx.PipeStream?.Dispose(); } catch { }
+                    AppLogger.Info("WinFsp", $"[CleanupDelete] Отменено создание незавершенного файла '{node.Name}'. Удален из памяти без записи в базу и корзину.");
+                    ctx.Dispose();
+                    return;
+                }
+
                 AppLogger.Debug("WinFsp", $"[CleanupDelete] Закрытие с флагом удаления для '{fileName}' (ID {node.Id}, Name '{node.Name}', flags={flags}, DeleteOnClose={ctx.DeleteOnClose}).");
 
                 // Защита от удаления системной папки корзины
@@ -1214,199 +1267,103 @@ namespace TelegramWebDAV.Services
                 string nodeName = node.Name;
                 DateTime targetUpdatedAt = node.UpdatedAt;
                 DateTime targetCreatedAt = node.CreatedAt;
+                string cleanFilePath = NormalizePath(fileName);
 
-                if (ctx.VirtualSourceNode != null)
+                try
                 {
-                    UnregisterActiveVirtualCopy(node.Id);
-                    if (ctx.ForwardTask != null)
+                    if (ctx.VirtualSourceNode != null)
                     {
-                        try
+                        UnregisterActiveVirtualCopy(node.Id);
+                        if (ctx.ForwardTask != null)
                         {
-                            var fwdResult = ctx.ForwardTask.GetAwaiter().GetResult();
-                            if (fwdResult.HasValue)
+                            try
                             {
-                                _repository.CreateOrUpdateFile(
-                                    parentId,
-                                    nodeName,
-                                    ctx.VirtualSourceNode.Size,
-                                    fwdResult.Value.MessageId,
-                                    fwdResult.Value.PreviewMessageId,
-                                    inlineData: null,
-                                    lastModified: targetUpdatedAt,
-                                    creationDate: targetCreatedAt
-                                );
+                                var fwdResult = ctx.ForwardTask.GetAwaiter().GetResult();
+                                if (fwdResult.HasValue)
+                                {
+                                    int newNodeId = _repository.CreateOrUpdateFile(
+                                        parentId,
+                                        nodeName,
+                                        ctx.VirtualSourceNode.Size,
+                                        fwdResult.Value.MessageId,
+                                        fwdResult.Value.PreviewMessageId,
+                                        inlineData: null,
+                                        lastModified: targetUpdatedAt,
+                                        creationDate: targetCreatedAt
+                                    );
 
-                                node.TgMessageId = fwdResult.Value.MessageId;
-                                node.TgPreviewMessageId = fwdResult.Value.PreviewMessageId;
-                                node.Size = ctx.VirtualSourceNode.Size;
-                                node.UpdatedAt = targetUpdatedAt;
-                                node.CreatedAt = targetCreatedAt;
+                                    if (newNodeId > 0) node.Id = newNodeId;
+                                    _activeUploadNodes.TryRemove(cleanFilePath, out _);
 
-                                AppLogger.Info("WinFsp", $"[VirtualCopy] Файл '{nodeName}' успешно сохранен через Telegram ForwardMessages (новый Msg ID: {fwdResult.Value.MessageId}, размер: {node.Size} байт).");
+                                    node.TgMessageId = fwdResult.Value.MessageId;
+                                    node.TgPreviewMessageId = fwdResult.Value.PreviewMessageId;
+                                    node.Size = ctx.VirtualSourceNode.Size;
+                                    node.UpdatedAt = targetUpdatedAt;
+                                    node.CreatedAt = targetCreatedAt;
+
+                                    AppLogger.Info("WinFsp", $"[VirtualCopy] Файл '{nodeName}' успешно сохранен через Telegram ForwardMessages (новый Msg ID: {fwdResult.Value.MessageId}, размер: {node.Size} байт).");
+                                }
+                                else
+                                {
+                                    _activeUploadNodes.TryRemove(cleanFilePath, out _);
+                                    AppLogger.Warn("WinFsp", $"[VirtualCopy] Форвардинг для '{nodeName}' вернул null. Возможно, исходное сообщение удалено из Telegram.");
+                                }
                             }
-                            else
+                            catch (Exception ex)
                             {
-                                AppLogger.Warn("WinFsp", $"[VirtualCopy] Форвардинг для '{nodeName}' вернул null. Возможно, исходное сообщение удалено из Telegram.");
+                                _activeUploadNodes.TryRemove(cleanFilePath, out _);
+                                AppLogger.Error("WinFsp", $"[VirtualCopy] Ошибка завершения ForwardTask для '{nodeName}': {ex.Message}", ex);
                             }
                         }
-                        catch (Exception ex)
+                        else
                         {
-                            AppLogger.Error("WinFsp", $"[VirtualCopy] Ошибка завершения ForwardTask для '{nodeName}': {ex.Message}", ex);
-                        }
-                    }
-                    else
-                    {
-                        // Небольшой файл или inline_data
-                        _repository.CreateOrUpdateFile(
-                            parentId,
-                            nodeName,
-                            ctx.VirtualSourceNode.Size,
-                            tgMessageId: null,
-                            tgPreviewMessageId: null,
-                            inlineData: ctx.VirtualSourceNode.InlineData,
-                            lastModified: targetUpdatedAt,
-                            creationDate: targetCreatedAt
-                        );
-
-                        node.Size = ctx.VirtualSourceNode.Size;
-                        node.InlineData = ctx.VirtualSourceNode.InlineData;
-                        node.UpdatedAt = targetUpdatedAt;
-                        node.CreatedAt = targetCreatedAt;
-
-                        AppLogger.Info("WinFsp", $"[VirtualCopy] Файл '{nodeName}' сохранен мгновенно из локальных данных ({node.Size} байт).");
-                    }
-
-                    ctx.Dispose();
-                    return;
-                }
-
-                // Вариант 1: Большой файл, который передавался на лету через StreamingPipeStream
-                if (ctx.PipeStream != null && ctx.UploadTask != null)
-                {
-                    var pipe = ctx.PipeStream;
-                    var uploadTask = ctx.UploadTask;
-                    var cts = ctx.UploadCts;
-                    ctx.PipeStream = null;
-                    ctx.UploadTask = null;
-                    ctx.UploadCts = null;
-
-                    pipe.CompleteWriting();
-
-                    try
-                    {
-                        // Синхронно ожидаем завершения загрузки в Telegram, чтобы Проводник Windows держал нативное окно копирования с графиком скорости
-                        var uploadResult = uploadTask.GetAwaiter().GetResult();
-                        if (uploadResult?.MessageId != null)
-                        {
-                            long finalLength = node.Size;
-                            _repository.CreateOrUpdateFile(
+                            // Небольшой файл или inline_data
+                            int newNodeId = _repository.CreateOrUpdateFile(
                                 parentId,
                                 nodeName,
-                                finalLength,
-                                uploadResult.MessageId,
-                                uploadResult.PreviewMessageId,
-                                inlineData: null,
-                                lastModified: targetUpdatedAt,
-                                creationDate: targetCreatedAt,
-                                parts: uploadResult.Parts
-                            );
-
-                            node.TgMessageId = uploadResult.MessageId;
-                            node.TgPreviewMessageId = uploadResult.PreviewMessageId;
-                            node.InlineData = null;
-                            node.UpdatedAt = targetUpdatedAt;
-                            node.CreatedAt = targetCreatedAt;
-
-                            AppLogger.Info("WinFsp", $"Файл '{nodeName}' успешно сохранен в Telegram (Msg ID: {uploadResult.MessageId}" + (uploadResult.PreviewMessageId != null ? $", Preview ID: {uploadResult.PreviewMessageId}" : "") + $", дата изменения: {targetUpdatedAt:yyyy-MM-dd HH:mm:ss}). Загрузка на лету (Zero-Temp) завершена.");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        AppLogger.Error("WinFsp", $"Ошибка при завершении потоковой загрузки '{nodeName}' в Telegram: {ex.Message}", ex);
-                    }
-                    finally
-                    {
-                        try { pipe.Dispose(); } catch { }
-                        try { cts?.Dispose(); } catch { }
-                    }
-                }
-                // Вариант 2: Небольшой файл (<= 1 МБ), сохраненный в памяти
-                else if (ctx.SmallFileBuffer != null)
-                {
-                    long finalLength = ctx.SmallFileBuffer.Length;
-                    byte[] fileBytes = ctx.SmallFileBuffer.ToArray();
-
-                    try
-                    {
-                        if (finalLength <= 1)
-                        {
-                            byte[]? inlineBytes = finalLength == 1 ? fileBytes : null;
-                            _repository.CreateOrUpdateFile(
-                                parentId,
-                                nodeName,
-                                finalLength,
+                                ctx.VirtualSourceNode.Size,
                                 tgMessageId: null,
                                 tgPreviewMessageId: null,
-                                inlineData: inlineBytes,
+                                inlineData: ctx.VirtualSourceNode.InlineData,
                                 lastModified: targetUpdatedAt,
                                 creationDate: targetCreatedAt
                             );
 
-                            node.Size = finalLength;
-                            node.InlineData = inlineBytes;
-                            node.TgMessageId = null;
+                            if (newNodeId > 0) node.Id = newNodeId;
+                            _activeUploadNodes.TryRemove(cleanFilePath, out _);
+
+                            node.Size = ctx.VirtualSourceNode.Size;
+                            node.InlineData = ctx.VirtualSourceNode.InlineData;
                             node.UpdatedAt = targetUpdatedAt;
                             node.CreatedAt = targetCreatedAt;
 
-                            AppLogger.Info("WinFsp", $"Файл '{nodeName}' ({finalLength} байт) сохранен в базе данных без отправки в Telegram (inline_data).");
+                            AppLogger.Info("WinFsp", $"[VirtualCopy] Файл '{nodeName}' сохранен мгновенно из локальных данных ({node.Size} байт).");
                         }
-                        else
+
+                        ctx.Dispose();
+                        return;
+                    }
+
+                    // Вариант 1: Большой файл, который передавался на лету через StreamingPipeStream
+                    if (ctx.PipeStream != null && ctx.UploadTask != null)
+                    {
+                        var pipe = ctx.PipeStream;
+                        var uploadTask = ctx.UploadTask;
+                        var cts = ctx.UploadCts;
+                        ctx.PipeStream = null;
+                        ctx.UploadTask = null;
+                        ctx.UploadCts = null;
+
+                        pipe.CompleteWriting();
+
+                        try
                         {
-                            int nextVersion = _repository.GetNextVersionForFile(parentId, nodeName);
-                            string parentPath = _repository.GetNodeFullPath(parentId);
-                            if (parentPath == "/") parentPath = "";
-                            string ext = Path.GetExtension(nodeName);
-                            string nameNoExt = Path.GetFileNameWithoutExtension(nodeName);
-                            string fullPathWithVersion = $"{parentPath}/{nameNoExt}_v{nextVersion}{ext}";
-
-                            AudioMetadataResult? fspAudioMeta = null;
-                            VideoMetadataResult? fspVideoMeta = null;
-
-                            if (!string.IsNullOrEmpty(ctx.OriginalSourcePath) && File.Exists(ctx.OriginalSourcePath))
-                            {
-                                if (VideoMetadataExtractor.IsPotentialVideo(nodeName))
-                                {
-                                    try { fspVideoMeta = VideoMetadataExtractor.ExtractFromFile(ctx.OriginalSourcePath, nodeName); } catch { }
-                                }
-                                else if (AudioMetadataExtractor.IsPotentialAudio(nodeName))
-                                {
-                                    try { fspAudioMeta = AudioMetadataExtractor.ExtractFromFile(ctx.OriginalSourcePath, nodeName); } catch { }
-                                }
-                            }
-
-                            if (fspAudioMeta == null && AudioMetadataExtractor.IsPotentialAudio(nodeName))
-                            {
-                                using var ms = new MemoryStream(fileBytes, false);
-                                fspAudioMeta = AudioMetadataExtractor.ExtractFromStream(ms, nodeName);
-                            }
-
-                            long? targetChannelId = _repository.GetEffectiveChannelId(parentId);
-                            AppLogger.Info("WinFsp", $"Отправка файла '{nodeName}' ({finalLength} байт) из памяти в Telegram (Zero-Temp)" + (targetChannelId != null ? $", канал: {targetChannelId}" : "") + "...");
-                            using var uploadMs = new MemoryStream(fileBytes, false);
-                            var uploadResult = _telegramService.UploadFileAsync(
-                                uploadMs,
-                                nodeName,
-                                finalLength,
-                                caption: fullPathWithVersion,
-                                audioMeta: fspAudioMeta,
-                                videoMeta: fspVideoMeta,
-                                originalFilePath: ctx.OriginalSourcePath,
-                                targetChannelId: targetChannelId
-                            ).GetAwaiter().GetResult();
-
+                            // Синхронно ожидаем завершения загрузки в Telegram, чтобы Проводник Windows держал нативное окно копирования с графиком скорости
+                            var uploadResult = uploadTask.GetAwaiter().GetResult();
                             if (uploadResult?.MessageId != null)
                             {
-                                _repository.CreateOrUpdateFile(
+                                long finalLength = node.Size;
+                                int newNodeId = _repository.CreateOrUpdateFile(
                                     parentId,
                                     nodeName,
                                     finalLength,
@@ -1418,21 +1375,152 @@ namespace TelegramWebDAV.Services
                                     parts: uploadResult.Parts
                                 );
 
-                                node.Size = finalLength;
+                                if (newNodeId > 0) node.Id = newNodeId;
+                                _activeUploadNodes.TryRemove(cleanFilePath, out _);
+
                                 node.TgMessageId = uploadResult.MessageId;
                                 node.TgPreviewMessageId = uploadResult.PreviewMessageId;
                                 node.InlineData = null;
                                 node.UpdatedAt = targetUpdatedAt;
                                 node.CreatedAt = targetCreatedAt;
 
-                                AppLogger.Info("WinFsp", $"Файл '{nodeName}' успешно сохранен в Telegram (Msg ID: {uploadResult.MessageId}" + (uploadResult.PreviewMessageId != null ? $", Preview ID: {uploadResult.PreviewMessageId}" : "") + $", дата изменения: {targetUpdatedAt:yyyy-MM-dd HH:mm:ss}).");
+                                AppLogger.Info("WinFsp", $"Файл '{nodeName}' успешно сохранен в Telegram (Msg ID: {uploadResult.MessageId}" + (uploadResult.PreviewMessageId != null ? $", Preview ID: {uploadResult.PreviewMessageId}" : "") + $", дата изменения: {targetUpdatedAt:yyyy-MM-dd HH:mm:ss}). Загрузка на лету (Zero-Temp) завершена.");
+                            }
+                            else
+                            {
+                                _activeUploadNodes.TryRemove(cleanFilePath, out _);
                             }
                         }
+                        catch (Exception ex)
+                        {
+                            _activeUploadNodes.TryRemove(cleanFilePath, out _);
+                            AppLogger.Error("WinFsp", $"Ошибка при завершении потоковой загрузки '{nodeName}' в Telegram: {ex.Message}", ex);
+                        }
+                        finally
+                        {
+                            try { pipe.Dispose(); } catch { }
+                            try { cts?.Dispose(); } catch { }
+                        }
                     }
-                    catch (Exception ex)
+                    // Вариант 2: Небольшой файл (<= 1 МБ), сохраненный в памяти
+                    else if (ctx.SmallFileBuffer != null)
                     {
-                        AppLogger.Error("WinFsp", $"Ошибка загрузки '{nodeName}' в Telegram: {ex.Message}", ex);
+                        long finalLength = ctx.SmallFileBuffer.Length;
+                        byte[] fileBytes = ctx.SmallFileBuffer.ToArray();
+
+                        try
+                        {
+                            if (finalLength <= 1)
+                            {
+                                byte[]? inlineBytes = finalLength == 1 ? fileBytes : null;
+                                int newNodeId = _repository.CreateOrUpdateFile(
+                                    parentId,
+                                    nodeName,
+                                    finalLength,
+                                    tgMessageId: null,
+                                    tgPreviewMessageId: null,
+                                    inlineData: inlineBytes,
+                                    lastModified: targetUpdatedAt,
+                                    creationDate: targetCreatedAt
+                                );
+
+                                if (newNodeId > 0) node.Id = newNodeId;
+                                _activeUploadNodes.TryRemove(cleanFilePath, out _);
+
+                                node.Size = finalLength;
+                                node.InlineData = inlineBytes;
+                                node.TgMessageId = null;
+                                node.UpdatedAt = targetUpdatedAt;
+                                node.CreatedAt = targetCreatedAt;
+
+                                AppLogger.Info("WinFsp", $"Файл '{nodeName}' ({finalLength} байт) сохранен в базе данных без отправки в Telegram (inline_data).");
+                            }
+                            else
+                            {
+                                int nextVersion = _repository.GetNextVersionForFile(parentId, nodeName);
+                                string parentPath = _repository.GetNodeFullPath(parentId);
+                                if (parentPath == "/") parentPath = "";
+                                string ext = Path.GetExtension(nodeName);
+                                string nameNoExt = Path.GetFileNameWithoutExtension(nodeName);
+                                string fullPathWithVersion = $"{parentPath}/{nameNoExt}_v{nextVersion}{ext}";
+
+                                AudioMetadataResult? fspAudioMeta = null;
+                                VideoMetadataResult? fspVideoMeta = null;
+
+                                if (!string.IsNullOrEmpty(ctx.OriginalSourcePath) && File.Exists(ctx.OriginalSourcePath))
+                                {
+                                    if (VideoMetadataExtractor.IsPotentialVideo(nodeName))
+                                    {
+                                        try { fspVideoMeta = VideoMetadataExtractor.ExtractFromFile(ctx.OriginalSourcePath, nodeName); } catch { }
+                                    }
+                                    else if (AudioMetadataExtractor.IsPotentialAudio(nodeName))
+                                    {
+                                        try { fspAudioMeta = AudioMetadataExtractor.ExtractFromFile(ctx.OriginalSourcePath, nodeName); } catch { }
+                                    }
+                                }
+
+                                if (fspAudioMeta == null && AudioMetadataExtractor.IsPotentialAudio(nodeName))
+                                {
+                                    using var ms = new MemoryStream(fileBytes, false);
+                                    fspAudioMeta = AudioMetadataExtractor.ExtractFromStream(ms, nodeName);
+                                }
+
+                                long? targetChannelId = _repository.GetEffectiveChannelId(parentId);
+                                AppLogger.Info("WinFsp", $"Отправка файла '{nodeName}' ({finalLength} байт) из памяти в Telegram (Zero-Temp)" + (targetChannelId != null ? $", канал: {targetChannelId}" : "") + "...");
+                                using var uploadMs = new MemoryStream(fileBytes, false);
+                                var uploadResult = _telegramService.UploadFileAsync(
+                                    uploadMs,
+                                    nodeName,
+                                    finalLength,
+                                    caption: fullPathWithVersion,
+                                    audioMeta: fspAudioMeta,
+                                    videoMeta: fspVideoMeta,
+                                    originalFilePath: ctx.OriginalSourcePath,
+                                    targetChannelId: targetChannelId
+                                ).GetAwaiter().GetResult();
+
+                                if (uploadResult?.MessageId != null)
+                                {
+                                    int newNodeId = _repository.CreateOrUpdateFile(
+                                        parentId,
+                                        nodeName,
+                                        finalLength,
+                                        uploadResult.MessageId,
+                                        uploadResult.PreviewMessageId,
+                                        inlineData: null,
+                                        lastModified: targetUpdatedAt,
+                                        creationDate: targetCreatedAt,
+                                        parts: uploadResult.Parts
+                                    );
+
+                                    if (newNodeId > 0) node.Id = newNodeId;
+                                    _activeUploadNodes.TryRemove(cleanFilePath, out _);
+
+                                    node.Size = finalLength;
+                                    node.TgMessageId = uploadResult.MessageId;
+                                    node.TgPreviewMessageId = uploadResult.PreviewMessageId;
+                                    node.InlineData = null;
+                                    node.UpdatedAt = targetUpdatedAt;
+                                    node.CreatedAt = targetCreatedAt;
+
+                                    AppLogger.Info("WinFsp", $"Файл '{nodeName}' успешно сохранен в Telegram (Msg ID: {uploadResult.MessageId}" + (uploadResult.PreviewMessageId != null ? $", Preview ID: {uploadResult.PreviewMessageId}" : "") + $", дата изменения: {targetUpdatedAt:yyyy-MM-dd HH:mm:ss}).");
+                                }
+                                else
+                                {
+                                    _activeUploadNodes.TryRemove(cleanFilePath, out _);
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _activeUploadNodes.TryRemove(cleanFilePath, out _);
+                            AppLogger.Error("WinFsp", $"Ошибка загрузки '{nodeName}' в Telegram: {ex.Message}", ex);
+                        }
                     }
+                }
+                finally
+                {
+                    _activeUploadNodes.TryRemove(cleanFilePath, out _);
                 }
             }
         }
