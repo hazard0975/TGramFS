@@ -1872,6 +1872,7 @@ namespace TelegramWebDAV.Services
         {
             var session = new CopySession();
             var addedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            bool hasExplicitFiles = rawCandidates.Exists(c => File.Exists(c));
 
             foreach (var raw in rawCandidates)
             {
@@ -1895,19 +1896,24 @@ namespace TelegramWebDAV.Services
                         session.SourceRoots.Add(raw);
                     }
 
-                    try
+                    // Рекурсивное перечисление файлов папки в очередь выполняется ТОЛЬКО если в списке кандидатов
+                    // нет явных файлов (т.е. пользователь действительно копирует всю папку целиком, а не файлы из неё).
+                    if (!hasExplicitFiles)
                     {
-                        foreach (var file in Directory.EnumerateFiles(raw, "*", SearchOption.AllDirectories))
+                        try
                         {
-                            if (addedFiles.Add(file))
+                            foreach (var file in Directory.EnumerateFiles(raw, "*", SearchOption.AllDirectories))
                             {
-                                session.PendingFiles.Add(file);
+                                if (addedFiles.Add(file))
+                                {
+                                    session.PendingFiles.Add(file);
+                                }
                             }
                         }
-                    }
-                    catch (Exception ex)
-                    {
-                        AppLogger.Debug("WinFsp", $"[Сессия] Ошибка перечисления файлов папки '{raw}': {ex.Message}");
+                        catch (Exception ex)
+                        {
+                            AppLogger.Debug("WinFsp", $"[Сессия] Ошибка перечисления файлов папки '{raw}': {ex.Message}");
+                        }
                     }
                 }
             }
@@ -1960,7 +1966,14 @@ namespace TelegramWebDAV.Services
                         string? match = _activeSession.FindAndConsume(targetFileName, relativeVirtualPath);
                         if (match != null)
                         {
-                            AppLogger.Info("WinFsp", $"[Источник] Найдено совпадение в активной сессии (осталось файлов в очереди: {_activeSession.PendingFiles.Count}/{_activeSession.InitialCount}): '{match}'");
+                            if (_activeSession.InitialCount > 0 && _activeSession.PendingFiles.Count > 0)
+                            {
+                                AppLogger.Info("WinFsp", $"[Источник] Найдено совпадение в активной сессии (осталось файлов в очереди: {_activeSession.PendingFiles.Count}/{_activeSession.InitialCount}): '{match}'");
+                            }
+                            else
+                            {
+                                AppLogger.Info("WinFsp", $"[Источник] Найдено совпадение в активной сессии: '{match}'");
+                            }
                             return (null, match);
                         }
                     }
@@ -2419,10 +2432,6 @@ namespace TelegramWebDAV.Services
                                                                 if (!results.Exists(x => string.Equals(x, candidateFile, StringComparison.OrdinalIgnoreCase)))
                                                                 {
                                                                     results.Add(candidateFile);
-                                                                }
-                                                                if (!results.Exists(x => string.Equals(x, path, StringComparison.OrdinalIgnoreCase)))
-                                                                {
-                                                                    results.Add(path);
                                                                 }
                                                                 return results;
                                                             }
