@@ -9,13 +9,6 @@ using TelegramWebDAV.Services;
 
 namespace TelegramWebDAV.Database
 {
-    public enum FinalizeFileResult
-    {
-        Success,
-        SuccessInTrash,
-        NodeNotFound
-    }
-
     public class NodeRepository
     {
         private readonly DatabaseManager _dbManager;
@@ -1404,107 +1397,6 @@ namespace TelegramWebDAV.Database
             }
             NotifyNodeChanged();
             return targetNodeId;
-        }
-
-        /// <summary>
-        /// Финализирует загруженный или скопированный файл строго по его ID узла в базе данных.
-        /// Гарантирует целостность даже если узел был переименован или перемещен в корзину (.Trash) во время выгрузки в Telegram.
-        /// Если узел уже находится в корзине, обновляет его данные и ставит в очередь подпись #trash.
-        /// Если узел был перманентно удален из базы (очистка корзины во время передачи), возвращает NodeNotFound для отзыва сообщения из Telegram.
-        /// </summary>
-        public FinalizeFileResult FinalizeUploadedFile(
-            int nodeId,
-            long size,
-            int? tgMessageId,
-            int? tgPreviewMessageId = null,
-            byte[]? inlineData = null,
-            DateTime? lastModified = null,
-            DateTime? creationDate = null,
-            IEnumerable<NodePart>? parts = null)
-        {
-            using (var connection = _dbManager.GetConnection())
-            {
-                Node? existingNode = null;
-                using (var cmd = connection.CreateCommand())
-                {
-                    cmd.CommandText = "SELECT * FROM nodes WHERE id = @nodeId LIMIT 1;";
-                    cmd.Parameters.AddWithValue("@nodeId", nodeId);
-                    existingNode = ReadNode(cmd);
-                }
-
-                if (existingNode == null)
-                {
-                    AppLogger.Warn("NodeRepository", $"[FinalizeUploadedFile] Узел ID {nodeId} не найден в БД (возможно, был перманентно удален). Сообщение в Telegram требует отзыва.");
-                    return FinalizeFileResult.NodeNotFound;
-                }
-
-                long? effectiveTgChannelId = existingNode.TgChannelId ?? GetEffectiveChannelId(existingNode.ParentId);
-
-                using (var updateCmd = connection.CreateCommand())
-                {
-                    string updateSql = @"
-                        UPDATE nodes SET
-                            size = @size,
-                            tg_message_id = @tgMessageId,
-                            tg_preview_message_id = @tgPreviewMessageId,
-                            tg_channel_id = @tgChannelId,
-                            inline_data = @inlineData,
-                            updated_at = " + (lastModified.HasValue ? "@updatedAt" : "CURRENT_TIMESTAMP") +
-                            (creationDate.HasValue ? ", created_at = @createdAt" : "") + @"
-                        WHERE id = @nodeId;";
-
-                    updateCmd.CommandText = updateSql;
-                    updateCmd.Parameters.AddWithValue("@size", size);
-                    updateCmd.Parameters.AddWithValue("@tgMessageId", (object?)tgMessageId ?? DBNull.Value);
-                    updateCmd.Parameters.AddWithValue("@tgPreviewMessageId", (object?)tgPreviewMessageId ?? DBNull.Value);
-                    updateCmd.Parameters.AddWithValue("@tgChannelId", (object?)effectiveTgChannelId ?? DBNull.Value);
-                    updateCmd.Parameters.AddWithValue("@inlineData", (object?)inlineData ?? DBNull.Value);
-                    updateCmd.Parameters.AddWithValue("@nodeId", nodeId);
-                    if (lastModified.HasValue)
-                    {
-                        updateCmd.Parameters.AddWithValue("@updatedAt", FormatDateTime(lastModified.Value));
-                    }
-                    if (creationDate.HasValue)
-                    {
-                        updateCmd.Parameters.AddWithValue("@createdAt", FormatDateTime(creationDate.Value));
-                    }
-                    updateCmd.ExecuteNonQuery();
-                }
-
-                if (parts != null)
-                {
-                    SaveNodePartsInternal(connection, nodeId, parts);
-                }
-
-                NotifyNodeChanged();
-
-                bool inTrash = existingNode.InTrash || IsNodeInTrash(existingNode.Id);
-                if (inTrash)
-                {
-                    existingNode.Size = size;
-                    existingNode.TgMessageId = tgMessageId;
-                    existingNode.TgPreviewMessageId = tgPreviewMessageId;
-                    existingNode.InTrash = true;
-
-                    if (tgMessageId.HasValue && tgMessageId.Value > 1)
-                    {
-                        string pathWithVersion = GetNodeFullPathWithVersion(nodeId);
-                        string trashCaption = FormatTelegramCaption(pathWithVersion, tgMessageId.Value, isLatest: false);
-                        EnqueueCaptionUpdate(nodeId, tgMessageId.Value, trashCaption);
-                    }
-                    if (tgPreviewMessageId.HasValue && tgPreviewMessageId.Value > 1)
-                    {
-                        string pathWithVersion = GetNodeFullPathWithVersion(nodeId);
-                        string trashPreviewCaption = FormatTelegramCaption(pathWithVersion, tgPreviewMessageId.Value, isLatest: false);
-                        EnqueueCaptionUpdate(nodeId, tgPreviewMessageId.Value, trashPreviewCaption);
-                    }
-
-                    AppLogger.Info("NodeRepository", $"[FinalizeUploadedFile] Узел ID {nodeId} ('{existingNode.Name}') финализирован в корзине (.Trash) с установкой подписи #trash.");
-                    return FinalizeFileResult.SuccessInTrash;
-                }
-
-                return FinalizeFileResult.Success;
-            }
         }
 
         /// <summary>

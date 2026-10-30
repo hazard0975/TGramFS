@@ -2400,12 +2400,7 @@ namespace TelegramWebDAV.Services
 
                     using var boundedStream = new BoundedStream(
                         uploadStream,
-                        currentPartLength,
-                        (partPos, partTotal) =>
-                        {
-                            long globalPos = partStartGlobal + partPos;
-                            OnUploadProgress?.Invoke(effectiveFileName, globalPos, fileLength);
-                        }
+                        currentPartLength
                     );
 
                     var inputFile = await _client!.UploadFileAsync(
@@ -2457,7 +2452,8 @@ namespace TelegramWebDAV.Services
 
                     if (i == 0)
                     {
-                        partCaption = $"{effectiveCaption} [Часть 1 из {partCount}, total={fileLength:N0} Bytes]";
+                        string masterCaptionPath = $"{rawCaptionPath} [Часть 1 из {partCount}, total={fileLength:N0} Bytes]";
+                        partCaption = NodeRepository.FormatTelegramCaption(masterCaptionPath, null, isLatest: true);
                         try
                         {
                             message = await _client.SendMessageAsync(peer, partCaption, mediaDoc);
@@ -2471,10 +2467,31 @@ namespace TelegramWebDAV.Services
 
                         masterMessageId = message.ID;
                         AppLogger.Info("TelegramService", $"[BigFile Chunking] Заглавная Часть 1/{partCount} успешно отправлена в канал (Message ID: {masterMessageId}).");
+
+                        if (masterMessageId > 0)
+                        {
+                            try
+                            {
+                                string finalizedCaption = NodeRepository.FormatTelegramCaption(masterCaptionPath, masterMessageId, isLatest: true);
+                                var editReq = new TL.Methods.Messages_EditMessage
+                                {
+                                    flags = TL.Methods.Messages_EditMessage.Flags.has_message,
+                                    peer = peer,
+                                    id = masterMessageId,
+                                    message = finalizedCaption
+                                };
+                                await _client.Invoke(editReq);
+                            }
+                            catch (Exception ex)
+                            {
+                                AppLogger.Debug("TelegramService", $"[BigFile Chunking] Не удалось обновить финальную подпись для #{masterMessageId}: {ex.Message}");
+                            }
+                        }
                     }
                     else
                     {
-                        partCaption = $"{rawCaptionPath} [Часть {partDisplayNum} из {partCount}, total={fileLength:N0} Bytes]";
+                        string childCaptionPath = $"{rawCaptionPath} [Часть {partDisplayNum} из {partCount}, total={fileLength:N0} Bytes]";
+                        partCaption = $"↳ {childCaptionPath}";
                         try
                         {
                             message = await _client.SendMessageAsync(peer, partCaption, mediaDoc, reply_to_msg_id: masterMessageId);
@@ -2487,6 +2504,26 @@ namespace TelegramWebDAV.Services
                         }
 
                         AppLogger.Info("TelegramService", $"[BigFile Chunking] Дочерняя Часть {partDisplayNum}/{partCount} успешно отправлена в канал (Message ID: {message.ID}, ReplyTo: {masterMessageId}).");
+
+                        if (message.ID > 0)
+                        {
+                            try
+                            {
+                                string finalizedChildCaption = $"↳ {childCaptionPath}\nID: {message.ID}";
+                                var editReq = new TL.Methods.Messages_EditMessage
+                                {
+                                    flags = TL.Methods.Messages_EditMessage.Flags.has_message,
+                                    peer = peer,
+                                    id = message.ID,
+                                    message = finalizedChildCaption
+                                };
+                                await _client.Invoke(editReq);
+                            }
+                            catch (Exception ex)
+                            {
+                                AppLogger.Debug("TelegramService", $"[BigFile Chunking] Не удалось обновить финальную подпись дочерней части #{message.ID}: {ex.Message}");
+                            }
+                        }
                     }
 
                     parts.Add(new Models.NodePart(0, i, currentPartLength, message.ID, channelId));
@@ -2742,14 +2779,16 @@ namespace TelegramWebDAV.Services
         /// <summary>
         /// Мгновенно копирует (форвардит) файл в Telegram без повторной передачи байтов контента.
         /// Работает как внутри одного канала (дублирование медиа на серверах Telegram), так и между разными каналами.
+        /// Поддерживает многосоставные файлы (> 2 ГБ / 4 ГБ): форвардит все связанные части (node_parts) и возвращает новый список частей.
         /// </summary>
-        public async Task<(int MessageId, int? PreviewMessageId)?> ForwardFileAsync(
+        public async Task<FileUploadResult?> ForwardFileAsync(
             int sourceMessageId,
             int? sourcePreviewMessageId = null,
             long? sourceChannelId = null,
             long? targetChannelId = null,
             string? newCaption = null,
-            int targetNodeId = 0)
+            int targetNodeId = 0,
+            List<Models.NodePart>? sourceParts = null)
         {
             if (_client == null || !IsAuthorized || sourceMessageId <= 0)
             {
@@ -2791,7 +2830,7 @@ namespace TelegramWebDAV.Services
                     }
                 }
 
-                // 2. Форвардим основной файл
+                // 2. Форвардим основной файл (мастер-сообщение)
                 var fwdReq = new TL.Methods.Messages_ForwardMessages
                 {
                     from_peer = sourcePeer,
@@ -2804,34 +2843,110 @@ namespace TelegramWebDAV.Services
                 var fwdUpdates = await _client.Invoke(fwdReq);
                 newMsgId = ExtractMessageIdFromUpdates(fwdUpdates);
 
-                if (newMsgId > 0)
-                {
-                    AppLogger.Info("TelegramService", $"[ForwardFileAsync] Файл (Msg #{sourceMessageId}) успешно скопирован в Telegram! Новый Msg #{newMsgId}" +
-                        (newPreviewId.HasValue ? $", превью #{newPreviewId}" : "") +
-                        (sourceChannelId != targetChannelId ? $" (канал {sourceChannelId} -> {targetChannelId})" : " (в пределах канала)"));
-
-                    // 3. Если задана новая подпись, планируем её стандартизированное обновление через очередь
-                    if (!string.IsNullOrEmpty(newCaption))
-                    {
-                        string effectiveCaption = newCaption.StartsWith("🟢") || newCaption.StartsWith("🗑️")
-                            ? newCaption
-                            : NodeRepository.FormatTelegramCaption(newCaption, newMsgId, isLatest: true);
-                        _repository?.EnqueueCaptionUpdate(targetNodeId, newMsgId, effectiveCaption);
-
-                        if (newPreviewId.HasValue && newPreviewId.Value > 0)
-                        {
-                            string previewCaption = NodeRepository.FormatTelegramCaption(newCaption, newPreviewId.Value, isLatest: true);
-                            _repository?.EnqueueCaptionUpdate(targetNodeId, newPreviewId.Value, previewCaption);
-                        }
-                    }
-
-                    return (newMsgId, newPreviewId);
-                }
-                else
+                if (newMsgId <= 0)
                 {
                     AppLogger.Warn("TelegramService", $"[ForwardFileAsync] Сообщение #{sourceMessageId} переслано, но не удалось извлечь новый MessageId.");
                     return null;
                 }
+
+                AppLogger.Info("TelegramService", $"[ForwardFileAsync] Файл (Msg #{sourceMessageId}) успешно скопирован в Telegram! Новый Msg #{newMsgId}" +
+                    (newPreviewId.HasValue ? $", превью #{newPreviewId}" : "") +
+                    (sourceChannelId != targetChannelId ? $" (канал {sourceChannelId} -> {targetChannelId})" : " (в пределах канала)"));
+
+                // 3. Проверяем, является ли файл составным (multi-part > 2 ГБ / 4 ГБ)
+                var partsToForward = sourceParts ?? _repository?.GetNodePartsByMessageId(sourceMessageId);
+                List<Models.NodePart>? newParts = null;
+
+                if (partsToForward != null && partsToForward.Count > 1)
+                {
+                    AppLogger.Info("TelegramService", $"[ForwardFileAsync] Обнаружен составной файл ({partsToForward.Count} частей). Начинаем пересылку связанных частей...");
+                    newParts = new List<Models.NodePart>();
+
+                    long effectiveTargetChannelId = 0;
+                    if (targetPeer is TL.InputPeerChannel ipc)
+                    {
+                        effectiveTargetChannelId = ipc.channel_id;
+                    }
+
+                    // Первая часть (Part 0) привязана к master newMsgId
+                    var firstPart = partsToForward.FirstOrDefault(p => p.PartIndex == 0);
+                    newParts.Add(new Models.NodePart(
+                        targetNodeId,
+                        0,
+                        firstPart?.PartSize ?? 0,
+                        newMsgId,
+                        effectiveTargetChannelId
+                    ));
+
+                    // Форвардим все остальные части (Part 1 .. N-1)
+                    foreach (var childPart in partsToForward.Where(p => p.PartIndex > 0).OrderBy(p => p.PartIndex))
+                    {
+                        try
+                        {
+                            await EnsureFloodWaitDelayAsync();
+                            await EnsurePacingDelayAsync();
+
+                            var fwdChildReq = new TL.Methods.Messages_ForwardMessages
+                            {
+                                from_peer = sourcePeer,
+                                to_peer = targetPeer,
+                                id = new int[] { childPart.TgMessageId },
+                                random_id = new long[] { Random.Shared.NextInt64() },
+                                flags = TL.Methods.Messages_ForwardMessages.Flags.drop_author
+                            };
+
+                            var childUpdates = await _client.Invoke(fwdChildReq);
+                            int childNewMsgId = ExtractMessageIdFromUpdates(childUpdates);
+
+                            if (childNewMsgId > 0)
+                            {
+                                newParts.Add(new Models.NodePart(
+                                    targetNodeId,
+                                    childPart.PartIndex,
+                                    childPart.PartSize,
+                                    childNewMsgId,
+                                    effectiveTargetChannelId
+                                ));
+                                AppLogger.Info("TelegramService", $"[ForwardFileAsync] Дочерняя часть #{childPart.PartIndex} (исходный Msg #{childPart.TgMessageId}) скопирована -> новый Msg #{childNewMsgId}.");
+                            }
+                            else
+                            {
+                                AppLogger.Warn("TelegramService", $"[ForwardFileAsync] Не удалось получить новый MessageId для дочерней части #{childPart.PartIndex}.");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            AppLogger.Error("TelegramService", $"[ForwardFileAsync] Ошибка пересылки дочерней части #{childPart.PartIndex} (Msg #{childPart.TgMessageId}): {ex.Message}", ex);
+                        }
+                    }
+                }
+
+                // 4. Если задана новая подпись, планируем её стандартизированное обновление через очередь
+                if (!string.IsNullOrEmpty(newCaption))
+                {
+                    string effectiveCaption;
+                    if (newParts != null && newParts.Count > 1)
+                    {
+                        long totalSize = newParts.Sum(p => p.PartSize);
+                        string captionWithPathAndPart = $"{newCaption} [Часть 1 из {newParts.Count}, total={totalSize:N0} Bytes]";
+                        effectiveCaption = NodeRepository.FormatTelegramCaption(captionWithPathAndPart, newMsgId, isLatest: true);
+                    }
+                    else
+                    {
+                        effectiveCaption = newCaption.StartsWith("🟢") || newCaption.StartsWith("🗑️")
+                            ? newCaption
+                            : NodeRepository.FormatTelegramCaption(newCaption, newMsgId, isLatest: true);
+                    }
+                    _repository?.EnqueueCaptionUpdate(targetNodeId, newMsgId, effectiveCaption);
+
+                    if (newPreviewId.HasValue && newPreviewId.Value > 0)
+                    {
+                        string previewCaption = NodeRepository.FormatTelegramCaption(newCaption, newPreviewId.Value, isLatest: true);
+                        _repository?.EnqueueCaptionUpdate(targetNodeId, newPreviewId.Value, previewCaption);
+                    }
+                }
+
+                return new FileUploadResult(newMsgId, newPreviewId, newParts);
             }
             catch (TL.RpcException rpcEx) when (rpcEx.Code == 420) // FLOOD_WAIT_X
             {

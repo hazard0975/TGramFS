@@ -831,17 +831,18 @@ namespace TelegramWebDAV.Server
                         fullPathWithVersion
                     );
 
-                    if (fwdResult.HasValue)
+                    if (fwdResult != null && fwdResult.MessageId > 0)
                     {
                         repository.CreateOrUpdateFile(
                             destParentId,
                             destFileName,
                             sourceFile.Size,
-                            fwdResult.Value.MessageId,
-                            fwdResult.Value.PreviewMessageId,
+                            fwdResult.MessageId,
+                            fwdResult.PreviewMessageId,
                             inlineData: null,
                             lastModified: sourceFile.UpdatedAt,
-                            creationDate: sourceFile.CreatedAt
+                            creationDate: sourceFile.CreatedAt,
+                            parts: fwdResult.Parts
                         );
                         return true;
                     }

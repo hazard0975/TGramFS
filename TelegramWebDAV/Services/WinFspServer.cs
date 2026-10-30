@@ -1279,29 +1279,31 @@ namespace TelegramWebDAV.Services
                             try
                             {
                                 var fwdResult = ctx.ForwardTask.GetAwaiter().GetResult();
-                                if (fwdResult.HasValue)
+                                if (fwdResult != null && fwdResult.MessageId > 0)
                                 {
                                     int newNodeId = _repository.CreateOrUpdateFile(
                                         parentId,
                                         nodeName,
                                         ctx.VirtualSourceNode.Size,
-                                        fwdResult.Value.MessageId,
-                                        fwdResult.Value.PreviewMessageId,
+                                        fwdResult.MessageId,
+                                        fwdResult.PreviewMessageId,
                                         inlineData: null,
                                         lastModified: targetUpdatedAt,
-                                        creationDate: targetCreatedAt
+                                        creationDate: targetCreatedAt,
+                                        parts: fwdResult.Parts
                                     );
 
                                     if (newNodeId > 0) node.Id = newNodeId;
                                     _activeUploadNodes.TryRemove(cleanFilePath, out _);
 
-                                    node.TgMessageId = fwdResult.Value.MessageId;
-                                    node.TgPreviewMessageId = fwdResult.Value.PreviewMessageId;
+                                    node.TgMessageId = fwdResult.MessageId;
+                                    node.TgPreviewMessageId = fwdResult.PreviewMessageId;
                                     node.Size = ctx.VirtualSourceNode.Size;
                                     node.UpdatedAt = targetUpdatedAt;
                                     node.CreatedAt = targetCreatedAt;
 
-                                    AppLogger.Info("WinFsp", $"[VirtualCopy] Файл '{nodeName}' успешно сохранен через Telegram ForwardMessages (новый Msg ID: {fwdResult.Value.MessageId}, размер: {node.Size} байт).");
+                                    AppLogger.Info("WinFsp", $"[VirtualCopy] Файл '{nodeName}' успешно сохранен через Telegram ForwardMessages (новый Msg ID: {fwdResult.MessageId}, размер: {node.Size} байт" +
+                                        (fwdResult.Parts != null ? $", частей: {fwdResult.Parts.Count}" : "") + ").");
                                 }
                                 else
                                 {
@@ -2661,7 +2663,7 @@ namespace TelegramWebDAV.Services
 
             // Виртуальный источник для серверного клонирования (Zero-Traffic Copy)
             public Node? VirtualSourceNode { get; set; }
-            public Task<(int MessageId, int? PreviewMessageId)?>? ForwardTask { get; set; }
+            public Task<FileUploadResult?>? ForwardTask { get; set; }
 
             // Прямая потоковая загрузка без временных файлов на диске (Zero-Temp Direct Streaming)
             public StreamingPipeStream? PipeStream { get; set; }
