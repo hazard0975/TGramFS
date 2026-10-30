@@ -2452,7 +2452,8 @@ namespace TelegramWebDAV.Services
 
                     if (i == 0)
                     {
-                        string masterCaptionPath = $"{rawCaptionPath} [Часть 1 из {partCount}, total={fileLength:N0} Bytes]";
+                        double totalGb = (double)fileLength / (1024.0 * 1024.0 * 1024.0);
+                        string masterCaptionPath = $"{rawCaptionPath} [Часть 1 из {partCount}, total={totalGb:F2} ГБ]";
                         partCaption = NodeRepository.FormatTelegramCaption(masterCaptionPath, null, isLatest: true);
                         try
                         {
@@ -2490,7 +2491,7 @@ namespace TelegramWebDAV.Services
                     }
                     else
                     {
-                        string childCaptionPath = $"{rawCaptionPath} [Часть {partDisplayNum} из {partCount}, total={fileLength:N0} Bytes]";
+                        string childCaptionPath = $"{rawCaptionPath} [Часть {partDisplayNum} из {partCount}]";
                         partCaption = $"↳ {childCaptionPath}";
                         try
                         {
@@ -2928,7 +2929,8 @@ namespace TelegramWebDAV.Services
                     if (newParts != null && newParts.Count > 1)
                     {
                         long totalSize = newParts.Sum(p => p.PartSize);
-                        string captionWithPathAndPart = $"{newCaption} [Часть 1 из {newParts.Count}, total={totalSize:N0} Bytes]";
+                        double totalGb = (double)totalSize / (1024.0 * 1024.0 * 1024.0);
+                        string captionWithPathAndPart = $"{newCaption} [Часть 1 из {newParts.Count}, total={totalGb:F2} ГБ]";
                         effectiveCaption = NodeRepository.FormatTelegramCaption(captionWithPathAndPart, newMsgId, isLatest: true);
                     }
                     else

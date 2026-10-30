@@ -2656,13 +2656,13 @@ _telegramService.UpdateSettings(_settings);
    - Удален избыточный внутренний вызов `progressCallback` из `BoundedStream`.
    - Прогресс выгрузки каждой части учитывается строго один раз через стандартный делегат `_client.UploadFileAsync(..., progress: (sent, total) => ...)`.
 2. **Каноническое форматирование подписей составных частей (`TelegramService.cs`):**
-   - Для мастер-части (Часть 1) путь формируется с явным указанием `[Часть 1 из {partCount}, total={fileLength:N0} Bytes]`, форматируется через `NodeRepository.FormatTelegramCaption` и после отправки финализируется реальным `masterMessageId` и `#latest`.
-   - Для дочерних частей (2..N) сохраняется читаемый древовидный вид `↳ {childCaptionPath}`, а после отправки через `Messages_EditMessage` подпись дополняется строкой `ID: {message.ID}`.
+   - Для мастер-части (Часть 1) путь формируется с наглядным указанием размера в гигабайтах `[Часть 1 из {partCount}, total={totalGb:F2} ГБ]`, форматируется через `NodeRepository.FormatTelegramCaption` и после отправки финализируется реальным `masterMessageId` и `#latest`.
+   - Для дочерних частей (2..N) подпись сделана лаконичной: `↳ {rawCaptionPath} [Часть {partDisplayNum} из {partCount}]` без дублирования общего размера, с финализацией строкой `ID: {message.ID}` после отправки.
 3. **Полноценная поддержка составных файлов в виртуальном копировании (`ForwardFileAsync`):**
    - Сигнатура `ForwardFileAsync` переведена на возврат `Task<FileUploadResult?>`.
    - Метод автоматически извлекает составные части оригинала через `NodeRepository.GetNodePartsByMessageId(sourceMessageId)`.
    - Если файл является составным (`parts.Count > 1`), метод последовательно форвардит все дочерние части на серверной стороне Telegram, формирует новый список `newParts` с актуальными `tg_message_id` в целевом канале и возвращает его в составе `FileUploadResult`.
-   - В подписи мастер-части обновленной копии автоматически сохраняется корректный заголовок `[Часть 1 из N, total=... Bytes]`.
+   - В подписи мастер-части обновленной копии автоматически сохраняется корректный заголовок `[Часть 1 из N, total={totalGb:F2} ГБ]`.
 4. **Сквозная передача частей в WinFsp и WebDAV:**
    - В `WinFspServer.Cleanup` результат `fwdResult.Parts` передается в `_repository.CreateOrUpdateFile(..., parts: fwdResult.Parts)`, гарантируя полную сохранность таблицы `node_parts` при копировании файлов любого размера.
    - В `WebDavMiddleware.HandleCopyAsync` аналогично передается `parts: fwdResult.Parts`.
