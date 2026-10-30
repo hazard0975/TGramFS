@@ -135,6 +135,12 @@ namespace TelegramWebDAV.UI
                 _progressOverlay.CompleteTransfer(fileName, TransferDirection.Upload);
             };
 
+            _telegramService.OnUploadCanceled += (fileName) =>
+            {
+                AppLogger.Info("TrayContext", $"Событие OnUploadCanceled для '{fileName}' получено из TelegramService.");
+                _progressOverlay.CancelTransfer(fileName, TransferDirection.Upload);
+            };
+
             _telegramService.OnDownloadProgress += (fileName, current, total) =>
             {
                 _progressOverlay.UpdateProgress(fileName, current, total, TransferDirection.Download);

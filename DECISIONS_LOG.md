@@ -2666,3 +2666,36 @@ _telegramService.UpdateSettings(_settings);
 4. **Сквозная передача частей в WinFsp и WebDAV:**
    - В `WinFspServer.Cleanup` результат `fwdResult.Parts` передается в `_repository.CreateOrUpdateFile(..., parts: fwdResult.Parts)`, гарантируя полную сохранность таблицы `node_parts` при копировании файлов любого размера.
    - В `WebDavMiddleware.HandleCopyAsync` аналогично передается `parts: fwdResult.Parts`.
+
+---
+
+## 81. Устранение ложного VirtualCopy при копировании с физического диска (Root Cause Priority) и корректная обработка отмены загрузки (Zero-Ghost Transfer)
+
+### Контекст и симптомы:
+1. При первом перетаскивании/копировании файла с локального диска ПК (`D:\TGtest\ScreenRecorderProject8.mkv`) на виртуальный диск (`Y:\`) вместо потоковой загрузки оригинального файла с диска неожиданно выполнилось виртуальное копирование через серверный форвардинг сообщений в Telegram (VirtualCopy). При повторном копировании того же файла поведение не воспроизводилось.
+2. При нажатии кнопки «Отмена» во время загрузки файла в окне копирования Windows Explorer в журнале `app.log` фиксировалась ошибка с полным стеком вызовов: `[BigFile Chunking] Ошибка загрузки части файла... OperationCanceledException` и `WinFsp Ошибка при завершении потоковой загрузки`, а в трей-оверлее поверх полосы прогресса ошибочно выводилась надпись «ЗАГРУЗКА ЗАВЕРШЕНА» («Успешно загружено») со 100% заполнением шкалы.
+
+### Первопричина (Root Cause Analysis):
+1. **Преждевременный захват смонтированного диска и ложное совпадение целевого файла:**
+   - В `WinFspServer.CollectOpenFileHandles` при сканировании дескрипторов ядра блок `includeMountedDrive && isOnMounted` при совпадении имени файла выполнял немедленный возврат (`return results;`). Когда Explorer открывал целевой файл назначения на диске `Y:\` для записи (или удерживал дескриптор прежнего файла с таким же именем), сканер ядра немедленно возвращал дескриптор на диске `Y:\`, полностью прерывая дальнейший поиск физических дескрипторов (включая реальный открытый источник `D:\TGtest\ScreenRecorderProject8.mkv`).
+   - В `WinFspServer.ResolveFileSource` шаг 3.1 (`IsCandidateOnMountedDrive`) выполнялся до шага 3.2 (проверки локальных физических кандидатов на дисках `D:`, `C:`).
+   - В `MatchVirtualCandidate` отсутствовала проверка на совпадение пути кандидата с путем создаваемого файла (`NormalizePath(vPath) == NormalizePath(targetVirtualPath)`). В результате целевой файл, открытый проводником на диске `Y:\`, сопоставлялся сам с собой (или со старой записью в БД) и возвращался как виртуальный источник.
+   - На втором копировании дескрипторы Explorer или буфер обмена обновились, и ложное совпадение исчезло.
+2. **Безусловный вызов `OnUploadCompleted` в блоке `finally` и отсутствие обработки отмены:**
+   - В `TelegramService.UploadFileAsync` событие `OnUploadCompleted?.Invoke(effectiveFileName)` находилось внутри блока `finally`. Блок `finally` выполняется при любых исключениях и абортах. При отмене копирования пользователем `OnUploadCompleted` ошибочно стрелял в `TrayContext`, вызывая `TrayProgressOverlay.CompleteTransfer` и выставляя `_isCompleted = true` («ЗАГРУЗКА ЗАВЕРШЕНА»).
+   - В `UploadMultiPartFileAsync` и `WinFspServer.Close` обычная отмена через `UploadCts.Cancel()` или `StreamingPipeStream.Abort()` перехватывалась общим блоком `catch (Exception ex)` и логировалась как критический системный сбой `AppLogger.Error` с полным стеком исключения `OperationCanceledException` / `ObjectDisposedException`.
+   - В оверлее прогресса отсутствовал метод отмены текущей операции передачи.
+
+### Принятое решение (Root Cause First):
+1. **Приоритет физических файлов над виртуальными ссылками (`WinFspServer.cs`):**
+   - В `ResolveFileSource` порядок проверки изменен: сначала оцениваются и верифицируются физические кандидаты (`physicalCandidates` где `!IsCandidateOnMountedDrive(c)`). Если на физическом диске (`D:`, `C:`) найден реальный читаемый файл, он возвращается немедленно, полностью исключая ошибочное срабатывание VirtualCopy при перетаскивании файлов с ПК.
+   - В `CollectOpenFileHandles` запрещен досрочный выход `return results` для кандидатов на смонтированном диске `Y:\` — сканирование дескрипторов ядра продолжается до обнаружения физических файлов.
+   - В `CollectOpenFileHandles` и `MatchVirtualCandidate` внедрена строгая фильтрация целевого пути (`targetVirtualPath`): файл назначения на диске `Y:\` категорически не может выступать источником для самого себя. Для виртуальных источников добавлена обязательная валидация `node.TgMessageId > 0`.
+2. **Корректный жизненный цикл отмены без ложных ошибок (Zero-Ghost Cancellation):**
+   - В `TelegramService.UploadFileAsync` вызов `OnUploadCompleted?.Invoke` удален из блока `finally` и перенесен строго в точки реального успешного завершения отправки сообщений.
+   - Добавлено событие `public event Action<string>? OnUploadCanceled` и метод `TriggerUploadCanceled(string fileName)`.
+   - В `UploadMultiPartFileAsync` и `UploadFileAsync` отмена операции (`OperationCanceledException`, `ObjectDisposedException`, `cancellationToken.IsCancellationRequested` или обрыв стрима) перехватывается как штатная отмена: части удаляются из Telegram, пишется информационный лог `AppLogger.Info` без стектрейсов ошибок, вызывается `TriggerUploadCanceled`, а метод возвращает `null`.
+   - В `WinFspServer.Cleanup` и `Close` при отмене незавершенного файла вызывается `_telegramService.TriggerUploadCanceled(node.Name)` и `PipeStream.Abort()`, а в `Close` отмена логируется на уровне `Info`.
+3. **Чистый сброс трей-оверлея (`TrayProgressOverlay.CancelTransfer`):**
+   - В `TrayProgressOverlay.cs` реализован метод `CancelTransfer(fileName, direction)`. Метод полностью сбрасывает флаги передачи (`_isTransferring = false`, `_isCompleted = false`, `_isFinalizing = false`), обнуляет счетчики байт и скорости, останавливает таймеры и немедленно скрывает оверлей.
+   - В `TrayContext.cs` подписан обработчик `OnUploadCanceled`, мгновенно скрывающий прогресс при отмене копирования пользователем.

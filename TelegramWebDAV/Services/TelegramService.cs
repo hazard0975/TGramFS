@@ -487,6 +487,16 @@ namespace TelegramWebDAV.Services
         }
 
         /// <summary>
+        /// Событие отмены загрузки файла в Telegram (пользователь нажал отмену в Проводнике).
+        /// </summary>
+        public event Action<string>? OnUploadCanceled;
+
+        public void TriggerUploadCanceled(string fileName)
+        {
+            OnUploadCanceled?.Invoke(fileName);
+        }
+
+        /// <summary>
         /// Событие прогресса скачивания файла из Telegram (имя файла, скачано байт, всего байт).
         /// </summary>
         public event Action<string, long, long>? OnDownloadProgress;
@@ -1934,10 +1944,11 @@ namespace TelegramWebDAV.Services
             AudioMetadataResult? audioMeta = null,
             VideoMetadataResult? videoMeta = null,
             string? originalFilePath = null,
-            long? targetChannelId = null)
+            long? targetChannelId = null,
+            CancellationToken cancellationToken = default)
         {
             Interlocked.Increment(ref _pendingUploadsCount);
-            await _uploadSemaphore.WaitAsync();
+            await _uploadSemaphore.WaitAsync(cancellationToken);
             string effectiveFileName = !string.IsNullOrEmpty(displayFileName) ? displayFileName : fileName;
             string rawCaptionPath = !string.IsNullOrEmpty(caption) ? caption : effectiveFileName;
             string effectiveCaption = rawCaptionPath.StartsWith("🟢") || rawCaptionPath.StartsWith("🗑️")
@@ -1949,6 +1960,7 @@ namespace TelegramWebDAV.Services
 
             try
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 await EnsureFloodWaitDelayAsync();
 
                 if (_client == null || !IsAuthorized)
@@ -1993,7 +2005,7 @@ namespace TelegramWebDAV.Services
                         AppLogger.Info("TelegramService", $"Буферизация изображения во временный файл: {tempFilePath}");
                         using (var fs = new FileStream(tempFilePath, FileMode.Create, FileAccess.Write, FileShare.None))
                         {
-                            await source.CopyToAsync(fs);
+                            await source.CopyToAsync(fs, cancellationToken);
                         }
                         
                         uploadStream = new FileStream(tempFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
@@ -2035,7 +2047,8 @@ namespace TelegramWebDAV.Services
                         effectiveCaption,
                         rawCaptionPath,
                         audioMeta,
-                        videoMeta
+                        videoMeta,
+                        cancellationToken
                     );
                 }
 
@@ -2284,6 +2297,7 @@ namespace TelegramWebDAV.Services
                         }
 
                         AppLogger.Info("TelegramService", $"Файл '{effectiveFileName}' успешно сохранен в Telegram. Message ID: {message.ID}" + (photoMessage != null ? $", Preview ID: {photoMessage.ID}" : ""));
+                        OnUploadCompleted?.Invoke(effectiveFileName);
                         return new FileUploadResult(message.ID, photoMessage?.ID);
                     }
                 }
@@ -2311,16 +2325,22 @@ namespace TelegramWebDAV.Services
                     }
 
                     AppLogger.Info("TelegramService", $"Файл '{effectiveFileName}' успешно сохранен в Telegram. Message ID: {message.ID}");
+                    OnUploadCompleted?.Invoke(effectiveFileName);
                     return new FileUploadResult(message.ID);
                 }
 
                 AppLogger.Warn("TelegramService", "Сообщение отправлено, но ID не определен, возвращаем 1.");
+                OnUploadCompleted?.Invoke(effectiveFileName);
                 return new FileUploadResult(1);
+            }
+            catch (Exception ex) when (ex is OperationCanceledException || ex is ObjectDisposedException || cancellationToken.IsCancellationRequested || (ex is IOException ioEx && ioEx.Message.Contains("отменен")))
+            {
+                AppLogger.Info("TelegramService", $"Загрузка файла '{effectiveFileName}' в Telegram отменена пользователем.");
+                TriggerUploadCanceled(effectiveFileName);
+                return null;
             }
             finally
             {
-                OnUploadCompleted?.Invoke(effectiveFileName);
-
                 if (tempFilePath != null)
                 {
                     try { uploadStream.Dispose(); } catch { }
@@ -2370,7 +2390,8 @@ namespace TelegramWebDAV.Services
             string effectiveCaption,
             string rawCaptionPath,
             AudioMetadataResult? audioMeta,
-            VideoMetadataResult? videoMeta)
+            VideoMetadataResult? videoMeta,
+            CancellationToken cancellationToken = default)
         {
             int partCount = (int)Math.Ceiling((double)fileLength / maxPartSize);
             AppLogger.Info("TelegramService", $"[BigFile Chunking] Запуск нарезки и загрузки крупного файла '{effectiveFileName}' ({fileLength:N0} байт / {fileLength / (1024.0 * 1024.0 * 1024.0):F2} ГБ). Всего частей: {partCount}, лимит части: {maxPartSize / (1024.0 * 1024.0):F0} МБ.");
@@ -2383,6 +2404,7 @@ namespace TelegramWebDAV.Services
             {
                 for (int i = 0; i < partCount; i++)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     await EnsureFloodWaitDelayAsync();
 
                     long currentPartLength = (i == partCount - 1)
@@ -2531,11 +2553,26 @@ namespace TelegramWebDAV.Services
                 }
 
                 AppLogger.Info("TelegramService", $"[BigFile Chunking] Все {parts.Count} частей для '{effectiveFileName}' успешно загружены в Telegram!");
+                OnUploadCompleted?.Invoke(effectiveFileName);
                 return new FileUploadResult(masterMessageId, null, parts);
             }
             catch (Exception ex)
             {
-                AppLogger.Error("TelegramService", $"[BigFile Chunking] Ошибка загрузки части файла '{effectiveFileName}': {ex.Message}. Очистка загруженных частей...", ex);
+                bool isCancellation = ex is OperationCanceledException ||
+                                      ex is ObjectDisposedException ||
+                                      cancellationToken.IsCancellationRequested ||
+                                      (ex is IOException ioEx && ioEx.Message.Contains("отменен"));
+
+                if (isCancellation)
+                {
+                    AppLogger.Info("TelegramService", $"[BigFile Chunking] Загрузка файла '{effectiveFileName}' отменена пользователем. Очистка загруженных частей...");
+                    TriggerUploadCanceled(effectiveFileName);
+                }
+                else
+                {
+                    AppLogger.Error("TelegramService", $"[BigFile Chunking] Ошибка загрузки части файла '{effectiveFileName}': {ex.Message}. Очистка загруженных частей...", ex);
+                }
+
                 if (parts.Count > 0)
                 {
                     var msgIdsToDelete = parts.Select(p => p.TgMessageId).ToArray();
@@ -2557,6 +2594,11 @@ namespace TelegramWebDAV.Services
                             AppLogger.Warn("TelegramService", $"Не удалось удалить незавершенные части файла: {delEx.Message}");
                         }
                     });
+                }
+
+                if (isCancellation)
+                {
+                    return null;
                 }
                 throw;
             }

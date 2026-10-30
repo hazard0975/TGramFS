@@ -902,7 +902,8 @@ namespace TelegramWebDAV.Services
                             audioMeta: audioMeta,
                             videoMeta: videoMeta,
                             originalFilePath: ctx.OriginalSourcePath,
-                            targetChannelId: targetChannelId
+                            targetChannelId: targetChannelId,
+                            cancellationToken: ctx.UploadCts?.Token ?? default
                         ));
                     }
 
@@ -1146,7 +1147,9 @@ namespace TelegramWebDAV.Services
                     string cleanCancelPath = NormalizePath(fileName);
                     _activeUploadNodes.TryRemove(cleanCancelPath, out _);
                     ctx.UploadCts?.Cancel();
+                    try { ctx.PipeStream?.Abort(); } catch { }
                     try { ctx.PipeStream?.Dispose(); } catch { }
+                    _telegramService.TriggerUploadCanceled(node.Name);
                     AppLogger.Info("WinFsp", $"[CleanupDelete] Отменено создание незавершенного файла '{node.Name}'. Удален из памяти без записи в базу и корзину.");
                     ctx.Dispose();
                     return;
@@ -1396,7 +1399,20 @@ namespace TelegramWebDAV.Services
                         catch (Exception ex)
                         {
                             _activeUploadNodes.TryRemove(cleanFilePath, out _);
-                            AppLogger.Error("WinFsp", $"Ошибка при завершении потоковой загрузки '{nodeName}' в Telegram: {ex.Message}", ex);
+                            bool isCancelled = ex is OperationCanceledException ||
+                                               ex.InnerException is OperationCanceledException ||
+                                               ex is ObjectDisposedException ||
+                                               cts?.IsCancellationRequested == true ||
+                                               (ex is IOException ioEx && ioEx.Message.Contains("отменен"));
+                            if (isCancelled)
+                            {
+                                AppLogger.Info("WinFsp", $"Потоковая загрузка '{nodeName}' в Telegram отменена пользователем.");
+                                _telegramService.TriggerUploadCanceled(nodeName);
+                            }
+                            else
+                            {
+                                AppLogger.Error("WinFsp", $"Ошибка при завершении потоковой загрузки '{nodeName}' в Telegram: {ex.Message}", ex);
+                            }
                         }
                         finally
                         {
@@ -1953,29 +1969,14 @@ namespace TelegramWebDAV.Services
 
             // Шаг 2: Если в активной сессии файла нет, собираем свежих кандидатов РОВНО ОДИН РАЗ
             // Включаем смонтированный диск, чтобы за один проход найти и виртуальный, и локальный источник
-            var freshRawCandidates = CollectAllCandidates(targetFileName, callerPid, includeMountedDrive: true);
+            var freshRawCandidates = CollectAllCandidates(targetFileName, callerPid, includeMountedDrive: true, targetVirtualPath: relativeVirtualPath);
             if (freshRawCandidates.Count == 0)
             {
                 return (null, null);
             }
 
-            // Шаг 3.1: Проверяем, есть ли среди кандидатов виртуальный файл на диске Y: (VirtualCopy)
-            if (repository != null)
-            {
-                foreach (var cand in freshRawCandidates)
-                {
-                    if (IsCandidateOnMountedDrive(cand))
-                    {
-                        var vMatch = MatchVirtualCandidate(cand, targetFileName, relativeVirtualPath ?? "", repository);
-                        if (vMatch != null)
-                        {
-                            return (vMatch, null);
-                        }
-                    }
-                }
-            }
-
-            // Шаг 3.2: Обрабатываем физические локальные кандидаты (диски D:, C: и др.)
+            // Шаг 3.1: ПРИОРИТЕТ 1 - Обрабатываем физические локальные кандидаты (диски D:, C: и др.)
+            // Физический файл на жестком диске всегда имеет высший приоритет над виртуальными ссылками!
             var physicalCandidates = freshRawCandidates.Where(c => !IsCandidateOnMountedDrive(c)).ToList();
             if (physicalCandidates.Count > 0)
             {
@@ -2015,6 +2016,22 @@ namespace TelegramWebDAV.Services
                 }
             }
 
+            // Шаг 3.2: ПРИОРИТЕТ 2 - ТОЛЬКО если физический файл на диске НЕ найден, проверяем виртуальный файл на диске Y: (VirtualCopy)
+            if (repository != null)
+            {
+                foreach (var cand in freshRawCandidates)
+                {
+                    if (IsCandidateOnMountedDrive(cand))
+                    {
+                        var vMatch = MatchVirtualCandidate(cand, targetFileName, relativeVirtualPath ?? "", repository);
+                        if (vMatch != null)
+                        {
+                            return (vMatch, null);
+                        }
+                    }
+                }
+            }
+
             return (null, null);
         }
 
@@ -2024,7 +2041,7 @@ namespace TelegramWebDAV.Services
             return originalSource;
         }
 
-        private static List<string> CollectAllCandidates(string? targetFileName = null, int callerPid = 0, bool includeMountedDrive = false)
+        private static List<string> CollectAllCandidates(string? targetFileName = null, int callerPid = 0, bool includeMountedDrive = false, string? targetVirtualPath = null)
         {
             var list = new List<string>();
 
@@ -2035,7 +2052,7 @@ namespace TelegramWebDAV.Services
 
             // 2. Инспекция файловых дескрипторов (Handles) вызывающего процесса и explorer.exe для Drag-and-Drop / сторонних копировщиков
             // Работает на уровне ядра через NtQuerySystemInformation, без COM/UI сообщений
-            var handleList = CollectOpenFileHandles(targetFileName, includeMountedDrive: includeMountedDrive, callerPid: callerPid);
+            var handleList = CollectOpenFileHandles(targetFileName, includeMountedDrive: includeMountedDrive, callerPid: callerPid, targetVirtualPath: targetVirtualPath);
             list.AddRange(handleList);
 
             return list;
@@ -2208,7 +2225,7 @@ namespace TelegramWebDAV.Services
         /// Опрашивает открытые файловые дескрипторы через ядро Windows (NtQuerySystemInformation),
         /// не отправляя оконных сообщений и не обращаясь к OLE/COM, что полностью исключает дедлоки.
         /// </summary>
-        private static List<string> CollectOpenFileHandles(string? targetFileName, bool includeMountedDrive = false, int callerPid = 0)
+        private static List<string> CollectOpenFileHandles(string? targetFileName, bool includeMountedDrive = false, int callerPid = 0, string? targetVirtualPath = null)
         {
             var results = new List<string>();
             try
@@ -2353,14 +2370,19 @@ namespace TelegramWebDAV.Services
                                                     if (string.IsNullOrEmpty(targetFileName) ||
                                                         string.Equals(name, targetFileName, StringComparison.OrdinalIgnoreCase))
                                                     {
+                                                        string? vPath = GetVirtualPathFromMountedPath(path);
+                                                        // Целевой файл назначения не может быть кандидатом-источником
+                                                        if (!string.IsNullOrEmpty(targetVirtualPath) && !string.IsNullOrEmpty(vPath) &&
+                                                            string.Equals(NormalizePath(vPath), NormalizePath(targetVirtualPath), StringComparison.OrdinalIgnoreCase))
+                                                        {
+                                                            continue;
+                                                        }
+
                                                         if (!results.Exists(x => string.Equals(x, path, StringComparison.OrdinalIgnoreCase)))
                                                         {
                                                             AppLogger.Info("WinFsp", $"[Handles DragDrop] Обнаружен виртуальный файл на диске в процессе PID {processId}: '{path}'");
                                                             results.Add(path);
-                                                            if (!string.IsNullOrEmpty(targetFileName))
-                                                            {
-                                                                return results;
-                                                            }
+                                                            // НЕ выходим через return results: продолжаем поиск, чтобы обязательно обнаружить физические файлы на дисках D:, C:
                                                         }
                                                     }
                                                 }
@@ -2618,12 +2640,19 @@ namespace TelegramWebDAV.Services
             string? vPath = GetVirtualPathFromMountedPath(candidatePath);
             if (string.IsNullOrEmpty(vPath)) return null;
 
+            // КРИТИЧЕСКИ: Целевой файл не может быть источником для самого себя!
+            if (!string.IsNullOrEmpty(targetVirtualPath) &&
+                string.Equals(NormalizePath(vPath), NormalizePath(targetVirtualPath), StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
             // 1. Прямое совпадение имени файла
             string candName = GetFileName(vPath);
             if (string.Equals(candName, targetFileName, StringComparison.OrdinalIgnoreCase))
             {
                 var node = repository.GetNodeByPath(vPath);
-                if (node != null && !node.IsDir) return node;
+                if (node != null && !node.IsDir && (node.TgMessageId ?? 0) > 0) return node;
             }
 
             // 2. Если кандидат - папка (копировалось дерево папок)
@@ -2632,8 +2661,14 @@ namespace TelegramWebDAV.Services
             {
                 // Сценарий 2а: прямой дочерний элемент
                 string childPath = (vPath.TrimEnd('/') + "/" + targetFileName);
+                if (!string.IsNullOrEmpty(targetVirtualPath) &&
+                    string.Equals(NormalizePath(childPath), NormalizePath(targetVirtualPath), StringComparison.OrdinalIgnoreCase))
+                {
+                    return null;
+                }
+
                 var childNode = repository.GetNodeByPath(childPath);
-                if (childNode != null && !childNode.IsDir) return childNode;
+                if (childNode != null && !childNode.IsDir && (childNode.TgMessageId ?? 0) > 0) return childNode;
 
                 // Сценарий 2б: по относительному пути поддерева
                 if (!string.IsNullOrEmpty(targetVirtualPath))
@@ -2644,8 +2679,13 @@ namespace TelegramWebDAV.Services
                     {
                         string sub = targetVirtualPath.Substring(idx + dirName.Length + 1);
                         string fullSub = vPath.TrimEnd('/') + sub;
+                        if (string.Equals(NormalizePath(fullSub), NormalizePath(targetVirtualPath), StringComparison.OrdinalIgnoreCase))
+                        {
+                            return null;
+                        }
+
                         var subNode = repository.GetNodeByPath(fullSub);
-                        if (subNode != null && !subNode.IsDir) return subNode;
+                        if (subNode != null && !subNode.IsDir && (subNode.TgMessageId ?? 0) > 0) return subNode;
                     }
                 }
             }

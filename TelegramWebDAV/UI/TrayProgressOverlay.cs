@@ -448,6 +448,32 @@ namespace TelegramWebDAV.UI
         // Для обратной совместимости
         public void CompleteUpload(string fileName) => CompleteTransfer(fileName, TransferDirection.Upload);
 
+        public void CancelTransfer(string fileName, TransferDirection direction = TransferDirection.Upload)
+        {
+            if (_syncContext != null && SynchronizationContext.Current != _syncContext)
+            {
+                _syncContext.Post(_ => CancelTransfer(fileName, direction), null);
+                return;
+            }
+
+            AppLogger.Info("TrayProgressOverlay", $"CancelTransfer [{direction}] вызван для '{fileName}'. Сброс состояния и скрытие оверлея.");
+            _isTransferring = false;
+            _isCompleted = false;
+            _isFinalizing = false;
+            _isMetadata = false;
+            _currentFileName = string.Empty;
+            _currentBytes = 0;
+            _totalBytes = 0;
+            _bytesPerSecond = 0;
+
+            _completionTimer.Stop();
+            _updateTimer.Stop();
+            _hideCheckTimer.Stop();
+
+            Visible = false;
+            Invalidate();
+        }
+
         private void PositionNearTray()
         {
             // Автоматическое позиционирование в правом нижнем углу над панелью задач
