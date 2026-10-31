@@ -279,6 +279,27 @@ namespace TelegramWebDAV.Services
             }
         }
 
+        /// <summary>
+        /// Форматирует размер в байтах в человекочитаемую строку (Б, КБ, МБ, ГБ).
+        /// </summary>
+        public static string FormatBytes(long bytes)
+        {
+            if (bytes < 1024) return $"{bytes} Б";
+            if (bytes < 1024 * 1024) return $"{(bytes / 1024.0):F1} КБ";
+            if (bytes < 1024L * 1024L * 1024L) return $"{(bytes / (1024.0 * 1024.0)):F2} МБ";
+            return $"{(bytes / (1024.0 * 1024.0 * 1024.0)):F2} ГБ";
+        }
+
+        /// <summary>
+        /// Форматирует размер для логов: человекочитаемый размер с точными байтами в скобках.
+        /// Например: "367.03 МБ (384 858 730 байт)" или "120 байт".
+        /// </summary>
+        public static string FormatSizeDetailed(long bytes)
+        {
+            if (bytes < 1024) return $"{bytes} байт";
+            return $"{FormatBytes(bytes)} ({bytes:N0} байт)";
+        }
+
         private static readonly object _lostFilesLock = new();
 
         /// <summary>
@@ -289,9 +310,7 @@ namespace TelegramWebDAV.Services
             try
             {
                 string filePath = Path.Combine(LogDirectory, "lost_files.txt");
-                string sizeStr = size >= 1048576 
-                    ? $"{size:N0} байт ({size / (1024.0 * 1024.0):F2} МБ)" 
-                    : $"{size:N0} байт ({size / 1024.0:F2} КБ)";
+                string sizeStr = FormatSizeDetailed(size);
                 string line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [УДАЛЁН В TELEGRAM] Путь: '{fullPath}' | Размер: {sizeStr} | TgMsgId: {tgMessageId?.ToString() ?? "null"} | NodeId: {nodeId?.ToString() ?? "null"} | Причина: {reason} | Статус: перемещен в .Trash{Environment.NewLine}";
                 
                 lock (_lostFilesLock)

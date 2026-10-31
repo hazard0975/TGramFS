@@ -608,7 +608,7 @@ namespace TelegramWebDAV.Services
                 var (virtualSource, originalSource) = ResolveFileSource(itemName, cleanPath, callerPid, _repository);
                 if (virtualSource != null)
                 {
-                    AppLogger.Info("WinFsp", $"[VirtualCopy] Обнаружен исходный виртуальный файл для '{cleanPath}': ID {virtualSource.Id} ('{virtualSource.Name}'), размер: {virtualSource.Size} байт, MsgId: {virtualSource.TgMessageId?.ToString() ?? "null"}.");
+                    AppLogger.Info("WinFsp", $"[VirtualCopy] Обнаружен исходный виртуальный файл для '{cleanPath}': ID {virtualSource.Id} ('{virtualSource.Name}'), размер: {AppLogger.FormatSizeDetailed(virtualSource.Size)}, MsgId: {virtualSource.TgMessageId?.ToString() ?? "null"}.");
 
                     int tempVirtualId = Interlocked.Decrement(ref _nextTempNodeId);
                     var vNode = new Node
@@ -662,7 +662,7 @@ namespace TelegramWebDAV.Services
                     fileDesc = vCtx;
                     FillFileInfo(vNode, out fileInfo);
                     normalizedName = fileName;
-                    AppLogger.Info("WinFsp", $"Создан файл виртуальной копии (в памяти): '{cleanPath}' (размер: {virtualSource.Size})");
+                    AppLogger.Info("WinFsp", $"Создан файл виртуальной копии (в памяти): '{cleanPath}' (размер: {AppLogger.FormatSizeDetailed(virtualSource.Size)})");
                     return STATUS_SUCCESS;
                 }
 
@@ -890,7 +890,7 @@ namespace TelegramWebDAV.Services
                         }
 
                         long? targetChannelId = _repository.GetEffectiveChannelId(node.ParentId);
-                        AppLogger.Info("WinFsp", $"Запуск прямой потоковой передачи '{nodeName}' ({targetTotalSize} байт) в Telegram" + 
+                        AppLogger.Info("WinFsp", $"Запуск прямой потоковой передачи '{nodeName}' ({AppLogger.FormatSizeDetailed(targetTotalSize)}) в Telegram" + 
                             (targetChannelId != null ? $", канал: {targetChannelId}" : "") +
                             (videoMeta != null ? $", видео: {videoMeta.Width}x{videoMeta.Height}, {videoMeta.DurationSeconds} сек, обложка: {(videoMeta.Thumbnail != null ? "ДА" : "НЕТ")}" : "") +
                             (audioMeta != null ? $", аудио: {audioMeta.DurationSeconds} сек, обложка: {(audioMeta.AlbumCover != null ? "ДА" : "НЕТ")}" : "") + "...");
@@ -1305,7 +1305,7 @@ namespace TelegramWebDAV.Services
                                     node.UpdatedAt = targetUpdatedAt;
                                     node.CreatedAt = targetCreatedAt;
 
-                                    AppLogger.Info("WinFsp", $"[VirtualCopy] Файл '{nodeName}' успешно сохранен через Telegram ForwardMessages (новый Msg ID: {fwdResult.MessageId}, размер: {node.Size} байт" +
+                                    AppLogger.Info("WinFsp", $"[VirtualCopy] Файл '{nodeName}' успешно сохранен через Telegram ForwardMessages (новый Msg ID: {fwdResult.MessageId}, размер: {AppLogger.FormatSizeDetailed(node.Size)}" +
                                         (fwdResult.Parts != null ? $", частей: {fwdResult.Parts.Count}" : "") + ").");
                                 }
                                 else
@@ -1342,7 +1342,7 @@ namespace TelegramWebDAV.Services
                             node.UpdatedAt = targetUpdatedAt;
                             node.CreatedAt = targetCreatedAt;
 
-                            AppLogger.Info("WinFsp", $"[VirtualCopy] Файл '{nodeName}' сохранен мгновенно из локальных данных ({node.Size} байт).");
+                            AppLogger.Info("WinFsp", $"[VirtualCopy] Файл '{nodeName}' сохранен мгновенно из локальных данных ({AppLogger.FormatSizeDetailed(node.Size)}).");
                         }
 
                         ctx.Dispose();
@@ -1451,7 +1451,7 @@ namespace TelegramWebDAV.Services
                                 node.UpdatedAt = targetUpdatedAt;
                                 node.CreatedAt = targetCreatedAt;
 
-                                AppLogger.Info("WinFsp", $"Файл '{nodeName}' ({finalLength} байт) сохранен в базе данных без отправки в Telegram (inline_data).");
+                                AppLogger.Info("WinFsp", $"Файл '{nodeName}' ({AppLogger.FormatSizeDetailed(finalLength)}) сохранен в базе данных без отправки в Telegram (inline_data).");
                             }
                             else
                             {
@@ -1484,7 +1484,7 @@ namespace TelegramWebDAV.Services
                                 }
 
                                 long? targetChannelId = _repository.GetEffectiveChannelId(parentId);
-                                AppLogger.Info("WinFsp", $"Отправка файла '{nodeName}' ({finalLength} байт) из памяти в Telegram (Zero-Temp)" + (targetChannelId != null ? $", канал: {targetChannelId}" : "") + "...");
+                                AppLogger.Info("WinFsp", $"Отправка файла '{nodeName}' ({AppLogger.FormatSizeDetailed(finalLength)}) из памяти в Telegram (Zero-Temp)" + (targetChannelId != null ? $", канал: {targetChannelId}" : "") + "...");
                                 using var uploadMs = new MemoryStream(fileBytes, false);
                                 var uploadResult = _telegramService.UploadFileAsync(
                                     uploadMs,
@@ -2626,7 +2626,7 @@ namespace TelegramWebDAV.Services
             try
             {
                 using var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-                AppLogger.Info("WinFsp", $"[Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл '{filePath}' существует и доступен для чтения (размер: {fs.Length} байт).");
+                AppLogger.Info("WinFsp", $"[Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл '{filePath}' существует и доступен для чтения (размер: {AppLogger.FormatSizeDetailed(fs.Length)}).");
                 return filePath;
             }
             catch (Exception fsEx)

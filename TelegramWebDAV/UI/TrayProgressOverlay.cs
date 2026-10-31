@@ -788,10 +788,7 @@ namespace TelegramWebDAV.UI
 
         private static string FormatBytes(long bytes)
         {
-            if (bytes < 1024) return $"{bytes} Б";
-            if (bytes < 1024 * 1024) return $"{(bytes / 1024.0):F1} КБ";
-            if (bytes < 1024 * 1024 * 1024) return $"{(bytes / (1024.0 * 1024.0)):F1} МБ";
-            return $"{(bytes / (1024.0 * 1024.0 * 1024.0)):F2} ГБ";
+            return AppLogger.FormatBytes(bytes);
         }
 
         private static GraphicsPath GetRoundedRect(Rectangle bounds, int radius)
