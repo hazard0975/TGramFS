@@ -2985,6 +2985,16 @@ namespace TelegramWebDAV.Services
                         string previewCaption = NodeRepository.FormatTelegramCaption(newCaption, newPreviewId.Value, isLatest: true);
                         _repository?.EnqueueCaptionUpdate(targetNodeId, newPreviewId.Value, previewCaption, effectiveTargetChannelId > 0 ? effectiveTargetChannelId : null);
                     }
+
+                    if (newParts != null && newParts.Count > 1)
+                    {
+                        foreach (var childPart in newParts.Where(p => p.PartIndex > 0))
+                        {
+                            int partDisplayNum = childPart.PartIndex + 1;
+                            string childCaption = $"↳ {newCaption} [Часть {partDisplayNum} из {newParts.Count}]\nID: {childPart.TgMessageId}";
+                            _repository?.EnqueueCaptionUpdate(targetNodeId, childPart.TgMessageId, childCaption, effectiveTargetChannelId > 0 ? effectiveTargetChannelId : null);
+                        }
+                    }
                 }
 
                 return new FileUploadResult(newMsgId, newPreviewId, newParts);

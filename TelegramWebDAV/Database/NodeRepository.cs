@@ -1588,9 +1588,42 @@ namespace TelegramWebDAV.Database
                         var freshFile = GetNodeById(file.Id) ?? file;
                         string pathWithVersion = GetNodeFullPathWithVersion(freshFile.Id);
 
+                        var parts = new List<NodePart>();
+                        using (var partsCmd = connection.CreateCommand())
+                        {
+                            partsCmd.Transaction = transaction;
+                            partsCmd.CommandText = @"
+                                SELECT id, node_id, part_index, part_size, tg_message_id, tg_channel_id 
+                                FROM node_parts 
+                                WHERE node_id = @nodeId 
+                                ORDER BY part_index ASC;";
+                            partsCmd.Parameters.AddWithValue("@nodeId", freshFile.Id);
+                            using var reader = partsCmd.ExecuteReader();
+                            while (reader.Read())
+                            {
+                                parts.Add(new NodePart
+                                {
+                                    Id = reader.GetInt32(0),
+                                    NodeId = reader.GetInt32(1),
+                                    PartIndex = reader.GetInt32(2),
+                                    PartSize = reader.GetInt64(3),
+                                    TgMessageId = reader.GetInt32(4),
+                                    TgChannelId = reader.GetInt64(5)
+                                });
+                            }
+                        }
+
                         if (freshFile.TgMessageId.HasValue && freshFile.TgMessageId.Value > 1)
                         {
-                            string newCaption = FormatTelegramCaption(pathWithVersion, freshFile.TgMessageId.Value, !freshFile.InTrash);
+                            string masterPath = pathWithVersion;
+                            if (parts.Count > 1)
+                            {
+                                long totalSize = freshFile.Size > 0 ? freshFile.Size : parts.Sum(p => p.PartSize);
+                                double totalGb = (double)totalSize / (1024.0 * 1024.0 * 1024.0);
+                                masterPath = $"{pathWithVersion} [Часть 1 из {parts.Count}, total={totalGb:F2} ГБ]";
+                            }
+
+                            string newCaption = FormatTelegramCaption(masterPath, freshFile.TgMessageId.Value, !freshFile.InTrash);
                             using (var cmd = connection.CreateCommand())
                             {
                                 cmd.Transaction = transaction;
@@ -1609,6 +1642,45 @@ namespace TelegramWebDAV.Database
                                 cmd.Parameters.AddWithValue("@channelId", (object?)freshFile.TgChannelId ?? DBNull.Value);
                                 int affected = cmd.ExecuteNonQuery();
                                 if (affected > 0) queuedCount++;
+                            }
+                        }
+
+                        // Обновление подписей для дочерних частей составного файла (Часть 2..N)
+                        if (parts.Count > 1)
+                        {
+                            foreach (var part in parts.Where(p => p.PartIndex > 0))
+                            {
+                                int partDisplayNum = part.PartIndex + 1;
+                                string childCaption;
+                                if (!freshFile.InTrash)
+                                {
+                                    childCaption = $"↳ {pathWithVersion} [Часть {partDisplayNum} из {parts.Count}]\nID: {part.TgMessageId}";
+                                }
+                                else
+                                {
+                                    childCaption = $"🗑️ ↳ {pathWithVersion} [Часть {partDisplayNum} из {parts.Count}]\nID: {part.TgMessageId}\n#trash";
+                                }
+
+                                using (var cmd = connection.CreateCommand())
+                                {
+                                    cmd.Transaction = transaction;
+                                    cmd.CommandText = @"
+                                        INSERT INTO pending_caption_updates (node_id, tg_message_id, new_caption, channel_id)
+                                        VALUES (@nodeId, @tgMessageId, @newCaption, @channelId)
+                                        ON CONFLICT(tg_message_id) DO UPDATE SET
+                                            new_caption = excluded.new_caption,
+                                            channel_id = COALESCE(excluded.channel_id, pending_caption_updates.channel_id),
+                                            status = 0
+                                        WHERE pending_caption_updates.new_caption != excluded.new_caption;
+                                    ";
+                                    cmd.Parameters.AddWithValue("@nodeId", freshFile.Id);
+                                    cmd.Parameters.AddWithValue("@tgMessageId", part.TgMessageId);
+                                    cmd.Parameters.AddWithValue("@newCaption", childCaption);
+                                    long effectivePartChannelId = part.TgChannelId > 0 ? part.TgChannelId : (freshFile.TgChannelId ?? 0);
+                                    cmd.Parameters.AddWithValue("@channelId", effectivePartChannelId > 0 ? (object)effectivePartChannelId : DBNull.Value);
+                                    int affected = cmd.ExecuteNonQuery();
+                                    if (affected > 0) queuedCount++;
+                                }
                             }
                         }
 

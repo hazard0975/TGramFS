@@ -2753,3 +2753,25 @@ _telegramService.UpdateSettings(_settings);
    - В `NodeRepository.GetNextPendingCaptionUpdate` выборка канала изменена на `COALESCE(p.channel_id, n.tg_channel_id) as channel_id`.
    - В `TelegramService.ForwardFileAsync` вычисленный `effectiveTargetChannelId` передается в `EnqueueCaptionUpdate`.
    Воркер фоновой очереди всегда отправляет `Messages_EditMessage` строго в целевой канал сообщения, гарантируя обновление подписей как для единичных файлов, так и для пакетного копирования папок с сотнями файлов без `FLOOD_WAIT` и ошибок `MESSAGE_ID_INVALID`.
+
+---
+
+## 84. Гарантированное обновление подписей дочерних частей (2..N) составных файлов при виртуальном копировании и перемещении (Root Cause First)
+
+### Контекст и симптомы:
+При копировании или перемещении составных файлов (> 2 ГБ / 4 ГБ, разбитых на несколько частей `node_parts`) подпись в Telegram обновлялась только для первого (основного) сообщения файла (`TgMessageId`), а у всех дочерних частей (сообщения Частей 2..N) подписи оставались старыми (со старыми путями к файлу).
+
+### Первопричина (Root Cause Analysis):
+1. **Перемещение / переименование файлов (`NodeRepository.EnqueueCaptionUpdatesForFiles`)**:
+   Метод `EnqueueCaptionUpdatesForFiles` брал данные только из сущности `freshFile` (`TgMessageId` и `TgPreviewMessageId`). Дочерние части из таблицы `node_parts` (`WHERE node_id = @nodeId AND part_index > 0`) вообще не считывались и в очередь `pending_caption_updates` не помещались.
+2. **Виртуальное копирование файлов (`TelegramService.ForwardFileAsync`)**:
+   В блоке планирования обновлений подписей `if (!string.IsNullOrEmpty(newCaption))` метод ставил в очередь `_repository.EnqueueCaptionUpdate` только `newMsgId` и `newPreviewId`. Массив созданных при форвардинге дочерних частей `newParts` (`part.PartIndex > 0`) игнорировался, из-за чего пересланные копии дочерних сообщений оставались с прежними подписями.
+
+### Принятое решение (Root Cause First):
+1. **Очередь подписей для всех частей в `NodeRepository.EnqueueCaptionUpdatesForFiles`**:
+   - В рамках одной транзакции выполняется выборка всех частей файла из `node_parts`.
+   - Для заглавной части (Часть 1) при наличии нескольких частей формируется канонический заголовок с общим размером: `[Часть 1 из {parts.Count}, total={totalGb:F2} ГБ]`.
+   - Для всех дочерних частей (`part.PartIndex > 0`) формируется стандартная дочерняя подпись вида `↳ {pathWithVersion} [Часть {partDisplayNum} из {parts.Count}]\nID: {part.TgMessageId}` (или с префиксом `🗑️` и тегом `#trash` при удалении в корзину) и добавляется в очередь `pending_caption_updates` с точным сохранением `channel_id`.
+2. **Очередь подписей для всех частей в `TelegramService.ForwardFileAsync`**:
+   - После успешного форвардинга сообщений частей на стороне Telegram, если задана `newCaption`, для всех дочерних частей `newParts.Where(p => p.PartIndex > 0)` в очередь `pending_caption_updates` передаются задачи обновления с текстом `↳ {newCaption} [Часть {partDisplayNum} из {newParts.Count}]\nID: {childPart.TgMessageId}` и целевым `effectiveTargetChannelId`.
+
