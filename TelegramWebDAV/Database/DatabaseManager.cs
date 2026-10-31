@@ -185,6 +185,7 @@ CREATE TABLE IF NOT EXISTS pending_caption_updates (
     node_id INTEGER NOT NULL,
     tg_message_id INTEGER NOT NULL UNIQUE,
     new_caption TEXT NOT NULL,
+    channel_id INTEGER,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     status INTEGER NOT NULL DEFAULT 0
 );
@@ -260,6 +261,20 @@ CREATE INDEX IF NOT EXISTS idx_node_parts_node ON node_parts(node_id);
                 using (var command = connection.CreateCommand())
                 {
                     command.CommandText = "ALTER TABLE telegram_channels ADD COLUMN channel_type TEXT NOT NULL DEFAULT 'storage';";
+                    command.ExecuteNonQuery();
+                }
+            }
+            catch
+            {
+                // Колонка уже существует, игнорируем ошибку
+            }
+
+            // Миграция: убедимся, что колонка channel_id существует в таблице pending_caption_updates
+            try
+            {
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = "ALTER TABLE pending_caption_updates ADD COLUMN channel_id INTEGER;";
                     command.ExecuteNonQuery();
                 }
             }

@@ -2845,6 +2845,7 @@ namespace TelegramWebDAV.Services
 
                 var sourcePeer = await GetStoragePeerAsync(sourceChannelId);
                 var targetPeer = await GetStoragePeerAsync(targetChannelId);
+                long effectiveTargetChannelId = targetChannelId ?? (targetPeer is TL.InputPeerChannel tipc ? tipc.channel_id : 0);
 
                 int? newPreviewId = null;
                 int newMsgId = 0;
@@ -2905,11 +2906,7 @@ namespace TelegramWebDAV.Services
                     AppLogger.Info("TelegramService", $"[ForwardFileAsync] Обнаружен составной файл ({partsToForward.Count} частей). Начинаем пересылку связанных частей...");
                     newParts = new List<Models.NodePart>();
 
-                    long effectiveTargetChannelId = 0;
-                    if (targetPeer is TL.InputPeerChannel ipc)
-                    {
-                        effectiveTargetChannelId = ipc.channel_id;
-                    }
+
 
                     // Первая часть (Part 0) привязана к master newMsgId
                     var firstPart = partsToForward.FirstOrDefault(p => p.PartIndex == 0);
@@ -2981,12 +2978,12 @@ namespace TelegramWebDAV.Services
                             ? newCaption
                             : NodeRepository.FormatTelegramCaption(newCaption, newMsgId, isLatest: true);
                     }
-                    _repository?.EnqueueCaptionUpdate(targetNodeId, newMsgId, effectiveCaption);
+                    _repository?.EnqueueCaptionUpdate(targetNodeId, newMsgId, effectiveCaption, effectiveTargetChannelId > 0 ? effectiveTargetChannelId : null);
 
                     if (newPreviewId.HasValue && newPreviewId.Value > 0)
                     {
                         string previewCaption = NodeRepository.FormatTelegramCaption(newCaption, newPreviewId.Value, isLatest: true);
-                        _repository?.EnqueueCaptionUpdate(targetNodeId, newPreviewId.Value, previewCaption);
+                        _repository?.EnqueueCaptionUpdate(targetNodeId, newPreviewId.Value, previewCaption, effectiveTargetChannelId > 0 ? effectiveTargetChannelId : null);
                     }
                 }
 

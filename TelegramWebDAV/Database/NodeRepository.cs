@@ -1542,22 +1542,24 @@ namespace TelegramWebDAV.Database
         /// <summary>
         /// Помещает единичное обновление подписи сообщения в очередь pending_caption_updates.
         /// </summary>
-        public void EnqueueCaptionUpdate(int nodeId, int tgMessageId, string newCaption)
+        public void EnqueueCaptionUpdate(int nodeId, int tgMessageId, string newCaption, long? channelId = null)
         {
             if (tgMessageId <= 1 || string.IsNullOrEmpty(newCaption)) return;
             using (var connection = _dbManager.GetConnection())
             using (var command = connection.CreateCommand())
             {
                 command.CommandText = @"
-                    INSERT INTO pending_caption_updates (node_id, tg_message_id, new_caption)
-                    VALUES (@nodeId, @tgMessageId, @newCaption)
+                    INSERT INTO pending_caption_updates (node_id, tg_message_id, new_caption, channel_id)
+                    VALUES (@nodeId, @tgMessageId, @newCaption, @channelId)
                     ON CONFLICT(tg_message_id) DO UPDATE SET
                         new_caption = excluded.new_caption,
+                        channel_id = COALESCE(excluded.channel_id, pending_caption_updates.channel_id),
                         status = 0;
                 ";
                 command.Parameters.AddWithValue("@nodeId", nodeId);
                 command.Parameters.AddWithValue("@tgMessageId", tgMessageId);
                 command.Parameters.AddWithValue("@newCaption", newCaption);
+                command.Parameters.AddWithValue("@channelId", (object?)channelId ?? DBNull.Value);
                 command.ExecuteNonQuery();
             }
         }
@@ -1593,16 +1595,18 @@ namespace TelegramWebDAV.Database
                             {
                                 cmd.Transaction = transaction;
                                 cmd.CommandText = @"
-                                    INSERT INTO pending_caption_updates (node_id, tg_message_id, new_caption)
-                                    VALUES (@nodeId, @tgMessageId, @newCaption)
+                                    INSERT INTO pending_caption_updates (node_id, tg_message_id, new_caption, channel_id)
+                                    VALUES (@nodeId, @tgMessageId, @newCaption, @channelId)
                                     ON CONFLICT(tg_message_id) DO UPDATE SET
                                         new_caption = excluded.new_caption,
+                                        channel_id = COALESCE(excluded.channel_id, pending_caption_updates.channel_id),
                                         status = 0
                                     WHERE pending_caption_updates.new_caption != excluded.new_caption;
                                 ";
                                 cmd.Parameters.AddWithValue("@nodeId", freshFile.Id);
                                 cmd.Parameters.AddWithValue("@tgMessageId", freshFile.TgMessageId.Value);
                                 cmd.Parameters.AddWithValue("@newCaption", newCaption);
+                                cmd.Parameters.AddWithValue("@channelId", (object?)freshFile.TgChannelId ?? DBNull.Value);
                                 int affected = cmd.ExecuteNonQuery();
                                 if (affected > 0) queuedCount++;
                             }
@@ -1615,16 +1619,18 @@ namespace TelegramWebDAV.Database
                             {
                                 cmd.Transaction = transaction;
                                 cmd.CommandText = @"
-                                    INSERT INTO pending_caption_updates (node_id, tg_message_id, new_caption)
-                                    VALUES (@nodeId, @tgMessageId, @newCaption)
+                                    INSERT INTO pending_caption_updates (node_id, tg_message_id, new_caption, channel_id)
+                                    VALUES (@nodeId, @tgMessageId, @newCaption, @channelId)
                                     ON CONFLICT(tg_message_id) DO UPDATE SET
                                         new_caption = excluded.new_caption,
+                                        channel_id = COALESCE(excluded.channel_id, pending_caption_updates.channel_id),
                                         status = 0
                                     WHERE pending_caption_updates.new_caption != excluded.new_caption;
                                 ";
                                 cmd.Parameters.AddWithValue("@nodeId", freshFile.Id);
                                 cmd.Parameters.AddWithValue("@tgMessageId", freshFile.TgPreviewMessageId.Value);
                                 cmd.Parameters.AddWithValue("@newCaption", previewCaption);
+                                cmd.Parameters.AddWithValue("@channelId", (object?)freshFile.TgChannelId ?? DBNull.Value);
                                 int affected = cmd.ExecuteNonQuery();
                                 if (affected > 0) queuedCount++;
                             }
@@ -1686,7 +1692,7 @@ namespace TelegramWebDAV.Database
             using (var command = connection.CreateCommand())
             {
                 command.CommandText = @"
-                    SELECT p.id, p.node_id, p.tg_message_id, p.new_caption, n.tg_channel_id
+                    SELECT p.id, p.node_id, p.tg_message_id, p.new_caption, COALESCE(p.channel_id, n.tg_channel_id) as channel_id
                     FROM pending_caption_updates p
                     LEFT JOIN nodes n ON p.node_id = n.id
                     ORDER BY p.id ASC LIMIT 1;";

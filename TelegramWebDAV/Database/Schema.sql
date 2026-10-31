@@ -79,6 +79,7 @@ CREATE TABLE IF NOT EXISTS pending_caption_updates (
     node_id INTEGER NOT NULL,
     tg_message_id INTEGER NOT NULL UNIQUE,
     new_caption TEXT NOT NULL,
+    channel_id INTEGER,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     status INTEGER NOT NULL DEFAULT 0
 );

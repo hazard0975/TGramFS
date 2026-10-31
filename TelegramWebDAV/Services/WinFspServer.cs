@@ -1980,17 +1980,57 @@ namespace TelegramWebDAV.Services
                 }
             }
 
-            // Шаг 2: Если в активной сессии файла нет, собираем свежих кандидатов РОВНО ОДИН РАЗ
-            // Включаем смонтированный диск, чтобы за один проход найти и виртуальный, и локальный источник
-            var freshRawCandidates = CollectAllCandidates(targetFileName, callerPid, includeMountedDrive: true, targetVirtualPath: relativeVirtualPath);
-            if (freshRawCandidates.Count == 0)
+            // Шаг 2: Проверяем системный буфер обмена Windows (Ctrl+C / Ctrl+V, CF_HDROP).
+            // Если пользователь явно скопировал файл через Ctrl+C, в буфере лежит точный путь.
+            // Буфер обмена отражает прямое действие пользователя и имеет абсолютный приоритет над случайными фоновыми окнами Проводника!
+            var clipboardCandidates = CollectClipboardCandidates(includeMountedDrive: true);
+            if (clipboardCandidates.Count > 0)
+            {
+                // 2.1 Проверяем виртуальные кандидаты в буфере обмена (диск Y:)
+                if (repository != null)
+                {
+                    foreach (var clip in clipboardCandidates)
+                    {
+                        if (IsCandidateOnMountedDrive(clip))
+                        {
+                            var vMatch = MatchVirtualCandidate(clip, targetFileName, relativeVirtualPath ?? "", repository);
+                            if (vMatch != null)
+                            {
+                                AppLogger.Info("WinFsp", $"[Источник] Найдено прямое совпадение в буфере обмена Windows (Виртуальная копия): '{clip}'");
+                                return (vMatch, null);
+                            }
+                        }
+                    }
+                }
+
+                // 2.2 Проверяем физические кандидаты в буфере обмена (диски D:, C: и др.)
+                var physicalClip = clipboardCandidates.Where(c => !IsCandidateOnMountedDrive(c)).ToList();
+                if (physicalClip.Count > 0)
+                {
+                    lock (_sessionLock)
+                    {
+                        var clipSession = CreateCopySession(physicalClip);
+                        string? match = clipSession.FindAndConsume(targetFileName, relativeVirtualPath);
+                        if (match != null)
+                        {
+                            _activeSession = clipSession;
+                            AppLogger.Info("WinFsp", $"[Источник] Найдено прямое совпадение в буфере обмена Windows (Локальный файл): '{match}'");
+                            return (null, match);
+                        }
+                    }
+                }
+            }
+
+            // Шаг 3: Если в буфере обмена совпадений нет (Drag-and-Drop или сторонний копировщик/бэкапер),
+            // опрашиваем открытые файловые дескрипторы (Handles) через ядро Windows
+            var handleCandidates = CollectOpenFileHandles(targetFileName, includeMountedDrive: true, callerPid: callerPid, targetVirtualPath: relativeVirtualPath);
+            if (handleCandidates.Count == 0)
             {
                 return (null, null);
             }
 
-            // Шаг 3.1: ПРИОРИТЕТ 1 - Обрабатываем физические локальные кандидаты (диски D:, C: и др.)
-            // Физический файл на жестком диске всегда имеет высший приоритет над виртуальными ссылками!
-            var physicalCandidates = freshRawCandidates.Where(c => !IsCandidateOnMountedDrive(c)).ToList();
+            // Шаг 3.1: Для дескрипторов Drag-and-Drop / бэкаперов: приоритет у физических файлов
+            var physicalCandidates = handleCandidates.Where(c => !IsCandidateOnMountedDrive(c)).ToList();
             if (physicalCandidates.Count > 0)
             {
                 lock (_sessionLock)
@@ -2001,7 +2041,6 @@ namespace TelegramWebDAV.Services
                     string? match = newSession.FindAndConsume(targetFileName, relativeVirtualPath);
                     if (match != null)
                     {
-
                         if (_activeSession == null)
                         {
                             _activeSession = newSession;
@@ -2029,10 +2068,10 @@ namespace TelegramWebDAV.Services
                 }
             }
 
-            // Шаг 3.2: ПРИОРИТЕТ 2 - ТОЛЬКО если физический файл на диске НЕ найден, проверяем виртуальный файл на диске Y: (VirtualCopy)
+            // Шаг 3.2: ТОЛЬКО если среди дескрипторов физический файл не найден, проверяем виртуальный файл на диске Y:
             if (repository != null)
             {
-                foreach (var cand in freshRawCandidates)
+                foreach (var cand in handleCandidates)
                 {
                     if (IsCandidateOnMountedDrive(cand))
                     {
