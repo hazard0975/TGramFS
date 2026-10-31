@@ -2792,4 +2792,31 @@ _telegramService.UpdateSettings(_settings);
 3. **Обновление логов WinFspServer**:
    - Вывод размеров в операциях виртуального копирования (`[VirtualCopy]`), локального кэширования, проверки совпадения файлов на физическом диске (`[Источник]`), потоковой передачи (`StreamingPipeStream`), сохранения `inline_data` и выгрузки `Zero-Temp` переведён на `AppLogger.FormatSizeDetailed`.
 
+---
+
+## 86. Контроль коллизий и замена существующих файлов при перемещении/переименовании (Rename / Move)
+
+### Контекст и симптомы:
+При перемещении файла на виртуальном диске (WinFsp / WebDAV) в папку, где уже существовал файл с точно таким же именем (например, перемещение `a.7z` из папки `тест` в папку `тест\2`, где уже лежал `a.7z`), система не выдавала предупреждения и не заменяла файл, а создавала в целевой папке еще одну запись с точно таким же именем. В результате в одной папке отображалось несколько файлов-дубликатов с одинаковым названием.
+
+### Первопричина (Root Cause Analysis):
+1. **Игнорирование флага `replaceIfExists` в `WinFspServer.Rename`**:
+   Стандартный интерфейс WinFsp / NT Kernel передает в метод `Rename(fileNode, fileDesc, fileName, newFileName, replaceIfExists)` параметр `bool replaceIfExists`. В Windows Проводник (и другие файловые менеджеры) перед перемещением сначала запрашивает переименование с `replaceIfExists = false`. Если целевой файл существует, файловая система обязана вернуть код ошибки `NT_STATUS_OBJECT_NAME_COLLISION` (`0xC0000035`), чтобы Проводник открыл нативное окно конфликта («Заменить / Пропустить / Переименовать»). В коде `WinFspServer.Rename` проверка целевого файла отсутствовала, и метод сразу вызывал `MoveNode` и возвращал `STATUS_SUCCESS`.
+2. **Отсутствие проверки заголовка `Overwrite` в `WebDavMiddleware.HandleMoveAsync`**:
+   По спецификации WebDAV RFC 4918 Section 9.9 заголовок `Overwrite` по умолчанию равен `T` (True). При `Overwrite: F` сервер обязан вернуть `412 Precondition Failed`. В коде проверка наличия целевого узла не выполнялась.
+3. **Отсутствие вытеснения заменяемого узла в корзину при `replaceIfExists == true`**:
+   При подтверждении замены старый файл в целевой папке должен быть отправлен в корзину `.Trash` перед сменой родителя у перемещаемого узла.
+
+### Принятое решение (Root Cause First):
+1. **Метод `GetChildByName` в `NodeRepository`**:
+   Реализован метод прямого поиска дочернего узла по имени внутри папки (`WHERE parent_id = @parentId AND name = @name AND in_trash = @inTrash LIMIT 1;`).
+2. **Контроль коллизий в `WinFspServer.Rename`**:
+   - При `existingTarget != null && existingTarget.Id != node.Id`:
+     - Если `replaceIfExists == false`: немедленный возврат `NT_STATUS_OBJECT_NAME_COLLISION` (`0xC0000035`). Проводник отображает нативное окно замены/пропуска/переименования.
+     - Если `replaceIfExists == true`: выполняется мягкое удаление старого файла в корзину `_repository.SoftDeleteNode(existingTarget.Id)`, после чего узел перемещается.
+   - Валидация типов узлов: возврат `NT_STATUS_FILE_IS_A_DIRECTORY` при попытке заменить папку файлом, `NT_STATUS_NOT_A_DIRECTORY` при попытке заменить файл папкой, `NT_STATUS_DIRECTORY_NOT_EMPTY` при попытке заменить непустую папку.
+   - Защита от циклического перемещения директории внутрь самой себя или своих дочерних подпапок (`NT_STATUS_ACCESS_DENIED`).
+3. **Контроль `Overwrite` в `WebDavMiddleware.HandleMoveAsync`**:
+   Проверка `Overwrite`: при `Overwrite: F` возвращается `412 Precondition Failed`, при `Overwrite: T` старый целевой узел вытесняется в корзину перед вызовом `MoveNode`.
+
 

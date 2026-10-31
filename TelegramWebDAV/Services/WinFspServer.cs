@@ -358,6 +358,8 @@ namespace TelegramWebDAV.Services
         private const int NT_STATUS_OBJECT_PATH_NOT_FOUND = unchecked((int)0xC000003A);
         private const int NT_STATUS_SHARING_VIOLATION = unchecked((int)0xC0000043);
         private const int NT_STATUS_FILE_IS_A_DIRECTORY = unchecked((int)0xC00000BA);
+        private const int NT_STATUS_NOT_A_DIRECTORY = unchecked((int)0xC0000103);
+        private const int NT_STATUS_ACCESS_DENIED = unchecked((int)0xC0000022);
         private const int NT_STATUS_DIRECTORY_NOT_EMPTY = unchecked((int)0xC0000101);
         private const int NT_STATUS_CANNOT_DELETE = unchecked((int)0xC0000121);
         private const int NT_STATUS_IO_TIMEOUT = unchecked((int)0xC00000B5);
@@ -1067,6 +1069,58 @@ namespace TelegramWebDAV.Services
 
             try
             {
+                // Защита от перемещения папки внутрь самой себя или в свои подпапки
+                if (node.IsDir && node.Id > 0)
+                {
+                    int currentAncestorId = targetParent.Id;
+                    while (currentAncestorId > 0)
+                    {
+                        if (currentAncestorId == node.Id)
+                        {
+                            AppLogger.Warn("WinFsp", $"[Rename] Попытка переместить директорию '{node.Name}' (ID {node.Id}) внутрь самой себя.");
+                            return NT_STATUS_ACCESS_DENIED;
+                        }
+                        var ancestorNode = _repository.GetNodeById(currentAncestorId);
+                        if (ancestorNode == null || !ancestorNode.ParentId.HasValue) break;
+                        currentAncestorId = ancestorNode.ParentId.Value;
+                    }
+                }
+
+                // Проверка коллизий: существует ли уже активный файл/папка с таким именем в целевой папке
+                var existingTarget = _repository.GetChildByName(targetParent.Id, newName, inTrash: false);
+                if (existingTarget != null && existingTarget.Id != node.Id)
+                {
+                    if (!replaceIfExists)
+                    {
+                        AppLogger.Info("WinFsp", $"[Rename] Коллизия имен: '{newName}' уже существует в папке '{newParentPath}' (ID {existingTarget.Id}). Возврат NT_STATUS_OBJECT_NAME_COLLISION (replaceIfExists=false).");
+                        return NT_STATUS_OBJECT_NAME_COLLISION;
+                    }
+
+                    // replaceIfExists == true: замена существующего элемента
+                    if (existingTarget.IsDir && !node.IsDir)
+                    {
+                        AppLogger.Warn("WinFsp", $"[Rename] Нельзя заменить директорию '{existingTarget.Name}' файлом '{node.Name}'.");
+                        return NT_STATUS_FILE_IS_A_DIRECTORY;
+                    }
+                    if (!existingTarget.IsDir && node.IsDir)
+                    {
+                        AppLogger.Warn("WinFsp", $"[Rename] Нельзя заменить файл '{existingTarget.Name}' директорией '{node.Name}'.");
+                        return NT_STATUS_NOT_A_DIRECTORY;
+                    }
+                    if (existingTarget.IsDir && node.IsDir)
+                    {
+                        var targetChildren = _repository.GetChildren(existingTarget.Id);
+                        if (targetChildren.Count > 0)
+                        {
+                            AppLogger.Warn("WinFsp", $"[Rename] Нельзя заменить непустую директорию '{existingTarget.Name}' (ID {existingTarget.Id}, детей: {targetChildren.Count}).");
+                            return NT_STATUS_DIRECTORY_NOT_EMPTY;
+                        }
+                    }
+
+                    AppLogger.Info("WinFsp", $"[Rename] Замена существующего элемента '{existingTarget.Name}' (ID {existingTarget.Id}) при перемещении '{node.Name}' (ID {node.Id}). Перемещение старого элемента в корзину...");
+                    _repository.SoftDeleteNode(existingTarget.Id);
+                }
+
                 if (node.Id <= 0)
                 {
                     _activeUploadNodes.TryRemove(oldClean, out _);

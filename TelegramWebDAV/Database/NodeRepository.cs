@@ -383,6 +383,24 @@ namespace TelegramWebDAV.Database
         }
 
         /// <summary>
+        /// Возвращает дочерний узел по имени внутри указанной директории (без учета регистра)
+        /// </summary>
+        public Node? GetChildByName(int parentId, string name, bool inTrash = false)
+        {
+            if (string.IsNullOrEmpty(name)) return null;
+            using (var connection = _dbManager.GetConnection())
+            using (var command = connection.CreateCommand())
+            {
+                command.CommandText = "SELECT * FROM nodes WHERE parent_id = @parentId AND name = @name AND in_trash = @inTrash LIMIT 1;";
+                command.Parameters.AddWithValue("@parentId", parentId);
+                command.Parameters.AddWithValue("@name", name);
+                command.Parameters.AddWithValue("@inTrash", inTrash ? 1 : 0);
+                return ReadNode(command);
+            }
+        }
+
+
+        /// <summary>
         /// Создает новую папку.
         /// </summary>
         public bool CreateFolder(int parentId, string name, long? tgChannelId = null)

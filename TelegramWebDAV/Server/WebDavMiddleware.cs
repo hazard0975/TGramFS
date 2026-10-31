@@ -654,6 +654,24 @@ namespace TelegramWebDAV.Server
                 return Task.CompletedTask;
             }
 
+            // Проверка заголовка Overwrite (по умолчанию 'T' согласно RFC 4918 Section 9.9)
+            string? overwriteHeader = context.Request.Headers["Overwrite"];
+            bool overwrite = string.IsNullOrEmpty(overwriteHeader) || string.Equals(overwriteHeader, "T", StringComparison.OrdinalIgnoreCase);
+
+            var existingDestNode = repository.GetChildByName(destParentNode.Id, destName, inTrash: false);
+            if (existingDestNode != null && existingDestNode.Id != sourceNode.Id)
+            {
+                if (!overwrite)
+                {
+                    AppLogger.Warn("WebDAV", $"[MOVE] Назначение '{destPath}' уже существует, Overwrite={overwriteHeader}. Отклонено 412 Precondition Failed.");
+                    context.Response.StatusCode = (int)HttpStatusCode.PreconditionFailed; // 412
+                    return Task.CompletedTask;
+                }
+
+                AppLogger.Info("WebDAV", $"[MOVE] Замена существующего элемента '{existingDestNode.Name}' (ID {existingDestNode.Id}) при перемещении. Отправка в корзину...");
+                repository.SoftDeleteNode(existingDestNode.Id);
+            }
+
             long? sourceChannelId = repository.GetEffectiveChannelId(sourceNode.ParentId);
             long? targetChannelId = repository.GetEffectiveChannelId(destParentNode.Id);
 
