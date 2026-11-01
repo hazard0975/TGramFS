@@ -677,7 +677,7 @@ namespace TelegramWebDAV.Services
                     IsDir = false,
                     Version = _repository.GetNextVersionForFile(parentNode.Id, itemName),
                     InTrash = false,
-                    Size = allocationSize > 0 ? (long)allocationSize : 0,
+                    Size = 0,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 };
@@ -1272,7 +1272,7 @@ namespace TelegramWebDAV.Services
                         {
                             deletionItems.Add((n.TgMessageId.Value, fileChannelId));
                         }
-                        else if (!n.IsDir)
+                        else if (!n.IsDir && n.Size > 0 && n.InlineData == null)
                         {
                             AppLogger.Warn("WinFsp", $"[CleanupDelete Subtree] ВНИМАНИЕ: Файл '{n.Name}' (ID {n.Id}) не имеет TgMessageId в БД (null/0). Сообщение в Telegram не может быть удалено!");
                         }
@@ -1474,11 +1474,11 @@ namespace TelegramWebDAV.Services
                             try { cts?.Dispose(); } catch { }
                         }
                     }
-                    // Вариант 2: Небольшой файл (<= 1 МБ), сохраненный в памяти
-                    else if (ctx.SmallFileBuffer != null)
+                    // Вариант 2: Небольшой файл (<= 1 МБ), сохраненный в памяти, либо пустой файл (0 байт)
+                    else
                     {
-                        long finalLength = ctx.SmallFileBuffer.Length;
-                        byte[] fileBytes = ctx.SmallFileBuffer.ToArray();
+                        long finalLength = ctx.SmallFileBuffer?.Length ?? (node.Size >= 0 ? node.Size : 0);
+                        byte[] fileBytes = ctx.SmallFileBuffer?.ToArray() ?? Array.Empty<byte>();
 
                         try
                         {

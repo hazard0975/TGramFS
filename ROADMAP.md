@@ -1098,3 +1098,10 @@
      3. В `WebDavMiddleware.HandleMoveAsync` внедрена проверка заголовка `Overwrite` (RFC 4918 Section 9.9) и мягкое удаление целевого узла при перезаписи.
 
 
+
+- [x] **8.76. Гарантированное сохранение пустых файлов (0 байт) в SQLite в архитектуре Zero-Stub**:
+   - **Реализовано**:
+     1. В `WinFspServer.Cleanup` ветка сохранения непотоковых файлов переведена на общий блок `else`, обеспечивая сохранение как для буферизированных файлов, так и для пустых файлов 0 байт (для которых Windows не вызывает метод `Write` и `SmallFileBuffer` остается `null`).
+     2. Длина вычисляется безопасно: `long finalLength = ctx.SmallFileBuffer?.Length ?? (node.Size >= 0 ? node.Size : 0);`. Для файлов с `finalLength <= 1` (включая 0 байт) вызывается существующий метод `_repository.CreateOrUpdateFile(parentId, nodeName, finalLength, tgMessageId: null, inlineData: inlineBytes, ...)`, благодаря чему файл сохраняется в базе данных без ошибочных отправок в Telegram (MTProto не поддерживает 0-байтовые файлы) и появляется на диске.
+     3. В `WinFspServer.Create` для новых файлов начальный `Size` установлен строго в `0` (вместо `allocationSize`), что соответствует спецификации NT Filesystem.
+     4. В `WinFspServer.Cleanup` при перманентном удалении файлов из корзины исключен ложный варнинг в логах для файлов с `Size == 0` или `InlineData != null`.

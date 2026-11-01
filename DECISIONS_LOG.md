@@ -2819,4 +2819,30 @@ _telegramService.UpdateSettings(_settings);
 3. **Контроль `Overwrite` в `WebDavMiddleware.HandleMoveAsync`**:
    Проверка `Overwrite`: при `Overwrite: F` возвращается `412 Precondition Failed`, при `Overwrite: T` старый целевой узел вытесняется в корзину перед вызовом `MoveNode`.
 
+---
+
+## 87. Гарантированное сохранение пустых файлов (0 байт) в SQLite в архитектуре Zero-Stub (Root Cause First)
+
+### Контекст и симптомы:
+После перехода на архитектуру Zero-Stub (решение №79) создание пустых файлов (например, через контекстное меню Проводника «Создать -> Текстовый документ», копирование пустых файлов с диска или сохранение пустого файла из текстового редактора) приводило к тому, что файл на мгновение появлялся в Проводнике, но после закрытия дескриптора (`Cleanup`) бесследно исчезал и в SQLite не сохранялся. В Telegram файл также не отправлялся.
+
+### Первопричина (Root Cause Analysis):
+1. **Отсутствие вызова `Write` для файлов 0 байт**:
+   По спецификации Windows NT / Win32 при создании пустого файла Проводник вызывает `Create`, но никогда не вызывает `Write`, так как записывать нечего.
+2. **Недосягаемость блока сохранения в `WinFspServer.Cleanup`**:
+   Буфер `ctx.SmallFileBuffer` инициализировался исключительно внутри метода `Write`. В `Cleanup` стояло условие `else if (ctx.SmallFileBuffer != null)`. Для файла 0 байт `PipeStream` был равен `null`, а `SmallFileBuffer` также оставался `null`. Ветка `else` отсутствовала, из-за чего блок вызова `_repository.CreateOrUpdateFile(...)` полностью пропускался, а в блоке `finally` временный узел с отрицательным ID удалялся из коллекции `_activeUploadNodes`. Файл оставался без записи в SQLite и исчезал с диска.
+3. **Некорректная инициализация размера в `WinFspServer.Create`**:
+   В методе `Create` новому узлу присваивался `Size = allocationSize > 0 ? (long)allocationSize : 0`. По стандарту файловых систем NT `AllocationSize` — это резерв дисковых кластеров, а размер данных (`FileSize`) у нового файла до вызова `Write` или `SetFileSize` всегда равен строго `0`.
+
+### Принятое решение (Root Cause First):
+1. **Универсальная обработка непотоковых и пустых файлов в `WinFspServer.Cleanup`**:
+   - Условие `else if (ctx.SmallFileBuffer != null)` заменено на общий блок `else`, куда направляются все файлы, не использовавшие потоковый стриминг `StreamingPipeStream`.
+   - Вычисление длины переведено на безопасный доступ: `long finalLength = ctx.SmallFileBuffer?.Length ?? (node.Size >= 0 ? node.Size : 0);` и `byte[] fileBytes = ctx.SmallFileBuffer?.ToArray() ?? Array.Empty<byte>();`.
+   - Для пустых файлов (`finalLength == 0`) выполняется вызов существующей ветки `if (finalLength <= 1)`: вызывается `_repository.CreateOrUpdateFile(parentId, nodeName, 0, tgMessageId: null, tgPreviewMessageId: null, inlineData: null, ...)`.
+   - Временный узел из `_activeUploadNodes` получает реальный постоянный `node.Id > 0` из SQLite базы данных.
+2. **Инициализация `Size = 0` в `WinFspServer.Create`**:
+   - Полю `Size` создаваемого файла присваивается строго `0`, а значение `allocationSize` сохраняется только в `KnownTargetSize`.
+3. **Фильтрация логов при удалении из корзины**:
+   - В блоке перманентного удаления исключен вывод предупреждения `AppLogger.Warn` («ВНИМАНИЕ: Файл не имеет TgMessageId в БД») для файлов с `Size == 0` или `InlineData != null`, так как для них отсутствие сообщения в Telegram является штатным поведением.
+
 
