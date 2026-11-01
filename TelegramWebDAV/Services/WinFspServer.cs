@@ -210,36 +210,9 @@ namespace TelegramWebDAV.Services
                     _host.CasePreservedNames = true;
                     _host.UnicodeOnDisk = true;
 
-                    // Включаем сетевой режим (Network Mode / UNC Prefix).
-                    // Это регистрирует диск как сетевую файловую систему WinFsp.Net, благодаря чему
-                    // параметр EnableLinkedConnections=1 в реестре Windows связывает диск между
-                    // сессиями обычного пользователя и администратора (UAC Elevation), делая его видимым
-                    // ОДНОВРЕМЕННО и в обычном Проводнике Windows, и в программах бэкапа от имени Администратора.
-                    _host.Prefix = @"\telegram\drive";
-
-                    AppLogger.Info("WinFsp", $"Попытка монтирования виртуального диска {formattedLetter} через WinFsp (Network Mode)...");
+                    AppLogger.Info("WinFsp", $"Попытка монтирования виртуального диска {formattedLetter} через WinFsp...");
 
                     int result = _host.Mount(formattedLetter, TelegramWinFspFileSystem.DefaultSecurityDescriptor, false, 0);
-                    if (result != FileSystemBase.STATUS_SUCCESS && !string.IsNullOrEmpty(_host.Prefix))
-                    {
-                        AppLogger.Warn("WinFsp", $"Сетевой режим монтирования WinFsp вернул 0x{result:X8}. Пробуем локальный режим (Disk Mode)...");
-                        try { _host.Dispose(); } catch { }
-
-                        fileSystem = new TelegramWinFspFileSystem(_configManager, _repository, _telegramService);
-                        _host = new FileSystemHost(fileSystem)
-                        {
-                            FileSystemName = "NTFS",
-                            VolumeCreationTime = (ulong)DateTime.UtcNow.ToFileTimeUtc(),
-                            VolumeSerialNumber = 0x54454C47,
-                            SectorSize = 4096,
-                            SectorsPerAllocationUnit = 1,
-                            CaseSensitiveSearch = false,
-                            CasePreservedNames = true,
-                            UnicodeOnDisk = true
-                        };
-                        result = _host.Mount(formattedLetter, TelegramWinFspFileSystem.DefaultSecurityDescriptor, false, 0);
-                    }
-
                     if (result != FileSystemBase.STATUS_SUCCESS)
                     {
                         errorMessage = $"Код ошибки WinFsp: 0x{result:X8}";
@@ -250,7 +223,7 @@ namespace TelegramWebDAV.Services
                     }
 
                     _activeMountPoint = formattedLetter;
-                    AppLogger.Info("WinFsp", $"Виртуальный диск {formattedLetter} успешно смонтирован через WinFsp (прямой стриминг в ОЗУ, префикс: {_host.Prefix ?? "локальный"}).");
+                    AppLogger.Info("WinFsp", $"Виртуальный диск {formattedLetter} успешно смонтирован через WinFsp (прямой стриминг в ОЗУ).");
                     return true;
                 }
                 catch (Exception ex)
