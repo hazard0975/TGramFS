@@ -1,31 +1,9 @@
-               // Вариант 2: Небольшой файл (<= 1 МБ), сохраненный в памяти
-                else if (ctx.SmallFileBuffer != null)
-                {
-                    long finalLength = ctx.SmallFileBuffer.Length;
-                    byte[] fileBytes = ctx.SmallFileBuffer.ToArray();
 
-                    try
-                    {
-                        if (finalLength <= 1)
-                        {
-                            byte[]? inlineBytes = finalLength == 1 ? fileBytes : null;
-                            _repository.CreateOrUpdateFile(
-                                parentId,
-                                nodeName,
-                                finalLength,
-                                tgMessageId: null,
-                                tgPreviewMessageId: null,
-                                inlineData: inlineBytes,
-                                lastModified: targetUpdatedAt,
-                                creationDate: targetCreatedAt
-                            );
-
-                            node.Size = finalLength;
-                            node.InlineData = inlineBytes;
-                            node.TgMessageId = null;
-
-
-                            node.UpdatedAt = targetUpdatedAt;
-                            node.CreatedAt = targetCreatedAt;
-
-                            AppLogger.Info("WinFsp", $"Файл '{nodeName}' ({finalLength} байт) сохранен в базе данных без отправки в Telegram (inline_data).");
+[2026-11-01 03:08:54.939] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Новый текстовый документ.txt' (виртуальный путь: '/привязанная/mkv test/тест/3/Новый текстовый документ.txt')...
+[2026-11-01 03:08:54.960] [INFO ] [WinFsp] [Handles DragDrop] Сканирование хэндлов для 2 процессов (PID: 16440, 6996, вызывающий процесс: explorer (PID: 16440))...
+[2026-11-01 03:08:54.997] [INFO ] [WinFsp] [Handles DragDrop] В системе обнаружено 130408 дескрипторов ядра (File Type Index: 37).
+[2026-11-01 03:08:55.027] [INFO ] [WinFsp] [Handles DragDrop] Обнаружен файл 'Новый текстовый документ.txt' внутри открытой папки процесса PID 6996: 'D:\TGtest\Новый текстовый документ.txt'
+[2026-11-01 03:08:55.030] [INFO ] [WinFsp] [Источник] Инициализирована новая сессия копирования: файлов в очереди 1, папок-источников 1
+[2026-11-01 03:08:55.030] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\TGtest\Новый текстовый документ.txt' существует и доступен для чтения (размер: 11 байт).
+[2026-11-01 03:08:55.031] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/привязанная/mkv test/тест/3/Новый текстовый документ.txt' (alloc: 0), источник: 'D:\TGtest\Новый текстовый документ.txt'
+[2026-11-01 03:08:55.036] [INFO ] [WinFsp] Файл 'Новый текстовый документ.txt' (0 байт) сохранен в базе данных без отправки в Telegram (inline_data).

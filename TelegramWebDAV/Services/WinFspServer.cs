@@ -2514,7 +2514,11 @@ namespace TelegramWebDAV.Services
                                                 }
                                                 else if (Directory.Exists(path))
                                                 {
-                                                    if (!string.IsNullOrEmpty(targetFileName))
+                                                    // Проверяем файлы внутри открытой папки ТОЛЬКО для вызывающего процесса (callerPid),
+                                                    // например утилит бэкапа/синхронизации (SyncBackFree) или активного окна.
+                                                    // Для чужих фоновых окон Проводника (processId != callerPid) не гадаем по содержимому их открытых папок,
+                                                    // чтобы случайные файлы с такими же именами (например, 'Новый текстовый документ.txt') не привязывались ложно
+                                                    if (!string.IsNullOrEmpty(targetFileName) && callerPid > 0 && processId == callerPid)
                                                     {
                                                         try
                                                         {
@@ -2531,7 +2535,7 @@ namespace TelegramWebDAV.Services
                                                         }
                                                         catch { }
                                                     }
-                                                    else
+                                                    else if (string.IsNullOrEmpty(targetFileName))
                                                     {
                                                         if (!results.Exists(x => string.Equals(x, path, StringComparison.OrdinalIgnoreCase)))
                                                         {

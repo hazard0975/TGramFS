@@ -1105,3 +1105,9 @@
      2. Длина вычисляется безопасно: `long finalLength = ctx.SmallFileBuffer?.Length ?? (node.Size >= 0 ? node.Size : 0);`. Для файлов с `finalLength <= 1` (включая 0 байт) вызывается существующий метод `_repository.CreateOrUpdateFile(parentId, nodeName, finalLength, tgMessageId: null, inlineData: inlineBytes, ...)`, благодаря чему файл сохраняется в базе данных без ошибочных отправок в Telegram (MTProto не поддерживает 0-байтовые файлы) и появляется на диске.
      3. В `WinFspServer.Create` для новых файлов начальный `Size` установлен строго в `0` (вместо `allocationSize`), что соответствует спецификации NT Filesystem.
      4. В `WinFspServer.Cleanup` при перманентном удалении файлов из корзины исключен ложный варнинг в логах для файлов с `Size == 0` или `InlineData != null`.
+
+- [x] **8.77. Устранение ложного сопоставления открытых папок фоновых окон Проводника**:
+   - **Реализовано**:
+     1. В `WinFspServer.CollectOpenFileHandles` проверка файлов внутри открытых папок (`Directory.Exists(path) -> Path.Combine(path, targetFileName)`) ограничена строго вызывающим процессом: `callerPid > 0 && processId == callerPid`.
+     2. Исключено ложное связывание файлов со случайными фоновыми окнами Проводника, открытыми на физических дисках (например, `D:\TGtest`), при создании новых файлов на виртуальном диске `Y:\`.
+     3. Сохранена 100% точность определения папок для утилит бэкапа и синхронизации (SyncBackFree), а также прямого перетаскивания файлов Drag-and-Drop из окна в окно (через дескриптор `File.Exists(path)`).

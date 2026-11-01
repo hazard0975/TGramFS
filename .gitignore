@@ -32,3 +32,4 @@ base.db-shm
 *.db
 *.db-wal
 *.db-shm
+.dotnet/
