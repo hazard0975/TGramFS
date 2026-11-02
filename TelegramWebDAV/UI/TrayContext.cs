@@ -281,6 +281,11 @@ namespace TelegramWebDAV.UI
                 _progressOverlay.AutoShowOverlay = _settings.Server.AutoShowProgressOverlay;
                 BuildContextMenu();
                 UpdateTrayTooltip();
+
+                if (_virtualDriveManager.IsMounted && _settings.Server.MountForAdministrator)
+                {
+                    _virtualDriveManager.MountWithUac(out _);
+                }
             };
             _settingsForm.FormClosed += (s, e) =>
             {
@@ -354,6 +359,11 @@ namespace TelegramWebDAV.UI
             {
                 bool success = _virtualDriveManager.Mount(_settings.Server.DriveLetter, out string error);
                 NotifyMountResult(success, error, isManual: false);
+
+                if (success && _settings.Server.MountForAdministrator)
+                {
+                    _virtualDriveManager.MountWithUac(out _);
+                }
             }
         }
 
@@ -361,6 +371,11 @@ namespace TelegramWebDAV.UI
         {
             bool success = _virtualDriveManager.Remount(out string error);
             NotifyMountResult(success, error, isManual: true);
+
+            if (success && _settings.Server.MountForAdministrator)
+            {
+                _virtualDriveManager.MountWithUac(out _);
+            }
         }
 
         private void MountDriveWithUac()

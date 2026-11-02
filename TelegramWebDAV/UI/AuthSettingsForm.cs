@@ -46,6 +46,7 @@ namespace TelegramWebDAV.UI
         private NumericUpDown _numPort = null!;
         private ComboBox _cmbEngine = null!;
         private CheckBox _chkMountDrive = null!;
+        private CheckBox _chkMountForAdministrator = null!;
         private ComboBox _cmbDriveLetter = null!;
         private TextBox _txtVolumeName = null!;
         private NumericUpDown _numCapacityGb = null!;
@@ -176,6 +177,16 @@ namespace TelegramWebDAV.UI
             var rowPort = UIFactory.CreateSettingRow("HTTP Порт:", _numPort, 140);
 
             _chkMountDrive = UIFactory.CreateCheckBox("Автоматически монтировать сетевой диск в Windows", _settings.Server.MountDrive);
+            _chkMountForAdministrator = UIFactory.CreateCheckBox("Подключать диск и для Администратора (UAC)", _settings.Server.MountForAdministrator);
+            _chkMountForAdministrator.Enabled = _chkMountDrive.Checked;
+            _chkMountDrive.CheckedChanged += (s, e) =>
+            {
+                _chkMountForAdministrator.Enabled = _chkMountDrive.Checked;
+                if (!_chkMountDrive.Checked)
+                {
+                    _chkMountForAdministrator.Checked = false;
+                }
+            };
 
             _cmbEngine = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 260, Font = UITheme.BaseFont };
             _cmbEngine.Items.Add("WinFsp (Прямой стриминг в ОЗУ)");
@@ -252,7 +263,7 @@ namespace TelegramWebDAV.UI
             _chkIncludeTrashInSpace = UIFactory.CreateCheckBox("Учитывать файлы в корзине (.Trash) в занятом месте", _settings.Server.IncludeTrashInUsedSpace);
 
             pnlServerInner.Controls.AddRange(new Control[] {
-                _chkWebDavEnabled, rowPort, _chkMountDrive, rowEngine, rowVolumeName, rowDriveLetter, rowCapacity, _chkAutoExpand, _chkIncludeTrashInSpace
+                _chkWebDavEnabled, rowPort, _chkMountDrive, _chkMountForAdministrator, rowEngine, rowVolumeName, rowDriveLetter, rowCapacity, _chkAutoExpand, _chkIncludeTrashInSpace
             });
             grpServerDrive.Controls.Add(pnlServerInner);
 
@@ -1238,6 +1249,7 @@ namespace TelegramWebDAV.UI
             _settings.Server.WebDavEnabled = _chkWebDavEnabled.Checked;
             _settings.Server.Port = (int)_numPort.Value;
             _settings.Server.MountDrive = _chkMountDrive.Checked;
+            _settings.Server.MountForAdministrator = _chkMountForAdministrator.Checked;
             _settings.Server.DriveLetter = chosenLetter;
             _settings.Server.DriveName = _txtVolumeName.Text.Trim();
             _settings.Server.VirtualDiskCapacityGb = (long)_numCapacityGb.Value;

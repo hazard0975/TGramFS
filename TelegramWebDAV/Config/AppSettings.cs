@@ -33,6 +33,7 @@ namespace TelegramWebDAV.Config
         public bool WebDavEnabled { get; set; } = true;
         public int Port { get; set; } = 37000;
         public bool MountDrive { get; set; } = true;
+        public bool MountForAdministrator { get; set; } = false; // Автоматически подключать диск в сессию Администратора (UAC)
         public string DriveLetter { get; set; } = "Z:";
         public string DriveName { get; set; } = "TGramFS Drive";
         public bool AutoStartWithWindows { get; set; } = true;
