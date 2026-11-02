@@ -223,6 +223,7 @@ namespace TelegramWebDAV.Utils
             if (!formattedLetter.EndsWith(":")) formattedLetter += ":";
 
             string? ntPath = GetDosDeviceTarget(formattedLetter);
+            Services.AppLogger.Info("VirtualDriveManager", $"Запрос на подключение диска {formattedLetter} в сессию Администратора (UAC)...");
 
             if (WindowsRegistryFixer.IsAdministrator())
             {
@@ -230,6 +231,10 @@ namespace TelegramWebDAV.Utils
                 statusMessage = directSuccess
                     ? $"Диск {formattedLetter} успешно подключен для Администратора!"
                     : $"Не удалось подключить диск {formattedLetter} для Администратора.";
+                if (directSuccess)
+                    Services.AppLogger.Info("VirtualDriveManager", statusMessage);
+                else
+                    Services.AppLogger.Warn("VirtualDriveManager", statusMessage);
                 return directSuccess;
             }
 
@@ -239,6 +244,7 @@ namespace TelegramWebDAV.Utils
                 if (string.IsNullOrEmpty(exePath) || !File.Exists(exePath))
                 {
                     statusMessage = "Не удалось определить путь к исполняемому файлу приложения.";
+                    Services.AppLogger.Warn("VirtualDriveManager", statusMessage);
                     return false;
                 }
 
@@ -262,28 +268,33 @@ namespace TelegramWebDAV.Utils
                     if (process.ExitCode == 0)
                     {
                         statusMessage = $"Диск {formattedLetter} успешно подключен с правами Администратора (UAC)!";
+                        Services.AppLogger.Info("VirtualDriveManager", $"Диск {formattedLetter} успешно связан и доступен для программ с правами Администратора (UAC).");
                         return true;
                     }
                     else
                     {
                         statusMessage = $"Процесс монтирования с правами Администратора завершился с кодом {process.ExitCode}.";
+                        Services.AppLogger.Warn("VirtualDriveManager", statusMessage);
                         return false;
                     }
                 }
                 else
                 {
                     statusMessage = "Не удалось запустить процесс запроса прав администратора.";
+                    Services.AppLogger.Warn("VirtualDriveManager", statusMessage);
                     return false;
                 }
             }
             catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 1223) // ERROR_CANCELLED
             {
                 statusMessage = "Запрос прав администратора (UAC) был отменен пользователем.";
+                Services.AppLogger.Warn("VirtualDriveManager", statusMessage);
                 return false;
             }
             catch (Exception ex)
             {
                 statusMessage = $"Ошибка вызова UAC: {ex.Message}";
+                Services.AppLogger.Error("VirtualDriveManager", $"Ошибка вызова UAC для диска {formattedLetter}: {ex.Message}", ex);
                 return false;
             }
         }

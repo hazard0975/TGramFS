@@ -48,6 +48,7 @@ namespace TelegramWebDAV
                 }
 
                 bool success = TelegramWebDAV.Utils.NetworkDriveMounter.MountForElevatedSession(letter, port, ntPath);
+                TelegramWebDAV.Services.AppLogger.Shutdown();
                 Environment.Exit(success ? 0 : 1);
                 return;
             }
