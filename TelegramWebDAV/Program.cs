@@ -31,6 +31,27 @@ namespace TelegramWebDAV
                 return;
             }
 
+            // Обработка запроса на монтирование/линковку диска с повышенными привилегиями (UAC)
+            if (args != null && args.Length >= 3 && args[0] == "--mount-uac")
+            {
+                string letter = args[1];
+                int port = int.TryParse(args[2], out int p) ? p : 8080;
+                string? ntPath = null;
+                if (args.Length >= 4 && args[3] != "-")
+                {
+                    try
+                    {
+                        byte[] rawBytes = Convert.FromBase64String(args[3]);
+                        ntPath = System.Text.Encoding.UTF8.GetString(rawBytes);
+                    }
+                    catch { }
+                }
+
+                bool success = TelegramWebDAV.Utils.NetworkDriveMounter.MountForElevatedSession(letter, port, ntPath);
+                Environment.Exit(success ? 0 : 1);
+                return;
+            }
+
             // Обработка запроса из контекстного меню Проводника «Открыть в Telegram»
             if (args != null && args.Length >= 2 && args[0] == "--open-in-tg")
             {

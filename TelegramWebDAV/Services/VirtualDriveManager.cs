@@ -156,6 +156,23 @@ namespace TelegramWebDAV.Services
             return Mount(settings.Server.DriveLetter, out errorMessage);
         }
 
+        /// <summary>
+        /// Подключает диск в сессию Администратора с запросом UAC.
+        /// </summary>
+        public bool MountWithUac(out string statusMessage)
+        {
+            var settings = _configManager.Load();
+            string letter = _activeMountedLetter ?? settings.Server.DriveLetter ?? "Z:";
+            if (letter == "AUTO") letter = "Z:";
+
+            if (!IsMounted)
+            {
+                Mount(letter, out _);
+            }
+
+            return NetworkDriveMounter.MountWithElevation(letter, settings.Server.Port, out statusMessage);
+        }
+
         public void Dispose()
         {
             Unmount();

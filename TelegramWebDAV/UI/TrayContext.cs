@@ -206,6 +206,11 @@ namespace TelegramWebDAV.UI
             itemRemount.Click += (s, e) => RemountDrive();
             menu.Items.Add(itemRemount);
 
+            // Подключить сетевой диск (UAC)
+            var itemMountUac = new ToolStripMenuItem("Подключить сетевой диск (UAC)");
+            itemMountUac.Click += (s, e) => MountDriveWithUac();
+            menu.Items.Add(itemMountUac);
+
             // Отправить бэкап базы в Telegram
             var itemBackup = new ToolStripMenuItem("Отправить бэкап базы в Telegram");
             itemBackup.Click += async (s, e) =>
@@ -356,6 +361,26 @@ namespace TelegramWebDAV.UI
         {
             bool success = _virtualDriveManager.Remount(out string error);
             NotifyMountResult(success, error, isManual: true);
+        }
+
+        private void MountDriveWithUac()
+        {
+            try
+            {
+                bool success = _virtualDriveManager.MountWithUac(out string statusMessage);
+                if (success)
+                {
+                    _notifyIcon.ShowBalloonTip(4000, "Сетевой диск (UAC)", statusMessage, ToolTipIcon.Info);
+                }
+                else
+                {
+                    _notifyIcon.ShowBalloonTip(4000, "Сетевой диск (UAC)", statusMessage, ToolTipIcon.Warning);
+                }
+            }
+            catch (Exception ex)
+            {
+                _notifyIcon.ShowBalloonTip(4000, "Ошибка UAC", ex.Message, ToolTipIcon.Error);
+            }
         }
 
         private void NotifyMountResult(bool success, string error, bool isManual)
