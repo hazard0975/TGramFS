@@ -291,10 +291,17 @@ namespace TelegramWebDAV.UI
             _lastProgressUpdateTime = DateTime.UtcNow;
 
             long metadataLimit = 1572864;
-            if (total > metadataLimit && current >= total)
+            if (_direction == TransferDirection.Upload && total > metadataLimit && current >= total)
             {
                 _isFinalizing = true;
                 _bytesPerSecond = 0;
+            }
+            else if (_direction == TransferDirection.Download && total > 0 && current >= total)
+            {
+                _isFinalizing = false;
+                _bytesPerSecond = 0;
+                CompleteTransfer(fileName, TransferDirection.Download);
+                return;
             }
             else
             {
@@ -560,7 +567,7 @@ namespace TelegramWebDAV.UI
                 }
                 else if (_isFinalizing)
                 {
-                    header = _direction == TransferDirection.Download ? "СОХРАНЕНИЕ В КЭШ" : "СОХРАНЕНИЕ В ОБЛАКЕ";
+                    header = "СОХРАНЕНИЕ В ОБЛАКЕ";
                 }
                 else if (_isTransferring)
                 {
@@ -727,9 +734,7 @@ namespace TelegramWebDAV.UI
                 }
                 else if (_isFinalizing)
                 {
-                    stats = _direction == TransferDirection.Download
-                        ? "Завершение кэширования... ⏳"
-                        : "Финализация сообщения в канале... ⏳";
+                    stats = "Финализация сообщения в канале... ⏳";
                 }
                 else if (_isTransferring && _totalBytes > 0)
                 {
