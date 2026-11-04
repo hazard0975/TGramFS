@@ -300,8 +300,6 @@ namespace TelegramWebDAV.UI
             {
                 _isFinalizing = false;
                 _bytesPerSecond = 0;
-                CompleteTransfer(fileName, TransferDirection.Download);
-                return;
             }
             else
             {
@@ -423,6 +421,12 @@ namespace TelegramWebDAV.UI
                 return;
             }
 
+            // Защита от дребезга и повторного вызова завершения для одного и того же файла
+            if (_isCompleted && _currentFileName == fileName && _direction == direction && _completionTimer.Enabled)
+            {
+                return;
+            }
+
             AppLogger.Info("TrayProgressOverlay", $"CompleteTransfer [{direction}] вызван для '{fileName}'. Запуск _completionTimer...");
             _currentFileName = fileName;
             _direction = direction;
@@ -436,20 +440,21 @@ namespace TelegramWebDAV.UI
             }
             _bytesPerSecond = 0;
 
-            if (Visible)
+            if (!Visible)
             {
-                Invalidate();
-                Update();
+                if (!AutoShowOverlay || !TryShowOverlay())
+                {
+                    _isCompleted = false;
+                    _currentFileName = string.Empty;
+                    return;
+                }
+            }
 
-                // Запускаем гарантированный таймер скрытия только если оверлей был показан
-                _completionTimer.Stop();
-                _completionTimer.Start();
-            }
-            else
-            {
-                _isCompleted = false;
-                _currentFileName = string.Empty;
-            }
+            Invalidate();
+            Update();
+
+            _completionTimer.Stop();
+            _completionTimer.Start();
         }
 
         // Для обратной совместимости
@@ -683,7 +688,12 @@ namespace TelegramWebDAV.UI
                     Color startColor;
                     Color endColor;
 
-                    if (_isMetadata)
+                    if (_isCompleted)
+                    {
+                        startColor = _isMetadata ? Color.FromArgb(14, 165, 233) : Color.FromArgb(34, 197, 94); // Sky 500 / Green Emerald 500
+                        endColor = _isMetadata ? Color.FromArgb(56, 189, 248) : Color.FromArgb(74, 222, 128);  // Sky 400 / Green Emerald 400
+                    }
+                    else if (_isMetadata)
                     {
                         startColor = Color.FromArgb(14, 165, 233); // Sky 500
                         endColor = Color.FromArgb(56, 189, 248);   // Sky 400
