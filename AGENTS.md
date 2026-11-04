@@ -23,8 +23,9 @@
      curl -sSL https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh && chmod +x /tmp/dotnet-install.sh && /tmp/dotnet-install.sh --channel 8.0 --install-dir /usr/share/dotnet && ln -sf /usr/share/dotnet/dotnet /usr/bin/dotnet
      ```
 
-5. **Фиксация изменений в локальный гит**:
-   - Автоматически фиксировать изменения в локальный Git (git add -A && git commit -m "...").
+5. **Связь с GitHub и версионирование**:
+   - Официальный репозиторий: https://github.com/hazard0975/TGramFS.git.
+   - При необходимости можешь использовать его для чтения истории, проверки коммитов, сравнения изменений и восстановления старого кода.
 
 6. **Непрерывность истории и ведение журналов (`DECISIONS_LOG.md` и `ROADMAP.md`)**:
    - Не удалять, затирать или переписывать прошлые архитектурные решения и попытки.
