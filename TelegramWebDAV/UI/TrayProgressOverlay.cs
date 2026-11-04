@@ -421,12 +421,6 @@ namespace TelegramWebDAV.UI
                 return;
             }
 
-            // Защита от дребезга и повторного вызова завершения для одного и того же файла
-            if (_isCompleted && _currentFileName == fileName && _direction == direction && _completionTimer.Enabled)
-            {
-                return;
-            }
-
             AppLogger.Info("TrayProgressOverlay", $"CompleteTransfer [{direction}] вызван для '{fileName}'. Запуск _completionTimer...");
             _currentFileName = fileName;
             _direction = direction;
@@ -688,12 +682,7 @@ namespace TelegramWebDAV.UI
                     Color startColor;
                     Color endColor;
 
-                    if (_isCompleted)
-                    {
-                        startColor = _isMetadata ? Color.FromArgb(14, 165, 233) : Color.FromArgb(34, 197, 94); // Sky 500 / Green Emerald 500
-                        endColor = _isMetadata ? Color.FromArgb(56, 189, 248) : Color.FromArgb(74, 222, 128);  // Sky 400 / Green Emerald 400
-                    }
-                    else if (_isMetadata)
+                    if (_isMetadata)
                     {
                         startColor = Color.FromArgb(14, 165, 233); // Sky 500
                         endColor = Color.FromArgb(56, 189, 248);   // Sky 400
