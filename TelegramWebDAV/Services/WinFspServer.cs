@@ -363,6 +363,31 @@ namespace TelegramWebDAV.Services
         private const int NT_STATUS_DIRECTORY_NOT_EMPTY = unchecked((int)0xC0000101);
         private const int NT_STATUS_CANNOT_DELETE = unchecked((int)0xC0000121);
         private const int NT_STATUS_IO_TIMEOUT = unchecked((int)0xC00000B5);
+        private const int NT_STATUS_NETWORK_UNREACHABLE = unchecked((int)0xC000023C);
+
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, DateTime> _lastNetworkWarnPerFile = new();
+
+        private static void LogNetworkWarningDebounced(string fileName, string reason)
+        {
+            var now = DateTime.UtcNow;
+            if (_lastNetworkWarnPerFile.TryGetValue(fileName, out var last) && (now - last).TotalSeconds < 10)
+            {
+                return; // подавляем спам для одного и того же файла
+            }
+            _lastNetworkWarnPerFile[fileName] = now;
+            AppLogger.Warn("WinFsp", $"[Network] Сеть Telegram недоступна при чтении '{fileName}': {reason}");
+        }
+
+        private static bool IsNetworkException(Exception ex)
+        {
+            var baseEx = ex.GetBaseException();
+            return baseEx is TelegramNetworkException
+                || baseEx is System.Net.Sockets.SocketException
+                || baseEx is TimeoutException
+                || (baseEx is IOException io && io.Message.Contains("разорвала установленное подключение"))
+                || baseEx.Message.Contains("Клиент Telegram не подключен")
+                || baseEx.Message.Contains("Сеть Telegram недоступна");
+        }
 
         public TelegramWinFspFileSystem(
             ConfigManager configManager,
@@ -1762,9 +1787,9 @@ namespace TelegramWebDAV.Services
                     var downloadTask = _telegramService.DownloadFileAsync(node.TgMessageId.Value, memStream, (long)offset, (long)toRead, node.Name, node.Size, node.TgChannelId, node.Id);
                     if (!downloadTask.Wait(TimeSpan.FromSeconds(25)))
                     {
-                        AppLogger.Warn("WinFsp", $"[Read Timeout] Чтение '{node.Name}' (смещение {offset}, длина {toRead}) прервано по таймауту 25 сек (сеть Telegram недоступна или восстанавливается).");
+                        LogNetworkWarningDebounced(node.Name, "прервано по таймауту 25 сек (сеть Telegram недоступна или восстанавливается)");
                         bytesTransferred = 0;
-                        return NT_STATUS_IO_TIMEOUT;
+                        return NT_STATUS_NETWORK_UNREACHABLE;
                     }
                     bytesTransferred = (uint)memStream.Position;
                 }
@@ -1777,6 +1802,12 @@ namespace TelegramWebDAV.Services
                 _repository.HandleLostFile(node.Id, node.TgMessageId ?? 0, fnf.Message);
                 bytesTransferred = 0;
                 return NT_STATUS_OBJECT_NAME_NOT_FOUND;
+            }
+            catch (Exception ex) when (IsNetworkException(ex))
+            {
+                LogNetworkWarningDebounced(node.Name, ex.GetBaseException().Message);
+                bytesTransferred = 0;
+                return NT_STATUS_NETWORK_UNREACHABLE;
             }
             catch (Exception ex)
             {

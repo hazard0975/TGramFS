@@ -19,10 +19,18 @@ namespace TelegramWebDAV.Services
     /// </summary>
     public class MtprotoDownloadWorkerPool : IDisposable
     {
-        private readonly Client _mainClient;
+        private Client _mainClient;
         private readonly Func<int, int, Task<Client>>? _clientProvider;
         private readonly Func<int, long, byte[]?>? _existingChunkProvider;
         private readonly Func<int, Task<Document?>>? _documentRefresher;
+
+        /// <summary>
+        /// Бесшовное обновление ссылки на активный клиент Telegram после реконнекта без уничтожения пула и очереди задач.
+        /// </summary>
+        public void UpdateMainClient(Client newClient)
+        {
+            _mainClient = newClient ?? throw new ArgumentNullException(nameof(newClient));
+        }
 
         private int _workerCount;
         private CancellationTokenSource _poolCts = new();
@@ -458,6 +466,35 @@ namespace TelegramWebDAV.Services
                 }
                 catch (Exception ex)
                 {
+                    bool isNetworkError = ex is System.Net.Sockets.SocketException 
+                        || ex.InnerException is System.Net.Sockets.SocketException 
+                        || ex is IOException 
+                        || ex.GetType().Name == "TelegramNetworkException"
+                        || ex.Message.Contains("разорвала установленное подключение")
+                        || ex.Message.Contains("не подключен или не авторизован");
+
+                    if (isNetworkError)
+                    {
+                        if (request.RetryCount == 0)
+                        {
+                            AppLogger.Warn("MtprotoWorkerPool", $"[Воркер #{workerId}] Сеть Telegram недоступна при скачивании чанка #{displayChunkIdx}/{totalFileChunks} для '{request.FileName}'. Ожидание восстановления соединения...");
+                        }
+
+                        try
+                        {
+                            if (_clientProvider != null)
+                            {
+                                activeClient = await _clientProvider(workerId, request.Document.dc_id);
+                                request.RetryCount = 0;
+                                continue;
+                            }
+                        }
+                        catch
+                        {
+                            // Ожидание сети истекло по таймауту
+                        }
+                    }
+
                     AppLogger.Warn("MtprotoWorkerPool", $"[Воркер #{workerId}] Ошибка чанка #{displayChunkIdx}/{totalFileChunks} (смещение {request.ChunkOffset:N0} б): {ex.Message}");
                     if (request.RetryCount < 3)
                     {

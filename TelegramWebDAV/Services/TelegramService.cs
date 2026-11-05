@@ -12,6 +12,15 @@ using System.Net.Sockets;
 
 namespace TelegramWebDAV.Services
 {
+    /// <summary>
+    /// Исключение, сигнализирующее о временной недоступности сетевого стека или серверов Telegram (Wi-Fi, сокет, офлайн).
+    /// </summary>
+    public class TelegramNetworkException : IOException
+    {
+        public TelegramNetworkException(string message) : base(message) { }
+        public TelegramNetworkException(string message, Exception innerException) : base(message, innerException) { }
+    }
+
     public enum AuthStep
     {
         NeedsPhone,
@@ -105,6 +114,11 @@ namespace TelegramWebDAV.Services
         private static DateTime _globalFloodWaitUntil = DateTime.MinValue;
         private WTelegram.Client? _client;
         private System.Threading.CancellationTokenSource? _queueCts;
+
+        // Координация состояния подключения и ожидания сети читателями
+        private readonly object _connectionLock = new();
+        private TaskCompletionSource<bool>? _connectionReadyTcs;
+        private DateTime _lastConnectionFailureTime = DateTime.MinValue;
 
         // Очередь последовательной загрузки файлов в Telegram (Upload Queue)
         // Предотвращает конкуренцию за полосу пропускания, мерцание оверлея и FLOOD_WAIT
@@ -556,6 +570,7 @@ namespace TelegramWebDAV.Services
 
         private void OnNetworkAvailabilityChanged(object? sender, System.Net.NetworkInformation.NetworkAvailabilityEventArgs e)
         {
+            _lastConnectionFailureTime = DateTime.MinValue;
             if (e.IsAvailable)
             {
                 if (_client != null && IsAuthorized && (DateTime.UtcNow - _lastSuccessfulTrafficTime).TotalSeconds < 15)
@@ -573,6 +588,7 @@ namespace TelegramWebDAV.Services
 
         private void OnNetworkAddressChanged(object? sender, EventArgs e)
         {
+            _lastConnectionFailureTime = DateTime.MinValue;
             if (_client != null && IsAuthorized && (DateTime.UtcNow - _lastSuccessfulTrafficTime).TotalSeconds < 15)
             {
                 return;
@@ -1564,6 +1580,12 @@ namespace TelegramWebDAV.Services
                             if (IsAuthorized && _client != null)
                             {
                                 _lastSuccessfulTrafficTime = DateTime.UtcNow;
+                                _lastConnectionFailureTime = DateTime.MinValue;
+                                lock (_connectionLock)
+                                {
+                                    _connectionReadyTcs?.TrySetResult(true);
+                                    _connectionReadyTcs = null;
+                                }
                                 AppLogger.Info("TelegramService", "[Reactor] Сессия Telegram успешно восстановлена!");
                                 break;
                             }
@@ -1579,15 +1601,85 @@ namespace TelegramWebDAV.Services
                 finally
                 {
                     Interlocked.Exchange(ref _isReconnecting, 0);
+                    lock (_connectionLock)
+                    {
+                        if (_client != null && IsAuthorized)
+                        {
+                            _connectionReadyTcs?.TrySetResult(true);
+                        }
+                        else
+                        {
+                            _connectionReadyTcs?.TrySetResult(false);
+                        }
+                        _connectionReadyTcs = null;
+                    }
                 }
             });
+        }
+
+        /// <summary>
+        /// Ожидает восстановления сессии Telegram и готовности сети к передаче данных.
+        /// Если клиент подключен — возвращает true мгновенно (0 задержки).
+        /// Если клиент восстанавливает соединение — асинхронно ожидает готовности в пределах timeoutMs.
+        /// В режиме длительного офлайна применяет Fast-Fail (5 сек) для предотвращения зависания плеера на каждом треке.
+        /// </summary>
+        public async Task<bool> EnsureConnectedAsync(int timeoutMs = 20000, CancellationToken cancellationToken = default)
+        {
+            if (_client != null && IsAuthorized) return true;
+
+            var account = _repository?.GetActiveTelegramAccount();
+            if (account == null) return false;
+
+            // Fast-fail: если последняя попытка ожидания сети завершилась неудачей менее 5 секунд назад — не висим повторно
+            if ((DateTime.UtcNow - _lastConnectionFailureTime).TotalSeconds < 5)
+            {
+                return false;
+            }
+
+            if (Interlocked.CompareExchange(ref _isReconnecting, 0, 0) == 0)
+            {
+                TriggerReactorReconnect("запрос операции при отключенном клиенте");
+            }
+
+            Task<bool> waitTask;
+            lock (_connectionLock)
+            {
+                if (_client != null && IsAuthorized) return true;
+                _connectionReadyTcs ??= new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+                waitTask = _connectionReadyTcs.Task;
+            }
+
+            try
+            {
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                cts.CancelAfter(timeoutMs);
+
+                var completed = await Task.WhenAny(waitTask, Task.Delay(timeoutMs, cts.Token));
+                if (completed == waitTask)
+                {
+                    bool success = await waitTask;
+                    if (success)
+                    {
+                        _lastConnectionFailureTime = DateTime.MinValue;
+                        return true;
+                    }
+                }
+            }
+            catch (OperationCanceledException) { }
+
+            _lastConnectionFailureTime = DateTime.UtcNow;
+            return false;
         }
 
         private void InitWorkerPool()
         {
             if (_client == null) return;
             int configuredWorkers = Math.Clamp(_currentSettings.Server.DownloadWorkerCount > 0 ? _currentSettings.Server.DownloadWorkerCount : 1, 1, 3);
-            _workerPool?.Dispose();
+            if (_workerPool != null)
+            {
+                _workerPool.UpdateMainClient(_client);
+                return;
+            }
             _workerPool = new MtprotoDownloadWorkerPool(
                 _client,
                 workerCount: configuredWorkers,
@@ -1621,8 +1713,12 @@ namespace TelegramWebDAV.Services
         /// </summary>
         public async Task<WTelegram.Client> GetWorkerClientAsync(int workerId, int dcId)
         {
-            if (_client == null)
-                throw new InvalidOperationException("Основной клиент Telegram не инициализирован.");
+            if (_client == null || !IsAuthorized)
+            {
+                bool reconnected = await EnsureConnectedAsync(20000);
+                if (!reconnected || _client == null)
+                    throw new TelegramNetworkException("Основной клиент Telegram не инициализирован или не подключен.");
+            }
 
             return dcId != 0 ? await _client.GetClientForDC(dcId) : _client;
         }
@@ -3174,7 +3270,11 @@ namespace TelegramWebDAV.Services
                 return cached.document;
             }
 
-            if (_client == null) return null;
+            if (_client == null || !IsAuthorized)
+            {
+                bool reconnected = await EnsureConnectedAsync(20000);
+                if (!reconnected || _client == null) return null;
+            }
 
             long? effectiveChannelId = (channelId.HasValue && channelId.Value != 0)
                 ? channelId.Value
@@ -3192,6 +3292,11 @@ namespace TelegramWebDAV.Services
                 InvalidateStoragePeer();
                 peer = await GetStoragePeerAsync(effectiveChannelId);
                 messagesBase = await _client.GetMessages(peer, new TL.InputMessage[] { new TL.InputMessageID { id = messageId } });
+            }
+            catch (Exception ex) when (ex is SocketException || ex.InnerException is SocketException || ex is IOException || ex is TelegramNetworkException)
+            {
+                TriggerReactorReconnect("сбой сети при запросе дескриптора сообщения");
+                throw new TelegramNetworkException($"Сбой сети при запросе документа ID {messageId}: {ex.Message}", ex);
             }
             
             TL.Document? document = null;
@@ -3343,7 +3448,11 @@ namespace TelegramWebDAV.Services
             await EnsureFloodWaitDelayAsync();
 
             if (_client == null || !IsAuthorized)
-                throw new InvalidOperationException("Клиент Telegram не подключен или не авторизован.");
+            {
+                bool reconnected = await EnsureConnectedAsync(20000);
+                if (!reconnected || _client == null || !IsAuthorized)
+                    throw new TelegramNetworkException("Сеть Telegram недоступна (клиент не подключен или восстанавливает соединение).");
+            }
 
             bool enableDiskCache = _configManager?.CurrentSettings?.Server?.EnableDiskReadCache ?? false;
 
