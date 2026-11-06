@@ -48,6 +48,7 @@ namespace TelegramWebDAV.Services
             public int MessageId { get; set; }
             public Document Document { get; set; } = null!;
             public string FileName { get; set; } = string.Empty;
+            public string? FullVirtualPath { get; set; }
             public long FileTotalSize { get; set; }
             public int ChunkIndex { get; set; }
             public long ChunkOffset { get; set; }
@@ -141,7 +142,8 @@ namespace TelegramWebDAV.Services
             int requestLimit = 1048576,
             bool isHighPriority = false,
             Action<byte[], long>? onChunkReceived = null,
-            Action<long, long>? onProgress = null)
+            Action<long, long>? onProgress = null,
+            string? fullVirtualPath = null)
         {
             string key = $"{messageId}:{chunkOffset}";
 
@@ -185,6 +187,7 @@ namespace TelegramWebDAV.Services
                     MessageId = messageId,
                     Document = document,
                     FileName = fileName,
+                    FullVirtualPath = fullVirtualPath,
                     FileTotalSize = fileTotalSize,
                     ChunkIndex = chunkIdx,
                     ChunkOffset = chunkOffset,
@@ -361,6 +364,8 @@ namespace TelegramWebDAV.Services
                 }
 
                 int displayChunkIdx = request.ChunkIndex + 1;
+                string pathTag = !string.IsNullOrEmpty(request.FullVirtualPath) ? $" ({request.FullVirtualPath})" : "";
+                string fileTag = !string.IsNullOrEmpty(request.FileName) ? $" для '{request.FileName}'{pathTag}" : "";
 
                 try
                 {
@@ -380,7 +385,6 @@ namespace TelegramWebDAV.Services
                     if (alignedLimit < 4096) alignedLimit = 4096;
                     if (alignedLimit > 1048576) alignedLimit = 1048576;
 
-                    string fileTag = !string.IsNullOrEmpty(request.FileName) ? $" для '{request.FileName}'" : "";
                     string requestTag = FormatChunkTag(reqOffset, alignedLimit, request.FileTotalSize);
                     AppLogger.Info("MtprotoWorkerPool", $"[Воркер #{workerId}] Запрос чанка #{displayChunkIdx}/{totalFileChunks}{fileTag} (смещение {reqOffset:N0} б, размер {alignedLimit:N0} б){requestTag}...");
                     var sw = Stopwatch.StartNew();
@@ -477,7 +481,7 @@ namespace TelegramWebDAV.Services
                     {
                         if (request.RetryCount == 0)
                         {
-                            AppLogger.Warn("MtprotoWorkerPool", $"[Воркер #{workerId}] Сеть Telegram недоступна при скачивании чанка #{displayChunkIdx}/{totalFileChunks} для '{request.FileName}'. Ожидание восстановления соединения...");
+                            AppLogger.Warn("MtprotoWorkerPool", $"[Воркер #{workerId}] Сеть Telegram недоступна при скачивании чанка #{displayChunkIdx}/{totalFileChunks}{fileTag}. Ожидание восстановления соединения...");
                         }
 
                         try

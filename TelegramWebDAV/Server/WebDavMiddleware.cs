@@ -211,7 +211,7 @@ namespace TelegramWebDAV.Server
             {
                 try
                 {
-                    await telegramService.DownloadFileAsync(node.TgMessageId.Value, context.Response.OutputStream, start, length, node.Name, totalSize, node.TgChannelId, node.Id);
+                    await telegramService.DownloadFileAsync(node.TgMessageId.Value, context.Response.OutputStream, start, length, node.Name, totalSize, node.TgChannelId, node.Id, path);
                 }
                 catch (FileNotFoundException fnfEx)
                 {

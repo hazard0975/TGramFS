@@ -567,7 +567,7 @@ namespace TelegramWebDAV.Services
             try { openPid = FileSystemBase.GetOperationProcessId(); } catch { }
 
             fileNode = node;
-            fileDesc = new FspNodeContext(node) { CreatorProcessId = openPid };
+            fileDesc = new FspNodeContext(node) { CreatorProcessId = openPid, VirtualPath = cleanPath };
             FillFileInfo(node, out fileInfo);
             normalizedName = fileName;
             return STATUS_SUCCESS;
@@ -665,7 +665,8 @@ namespace TelegramWebDAV.Services
                         IsModified = true,
                         KnownTargetSize = virtualSource.Size,
                         VirtualSourceNode = virtualSource,
-                        CreatorProcessId = callerPid
+                        CreatorProcessId = callerPid,
+                        VirtualPath = cleanPath
                     };
 
                     RegisterActiveVirtualCopy(vNode.Id, virtualSource.Id, callerPid);
@@ -721,7 +722,8 @@ namespace TelegramWebDAV.Services
                     IsModified = true,
                     KnownTargetSize = allocationSize > 0 ? (long)allocationSize : -1,
                     OriginalSourcePath = originalSource,
-                    CreatorProcessId = callerPid
+                    CreatorProcessId = callerPid,
+                    VirtualPath = cleanPath
                 };
 
                 fileNode = node;
@@ -1694,7 +1696,8 @@ namespace TelegramWebDAV.Services
                 if (shouldLog)
                 {
                     string displayName = dirNode.Id == 1 ? "Root" : dirNode.Name;
-                    AppLogger.Info("WinFsp", $"[ReadDirectoryEntry] Открыта папка '{displayName}' (ID {dirNode.Id}), элементов: {children.Count}");
+                    string fullDirPath = dirNode.Id == 1 ? "/" : _repository.GetNodeFullPath(dirNode.Id);
+                    AppLogger.Info("WinFsp", $"[ReadDirectoryEntry] Открыта папка '{displayName}' ({fullDirPath}) (ID {dirNode.Id}), элементов: {children.Count}");
                 }
             }
 
@@ -1790,9 +1793,12 @@ namespace TelegramWebDAV.Services
 
                 unsafe
                 {
+                    var fspCtx = fileDesc as FspNodeContext;
+                    string? fullVPath = fspCtx?.VirtualPath ?? (node.Id > 1 ? _repository.GetNodeFullPath(node.Id) : null);
+
                     // Прямой стриминг в предоставленный ядром Windows буфер без создания промежуточных файлов на диске C:!
                     using var memStream = new UnmanagedMemoryStream((byte*)buffer.ToPointer(), toRead, toRead, FileAccess.Write);
-                    var downloadTask = _telegramService.DownloadFileAsync(node.TgMessageId.Value, memStream, (long)offset, (long)toRead, node.Name, node.Size, node.TgChannelId, node.Id);
+                    var downloadTask = _telegramService.DownloadFileAsync(node.TgMessageId.Value, memStream, (long)offset, (long)toRead, node.Name, node.Size, node.TgChannelId, node.Id, fullVPath);
                     if (!downloadTask.Wait(TimeSpan.FromSeconds(25)))
                     {
                         LogNetworkWarning(node.Name, "прервано по таймауту 25 сек (сеть Telegram недоступна или восстанавливается)");
@@ -2864,6 +2870,7 @@ namespace TelegramWebDAV.Services
             public bool IsUploadStarted { get; set; } = false;
             public string? OriginalSourcePath { get; set; }
             public int CreatorProcessId { get; set; }
+            public string? VirtualPath { get; set; }
 
             public FspNodeContext(Node node) => Node = node;
 

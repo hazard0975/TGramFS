@@ -154,6 +154,7 @@ namespace TelegramWebDAV.Services
         public class NetworkTransferAudit
         {
             public string FileName { get; set; } = string.Empty;
+            public string? FullVirtualPath { get; set; }
             public long FileSize { get; set; }
             public DateTime LastActivityTime { get; set; } = DateTime.UtcNow;
             private long _networkBytesDownloaded;
@@ -262,7 +263,8 @@ namespace TelegramWebDAV.Services
                     else
                         verdict = $"{ratio:F2}x (ВНИМАНИЕ — обнаружено избыточное дублирование сетевых запросов!)";
 
-                    string msg = $"[NetworkAudit] Завершено для '{FileName}': Размер: {FileSize:N0} б ({FileSize / 1048576.0:F2} МБ) | Из сети TG: {net:N0} б ({net / 1048576.0:F2} МБ) | Из ОЗУ: {ram:N0} б ({ram / 1048576.0:F2} МБ) | Эффективность сети: {verdict}";
+                    string pathTag = !string.IsNullOrEmpty(FullVirtualPath) ? $" ({FullVirtualPath})" : "";
+                    string msg = $"[NetworkAudit] Завершено для '{FileName}'{pathTag}: Размер: {FileSize:N0} б ({FileSize / 1048576.0:F2} МБ) | Из сети TG: {net:N0} б ({net / 1048576.0:F2} МБ) | Из ОЗУ: {ram:N0} б ({ram / 1048576.0:F2} МБ) | Эффективность сети: {verdict}";
 
                     if (ratio > 1.25)
                         AppLogger.Warn("TelegramService", msg);
@@ -3392,7 +3394,7 @@ namespace TelegramWebDAV.Services
         /// Поддерживает как обычные файлы, так и крупногабаритные составные файлы (> 2 ГБ / 4 ГБ) из таблицы node_parts.
         /// В режиме Pure RAM Mode качает данные 100% через ОЗУ (без файлов на диске), сохраняя чанки в динамический 128 МБ RAM-кэш.
         /// </summary>
-        public async Task DownloadFileAsync(int messageId, Stream destination, long offset, long length, string fileName = "файл", long totalFileSize = -1, long? channelId = null, int? nodeId = null)
+        public async Task DownloadFileAsync(int messageId, Stream destination, long offset, long length, string fileName = "файл", long totalFileSize = -1, long? channelId = null, int? nodeId = null, string? fullVirtualPath = null)
         {
             List<Models.NodePart>? parts = null;
             if (nodeId.HasValue && nodeId.Value > 0)
@@ -3406,11 +3408,11 @@ namespace TelegramWebDAV.Services
 
             if (parts != null && parts.Count > 1)
             {
-                await DownloadMultiPartFileAsync(parts, destination, offset, length, fileName, totalFileSize, channelId);
+                await DownloadMultiPartFileAsync(parts, destination, offset, length, fileName, totalFileSize, channelId, fullVirtualPath);
                 return;
             }
 
-            await DownloadSingleDocumentSliceAsync(messageId, destination, offset, length, fileName, totalFileSize, channelId, nodeId);
+            await DownloadSingleDocumentSliceAsync(messageId, destination, offset, length, fileName, totalFileSize, channelId, nodeId, fullVirtualPath);
         }
 
         private async Task DownloadMultiPartFileAsync(
@@ -3420,7 +3422,8 @@ namespace TelegramWebDAV.Services
             long length,
             string fileName,
             long totalFileSize,
-            long? channelId)
+            long? channelId,
+            string? fullVirtualPath = null)
         {
             var sortedParts = parts.OrderBy(p => p.PartIndex).ToList();
             long currentStart = 0;
@@ -3463,12 +3466,12 @@ namespace TelegramWebDAV.Services
                     string partDisplayName = $"{fileName} [Часть {p.PartIndex + 1}/{sortedParts.Count}]";
                     AppLogger.Debug("TelegramService", $"[MultiPart Read] Чтение диапазона [{overlapStart}..{overlapEnd}) ({overlapLength:N0} байт) из части {p.PartIndex + 1} (Msg ID {p.TgMessageId}, localOffset={localOffset}).");
 
-                    await DownloadSingleDocumentSliceAsync(p.TgMessageId, destination, localOffset, overlapLength, partDisplayName, localTotalSize, partChannelId, p.NodeId);
+                    await DownloadSingleDocumentSliceAsync(p.TgMessageId, destination, localOffset, overlapLength, partDisplayName, localTotalSize, partChannelId, p.NodeId, fullVirtualPath);
                 }
             }
         }
 
-        private async Task DownloadSingleDocumentSliceAsync(int messageId, Stream destination, long offset, long length, string fileName = "файл", long totalFileSize = -1, long? channelId = null, int? nodeId = null)
+        private async Task DownloadSingleDocumentSliceAsync(int messageId, Stream destination, long offset, long length, string fileName = "файл", long totalFileSize = -1, long? channelId = null, int? nodeId = null, string? fullVirtualPath = null)
         {
             await EnsureFloodWaitDelayAsync();
 
@@ -3517,8 +3520,9 @@ namespace TelegramWebDAV.Services
                 _networkAudits.TryRemove(messageId, out _);
             }
 
-            var audit = _networkAudits.GetOrAdd(messageId, _ => new NetworkTransferAudit { FileName = fileName, FileSize = actualTotalSize });
+            var audit = _networkAudits.GetOrAdd(messageId, _ => new NetworkTransferAudit { FileName = fileName, FileSize = actualTotalSize, FullVirtualPath = fullVirtualPath });
             audit.FileName = fileName;
+            if (!string.IsNullOrEmpty(fullVirtualPath)) audit.FullVirtualPath = fullVirtualPath;
             audit.FileSize = actualTotalSize;
             audit.TouchActivity();
 
@@ -3654,7 +3658,7 @@ namespace TelegramWebDAV.Services
                         // Запускаем непрерывный фоновый конвейер скачивания оставшихся чанков файла только при реальном воспроизведении/скачивании
                         if (!isMetadataProbe)
                         {
-                            TriggerContinuousPrefetch(messageId, document, fileName, actualTotalSize, offset, audit);
+                            TriggerContinuousPrefetch(messageId, document, fileName, actualTotalSize, offset, audit, fullVirtualPath);
                         }
                         return;
                     }
@@ -3715,7 +3719,7 @@ namespace TelegramWebDAV.Services
                     // Если мы в режиме стриминга, проверяем необходимость запуска префетча
                     if (!enableDiskCache && !isSmallFile && (!isMetadataProbe || readSeq.AccumulatedSequentialBytes >= 1048576) && remainingBytes > 0)
                     {
-                        TriggerContinuousPrefetch(messageId, document, fileName, actualTotalSize, currentPos, audit);
+                        TriggerContinuousPrefetch(messageId, document, fileName, actualTotalSize, currentPos, audit, fullVirtualPath);
                     }
 
                     continue;
@@ -3771,7 +3775,8 @@ namespace TelegramWebDAV.Services
                             {
                                 OnDownloadProgress?.Invoke(fileName, chunkOffset + transferred, actualTotalSize);
                             }
-                        });
+                        },
+                        fullVirtualPath: fullVirtualPath);
 
                     var raw = await chunkTask;
                     if (raw != null && raw.Length > 0)
@@ -3825,7 +3830,7 @@ namespace TelegramWebDAV.Services
 
                         if (!enableDiskCache && !isSmallFile && !isCurrentChunkProbe && remainingBytes > 0)
                         {
-                            TriggerContinuousPrefetch(messageId, document, fileName, actualTotalSize, currentPos, audit);
+                            TriggerContinuousPrefetch(messageId, document, fileName, actualTotalSize, currentPos, audit, fullVirtualPath);
                         }
 
                         continue;
@@ -3855,7 +3860,7 @@ namespace TelegramWebDAV.Services
             else if (!enableDiskCache && !isSmallFile)
             {
                 // Запускаем непрерывный фоновый конвейер воркеров MTProto строго ПОСЛЕ того, как текущий чанк скачан и готов в RAM
-                TriggerContinuousPrefetch(messageId, document, fileName, actualTotalSize, currentPos, audit);
+                TriggerContinuousPrefetch(messageId, document, fileName, actualTotalSize, currentPos, audit, fullVirtualPath);
             }
         }
 
@@ -3863,7 +3868,7 @@ namespace TelegramWebDAV.Services
         /// Постановка упреждающих чанков в единый глобальный пул воркеров MTProto.
         /// Не создает новых пулов и исключает дублирование сетевых запросов.
         /// </summary>
-        private void TriggerContinuousPrefetch(int messageId, TL.Document document, string fileName, long actualTotalSize, long currentReadOffset, NetworkTransferAudit audit)
+        private void TriggerContinuousPrefetch(int messageId, TL.Document document, string fileName, long actualTotalSize, long currentReadOffset, NetworkTransferAudit audit, string? fullVirtualPath = null)
         {
             bool enableDiskCache = _currentSettings.Server.EnableDiskReadCache;
             if (enableDiskCache || document == null || actualTotalSize <= 1048576 || _client == null) return;
@@ -3946,7 +3951,8 @@ namespace TelegramWebDAV.Services
                     _ => "воркеров"
                 };
 
-                AppLogger.Info("MtprotoWorkerPool", $"[RAM Streaming] Скачивание {mb:0.00} МБ ({rangeStr} из {totalChunks}) для '{fileName}' через {activeWorkers} {workerWord} MTProto...");
+                string pathTag = !string.IsNullOrEmpty(fullVirtualPath) ? $" ({fullVirtualPath})" : "";
+                AppLogger.Info("MtprotoWorkerPool", $"[RAM Streaming] Скачивание {mb:0.00} МБ ({rangeStr} из {totalChunks}) для '{fileName}'{pathTag} через {activeWorkers} {workerWord} MTProto...");
 
                 foreach (var chunkOffsetToQueue in newChunksToQueue)
                 {
@@ -3974,7 +3980,8 @@ namespace TelegramWebDAV.Services
                         onProgress: (transferred, total) =>
                         {
                             OnDownloadProgress?.Invoke(fileName, chunkOffsetToQueue + transferred, actualTotalSize);
-                        });
+                        },
+                        fullVirtualPath: fullVirtualPath);
                 }
             }
         }
