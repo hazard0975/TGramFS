@@ -3505,7 +3505,7 @@ namespace TelegramWebDAV.Services
             }
 
             long actualTotalSize = totalFileSize > 0 ? totalFileSize : (document.size > 0 ? document.size : offset + length);
-            bool isSmallFile = actualTotalSize <= 262144; // Файл меньше 256 КБ
+            bool isSmallFile = actualTotalSize <= 1048576; // Файл меньше или равен 1 МБ
             long currentChunkIdx = offset / 1048576;
             long totalChunks = actualTotalSize > 0 ? (long)Math.Ceiling((double)actualTotalSize / 1048576.0) : 1;
 
@@ -3571,13 +3571,13 @@ namespace TelegramWebDAV.Services
             bool isSinglePointProbe = length <= 262144 && readSeq.SequentialCount <= 1;
             bool isMetadataProbe = isTailProbe || isFirstMb || isSinglePointProbe;
 
-            if (offset == 0 && !isMetadataProbe && actualTotalSize > 262144)
+            if (offset == 0 && !isMetadataProbe && actualTotalSize > 1048576)
             {
                 audit.ResetCompletion();
             }
 
             // Если дисковый кэш включен в настройках: скачиваем файл в дисковый кэш %TEMP%
-            if (enableDiskCache && offset == 0 && !isMetadataProbe && actualTotalSize > 262144)
+            if (enableDiskCache && offset == 0 && !isMetadataProbe && actualTotalSize > 1048576)
             {
                 string cacheDir = Path.Combine(Path.GetTempPath(), "TGramFS_ReadCache");
                 Directory.CreateDirectory(cacheDir);
@@ -3732,56 +3732,16 @@ namespace TelegramWebDAV.Services
                 // - Хвостовой зонд (isTailProbe в последних 512 КБ больших файлов): качаем квантом 256 КБ без префетча.
                 // - Начиная со второго мегабайта (>= 1 МБ) при обычном стриминге/копировании: качаем полными 1 МБ (1 048 576 байт).
 
-                long chunkOffset;
-                int requestLimit;
-                int internalOffset;
-                bool isCurrentChunkProbe;
-
-                if (isSmallFile)
-                {
-                    chunkOffset = 0;
-                    requestLimit = (int)Math.Min(262144, actualTotalSize);
-                    internalOffset = (int)currentPos;
-                    isCurrentChunkProbe = true;
-                }
-                else if (currentPos < 1048576)
-                {
-                    if (currentPos < 262144)
-                    {
-                        // 1-я четверть: быстрый зонд 256 КБ для ID3/обложек
-                        chunkOffset = 0;
-                        requestLimit = (int)Math.Min(262144, actualTotalSize);
-                        internalOffset = (int)currentPos;
-                        isCurrentChunkProbe = true;
-                    }
-                    else
-                    {
-                        // 2..4 четверти: монолитная докачка 768 КБ при копировании или воспроизведении
-                        chunkOffset = 262144;
-                        requestLimit = (int)Math.Min(786432, actualTotalSize - 262144);
-                        internalOffset = (int)(currentPos - 262144);
-                        isCurrentChunkProbe = false;
-                    }
-                }
-                else
-                {
-                    if (isTailProbe)
-                    {
-                        int quantum = 262144;
-                        chunkOffset = (currentPos / quantum) * quantum;
-                        internalOffset = (int)(currentPos - chunkOffset);
-                        requestLimit = (int)Math.Min(quantum, actualTotalSize - chunkOffset);
-                        isCurrentChunkProbe = true;
-                    }
-                    else
-                    {
-                        int quantum = 1048576;
-                        chunkOffset = (currentPos / quantum) * quantum;
-                        internalOffset = (int)(currentPos - chunkOffset);
-                        requestLimit = (int)Math.Min(quantum, actualTotalSize - chunkOffset);
-                        isCurrentChunkProbe = false;
-                    }
-                }
+                // Единый канонический размер чанка MTProto (1 МБ) с монолитным остатком в конце файла:
+                // - Каждый полный чанк (#1, #2, #3...) скачивается ровно по 1 048 576 байт (1 МБ).
+                // - Последний чанк файла (#N) скачивается ровно на остаток от границы чанка до EOF (1 монолитный запрос).
+                // - Маленькие файлы (<= 1 МБ) скачиваются целиком за 1 запрос.
+                // Это полностью исключает двойные сетевые раундтрипы (256 КБ + 768 КБ, 256 КБ + 27 КБ) на старте и финише,
+                // сокращает задержку первого воспроизведения на 350-500 мс и предотвращает перерасход RPC-квоты Telegram API.
+                long chunkOffset = (currentPos / 1048576) * 1048576;
+                int internalOffset = (int)(currentPos - chunkOffset);
+                int requestLimit = (int)Math.Min(1048576L, actualTotalSize - chunkOffset);
+                bool isCurrentChunkProbe = isMetadataProbe;
 
                 if (_workerPool == null) InitWorkerPool();
                 if (_workerPool != null)
@@ -3906,7 +3866,7 @@ namespace TelegramWebDAV.Services
         private void TriggerContinuousPrefetch(int messageId, TL.Document document, string fileName, long actualTotalSize, long currentReadOffset, NetworkTransferAudit audit)
         {
             bool enableDiskCache = _currentSettings.Server.EnableDiskReadCache;
-            if (enableDiskCache || document == null || actualTotalSize <= 262144 || _client == null) return;
+            if (enableDiskCache || document == null || actualTotalSize <= 1048576 || _client == null) return;
 
             // Проверяем порог активации упреждения: пока не вычитано N МБ от точки старта/перемотки, префетч не запускается
             long activationThresholdBytes = Math.Max(1, _currentSettings.Server.StreamingActivationThresholdMb) * 1048576L;
