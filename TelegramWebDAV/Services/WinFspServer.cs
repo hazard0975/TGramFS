@@ -365,17 +365,25 @@ namespace TelegramWebDAV.Services
         private const int NT_STATUS_IO_TIMEOUT = unchecked((int)0xC00000B5);
         private const int NT_STATUS_NETWORK_UNREACHABLE = unchecked((int)0xC000023C);
 
-        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, DateTime> _lastNetworkWarnPerFile = new();
+        private static int _isNetworkOfflineLogged = 0;
 
-        private static void LogNetworkWarningDebounced(string fileName, string reason)
+        /// <summary>
+        /// Сбрасывает флаг зафиксированного сбоя сети при восстановлении соединения,
+        /// обеспечивая ровно одно чистое предупреждение при следующем падении.
+        /// </summary>
+        public static void ResetNetworkOfflineState()
         {
-            var now = DateTime.UtcNow;
-            if (_lastNetworkWarnPerFile.TryGetValue(fileName, out var last) && (now - last).TotalSeconds < 10)
+            Interlocked.Exchange(ref _isNetworkOfflineLogged, 0);
+        }
+
+        private static void LogNetworkWarning(string fileName, string reason)
+        {
+            // State-Based Logging: логируем строго 1 раз при переходе в офлайн.
+            // Пока сеть лежит — 100% тишина в логе для всех последующих файлов и запросов.
+            if (Interlocked.CompareExchange(ref _isNetworkOfflineLogged, 1, 0) == 0)
             {
-                return; // подавляем спам для одного и того же файла
+                AppLogger.Warn("WinFsp", $"[Network] Сеть Telegram недоступна при чтении '{fileName}': {reason}");
             }
-            _lastNetworkWarnPerFile[fileName] = now;
-            AppLogger.Warn("WinFsp", $"[Network] Сеть Telegram недоступна при чтении '{fileName}': {reason}");
         }
 
         private static bool IsNetworkException(Exception ex)
@@ -1787,11 +1795,15 @@ namespace TelegramWebDAV.Services
                     var downloadTask = _telegramService.DownloadFileAsync(node.TgMessageId.Value, memStream, (long)offset, (long)toRead, node.Name, node.Size, node.TgChannelId, node.Id);
                     if (!downloadTask.Wait(TimeSpan.FromSeconds(25)))
                     {
-                        LogNetworkWarningDebounced(node.Name, "прервано по таймауту 25 сек (сеть Telegram недоступна или восстанавливается)");
+                        LogNetworkWarning(node.Name, "прервано по таймауту 25 сек (сеть Telegram недоступна или восстанавливается)");
                         bytesTransferred = 0;
                         return NT_STATUS_NETWORK_UNREACHABLE;
                     }
                     bytesTransferred = (uint)memStream.Position;
+                }
+                if (_isNetworkOfflineLogged != 0)
+                {
+                    Interlocked.Exchange(ref _isNetworkOfflineLogged, 0);
                 }
                 return STATUS_SUCCESS;
             }
@@ -1805,7 +1817,7 @@ namespace TelegramWebDAV.Services
             }
             catch (Exception ex) when (IsNetworkException(ex))
             {
-                LogNetworkWarningDebounced(node.Name, ex.GetBaseException().Message);
+                LogNetworkWarning(node.Name, ex.GetBaseException().Message);
                 bytesTransferred = 0;
                 return NT_STATUS_NETWORK_UNREACHABLE;
             }

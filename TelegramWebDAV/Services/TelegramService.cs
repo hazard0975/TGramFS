@@ -119,6 +119,7 @@ namespace TelegramWebDAV.Services
         private readonly object _connectionLock = new();
         private TaskCompletionSource<bool>? _connectionReadyTcs;
         private DateTime _lastConnectionFailureTime = DateTime.MinValue;
+        private volatile bool _isNetworkOffline = false;
 
         // Очередь последовательной загрузки файлов в Telegram (Upload Queue)
         // Предотвращает конкуренцию за полосу пропускания, мерцание оверлея и FLOOD_WAIT
@@ -573,6 +574,7 @@ namespace TelegramWebDAV.Services
             _lastConnectionFailureTime = DateTime.MinValue;
             if (e.IsAvailable)
             {
+                _isNetworkOffline = false;
                 if (_client != null && IsAuthorized && (DateTime.UtcNow - _lastSuccessfulTrafficTime).TotalSeconds < 15)
                 {
                     return;
@@ -582,6 +584,7 @@ namespace TelegramWebDAV.Services
             }
             else
             {
+                _isNetworkOffline = true;
                 WakeUpReconnectWait("отключение сетевого интерфейса Windows");
             }
         }
@@ -589,6 +592,7 @@ namespace TelegramWebDAV.Services
         private void OnNetworkAddressChanged(object? sender, EventArgs e)
         {
             _lastConnectionFailureTime = DateTime.MinValue;
+            _isNetworkOffline = false;
             if (_client != null && IsAuthorized && (DateTime.UtcNow - _lastSuccessfulTrafficTime).TotalSeconds < 15)
             {
                 return;
@@ -1543,6 +1547,8 @@ namespace TelegramWebDAV.Services
                         bool isReachable = await CheckTelegramReachabilityAsync(2500);
                         if (!isReachable)
                         {
+                            _isNetworkOffline = true;
+                            _lastConnectionFailureTime = DateTime.UtcNow;
                             if (!hasLoggedOffline)
                             {
                                 AppLogger.Warn("TelegramService", $"[Reactor] Сеть недоступна ({reason}). Ожидание подключения к интернету...");
@@ -1579,6 +1585,7 @@ namespace TelegramWebDAV.Services
 
                             if (IsAuthorized && _client != null)
                             {
+                                _isNetworkOffline = false;
                                 _lastSuccessfulTrafficTime = DateTime.UtcNow;
                                 _lastConnectionFailureTime = DateTime.MinValue;
                                 lock (_connectionLock)
@@ -1586,6 +1593,7 @@ namespace TelegramWebDAV.Services
                                     _connectionReadyTcs?.TrySetResult(true);
                                     _connectionReadyTcs = null;
                                 }
+                                TelegramWinFspFileSystem.ResetNetworkOfflineState();
                                 AppLogger.Info("TelegramService", "[Reactor] Сессия Telegram успешно восстановлена!");
                                 break;
                             }
@@ -1620,8 +1628,8 @@ namespace TelegramWebDAV.Services
         /// <summary>
         /// Ожидает восстановления сессии Telegram и готовности сети к передаче данных.
         /// Если клиент подключен — возвращает true мгновенно (0 задержки).
-        /// Если клиент восстанавливает соединение — асинхронно ожидает готовности в пределах timeoutMs.
-        /// В режиме длительного офлайна применяет Fast-Fail (5 сек) для предотвращения зависания плеера на каждом треке.
+        /// При подтвержденном офлайне или отключенном адаптере возвращает false мгновенно (0 мс), не блокируя плеер при добавлении файлов.
+        /// Если клиент восстанавливает соединение при доступной сети — асинхронно ожидает готовности в пределах timeoutMs.
         /// </summary>
         public async Task<bool> EnsureConnectedAsync(int timeoutMs = 20000, CancellationToken cancellationToken = default)
         {
@@ -1630,7 +1638,22 @@ namespace TelegramWebDAV.Services
             var account = _repository?.GetActiveTelegramAccount();
             if (account == null) return false;
 
-            // Fast-fail: если последняя попытка ожидания сети завершилась неудачей менее 5 секунд назад — не висим повторно
+            // 1. Проверяем системную доступность физической сети Windows (0 мс)
+            if (!System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable())
+            {
+                _isNetworkOffline = true;
+                _lastConnectionFailureTime = DateTime.UtcNow;
+                return false;
+            }
+
+            // 2. Если сервис уже зафиксировал режим офлайна — мгновенный отказ (0 мс) без подвисания плеера
+            if (_isNetworkOffline)
+            {
+                _lastConnectionFailureTime = DateTime.UtcNow;
+                return false;
+            }
+
+            // 3. Fast-fail: если последняя попытка ожидания сети завершилась неудачей менее 5 секунд назад — не висим повторно
             if ((DateTime.UtcNow - _lastConnectionFailureTime).TotalSeconds < 5)
             {
                 return false;
@@ -1660,6 +1683,7 @@ namespace TelegramWebDAV.Services
                     bool success = await waitTask;
                     if (success)
                     {
+                        _isNetworkOffline = false;
                         _lastConnectionFailureTime = DateTime.MinValue;
                         return true;
                     }
@@ -1667,6 +1691,7 @@ namespace TelegramWebDAV.Services
             }
             catch (OperationCanceledException) { }
 
+            _isNetworkOffline = true;
             _lastConnectionFailureTime = DateTime.UtcNow;
             return false;
         }
