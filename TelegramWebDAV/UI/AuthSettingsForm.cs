@@ -573,7 +573,7 @@ namespace TelegramWebDAV.UI
 
             _txtBackupChannelTitle = new TextBox 
             { 
-                Text = currentBackupCh?.Title ?? "TGramFS Backups", 
+                Text = currentBackupCh?.Title ?? "TGramFS DB Backups", 
                 Width = 260, 
                 Font = UITheme.BaseFont 
             };
@@ -1083,14 +1083,14 @@ namespace TelegramWebDAV.UI
             string channelTitle = _txtChannelTitle.Text.Trim();
             if (string.IsNullOrEmpty(channelTitle))
             {
-                channelTitle = "Telegram WebDAV Drive";
+                channelTitle = "TGramFS Storage";
                 _txtChannelTitle.Text = channelTitle;
             }
 
             _telegramService.UpdateApiCredentials(apiId, apiHash, channelTitle);
             UpdateUiState();
 
-            MessageBox.Show("Настройки Telegram (API ID, Hash и имя канала) успешно сохранены в базу данных!", "Telegram WebDAV", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show("Настройки Telegram (API ID, Hash и имя канала) успешно сохранены в базу данных!", "TGramFS", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void UpdateUiState()
@@ -1282,7 +1282,7 @@ namespace TelegramWebDAV.UI
             string newTitle = _txtBackupChannelTitle.Text.Trim();
             if (string.IsNullOrWhiteSpace(newTitle))
             {
-                newTitle = "Telegram Drive Backups";
+                newTitle = "TGramFS DB Backups";
             }
             if (newTitle.Length > 128)
             {

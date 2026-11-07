@@ -1042,27 +1042,59 @@ namespace TelegramWebDAV.Services
 
         public void UpdateApiCredentials(int apiId, string apiHash, string? channelTitle = null)
         {
+            bool credsChanged = true;
             if (_repository != null)
             {
+                var currentAccount = _repository.GetActiveTelegramAccount();
+                if (currentAccount != null && currentAccount.ApiId == apiId && currentAccount.ApiHash == apiHash)
+                {
+                    credsChanged = false;
+                }
+
                 var account = _repository.SaveTelegramAccount(apiId, apiHash);
                 if (!string.IsNullOrWhiteSpace(channelTitle))
                 {
+                    string cleanTitle = channelTitle.Trim();
                     var primary = _repository.GetPrimaryTelegramChannel(account.Id);
                     if (primary != null)
                     {
-                        _repository.UpdateChannelTitle(primary.ChannelId, channelTitle.Trim());
+                        if (!string.Equals(primary.Title, cleanTitle, StringComparison.Ordinal))
+                        {
+                            _repository.UpdateChannelTitle(primary.ChannelId, cleanTitle);
+                            if (IsAuthorized && primary.ChannelId != 0 && !credsChanged)
+                            {
+                                _ = Task.Run(async () =>
+                                {
+                                    try
+                                    {
+                                        await EditChannelTitleAsync(primary.ChannelId, cleanTitle);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        AppLogger.Warn("TelegramService", $"Не удалось синхронизировать заголовок основного канала ID {primary.ChannelId}: {ex.Message}");
+                                    }
+                                });
+                            }
+                            else
+                            {
+                                _pendingChannelTitle = cleanTitle;
+                            }
+                        }
                     }
                     else
                     {
-                        _pendingChannelTitle = channelTitle.Trim();
+                        _pendingChannelTitle = cleanTitle;
                     }
                 }
             }
 
-            _storagePeer = null;
-            try { _client?.Dispose(); } catch { }
-            _client = null;
-            _ = ConnectAsync();
+            if (credsChanged)
+            {
+                _storagePeer = null;
+                try { _client?.Dispose(); } catch { }
+                _client = null;
+                _ = ConnectAsync();
+            }
         }
 
         public void UpdateStorageChannelTitle(string title)
@@ -1071,15 +1103,34 @@ namespace TelegramWebDAV.Services
             var account = _repository.GetActiveTelegramAccount();
             if (account == null) return;
 
+            string cleanTitle = title.Trim();
             var primary = _repository.GetPrimaryTelegramChannel(account.Id);
-            if (primary != null && primary.Title != title.Trim())
+            if (primary != null && !string.Equals(primary.Title, cleanTitle, StringComparison.Ordinal))
             {
-                _repository.UpdateChannelTitle(primary.ChannelId, title.Trim());
+                _repository.UpdateChannelTitle(primary.ChannelId, cleanTitle);
                 _storagePeer = null;
+                if (IsAuthorized && primary.ChannelId != 0)
+                {
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await EditChannelTitleAsync(primary.ChannelId, cleanTitle);
+                        }
+                        catch (Exception ex)
+                        {
+                            AppLogger.Warn("TelegramService", $"Не удалось синхронизировать заголовок основного канала ID {primary.ChannelId}: {ex.Message}");
+                        }
+                    });
+                }
+                else
+                {
+                    _pendingChannelTitle = cleanTitle;
+                }
             }
             else if (primary == null)
             {
-                _pendingChannelTitle = title.Trim();
+                _pendingChannelTitle = cleanTitle;
             }
         }
 
@@ -1142,11 +1193,27 @@ namespace TelegramWebDAV.Services
                 var primaryChannel = _repository?.GetPrimaryTelegramChannel(account.Id);
                 string targetTitle = primaryChannel != null && !string.IsNullOrWhiteSpace(primaryChannel.Title)
                     ? primaryChannel.Title.Trim()
-                    : (!string.IsNullOrWhiteSpace(_pendingChannelTitle) ? _pendingChannelTitle.Trim() : "Telegram WebDAV Drive");
+                    : (!string.IsNullOrWhiteSpace(_pendingChannelTitle) ? _pendingChannelTitle.Trim() : "TGramFS Storage");
 
                 // 1. Если StorageChannelId и StorageChannelAccessHash уже сохранены в базе SQLite — мгновенно используем их без сетевых вызовов!
                 if (primaryChannel != null && primaryChannel.ChannelId != 0 && primaryChannel.AccessHash != 0)
                 {
+                    if (!string.IsNullOrWhiteSpace(_pendingChannelTitle) &&
+                        !string.Equals(primaryChannel.Title, _pendingChannelTitle, StringComparison.Ordinal))
+                    {
+                        string desiredTitle = _pendingChannelTitle;
+                        _pendingChannelTitle = null;
+                        try
+                        {
+                            await EditChannelTitleAsync(primaryChannel.ChannelId, desiredTitle);
+                            primaryChannel.Title = desiredTitle;
+                        }
+                        catch (Exception ex)
+                        {
+                            AppLogger.Warn("TelegramService", $"Не удалось синхронизировать заголовок основного канала ID {primaryChannel.ChannelId}: {ex.Message}");
+                        }
+                    }
+
                     _storagePeer = new TL.InputPeerChannel(primaryChannel.ChannelId, primaryChannel.AccessHash);
                     AppLogger.Info("TelegramService", $"Подключен канал-хранилище из базы SQLite: '{primaryChannel.Title}' (ID: {primaryChannel.ChannelId}).");
                     return _storagePeer;
@@ -1176,7 +1243,7 @@ namespace TelegramWebDAV.Services
                 {
                     flags = TL.Methods.Channels_CreateChannel.Flags.broadcast,
                     title = targetTitle,
-                    about = "Приватное облачное хранилище файлов для Telegram WebDAV Drive"
+                    about = "Приватное облачное хранилище файлов для TGramFS Drive"
                 };
 
                 var createdUpdates = await _client.Invoke(createReq);
@@ -2773,7 +2840,7 @@ namespace TelegramWebDAV.Services
 
             string targetTitle = !string.IsNullOrWhiteSpace(specificTitle) 
                 ? specificTitle.Trim() 
-                : "Telegram Drive Backups";
+                : "TGramFS DB Backups";
 
             // 2. Если в базе нет — создаем новый приватный канал
             AppLogger.Info("TelegramService", $"Канал резервных копий не найден в базе данных. Создание нового приватного канала '{targetTitle}'...");
@@ -2781,7 +2848,7 @@ namespace TelegramWebDAV.Services
             {
                 flags = TL.Methods.Channels_CreateChannel.Flags.broadcast,
                 title = targetTitle,
-                about = "Автоматические резервные копии базы данных Telegram WebDAV Drive"
+                about = "Автоматические резервные копии базы данных TGramFS Drive"
             };
 
             var createdUpdates = await _client.Invoke(createReq);
