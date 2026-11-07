@@ -1988,6 +1988,12 @@ namespace TelegramWebDAV.Database
         /// </summary>
         public void SaveOrUpdateBackupChannel(int accountId, long channelId, long accessHash, string title)
         {
+            if (channelId <= 0)
+            {
+                AppLogger.Warn("NodeRepository", $"Попытка сохранения канала бэкапов с некорректным channelId: {channelId}. Запись отклонена.");
+                return;
+            }
+
             using (var connection = _dbManager.GetConnection())
             using (var command = connection.CreateCommand())
             {
@@ -2067,6 +2073,12 @@ namespace TelegramWebDAV.Database
         /// </summary>
         public void SaveOrUpdateTelegramChannel(int accountId, long channelId, long accessHash, string title, bool isPrimary = true)
         {
+            if (channelId <= 0)
+            {
+                AppLogger.Warn("NodeRepository", $"Попытка сохранения канала с некорректным channelId: {channelId}. Запись отклонена.");
+                return;
+            }
+
             using (var connection = _dbManager.GetConnection())
             using (var transaction = connection.BeginTransaction())
             {
@@ -2077,7 +2089,7 @@ namespace TelegramWebDAV.Database
                         using (var resetCmd = connection.CreateCommand())
                         {
                             resetCmd.Transaction = transaction;
-                            resetCmd.CommandText = "UPDATE telegram_channels SET is_primary = 0 WHERE account_id = @accountId;";
+                            resetCmd.CommandText = "UPDATE telegram_channels SET is_primary = 0 WHERE account_id = @accountId; DELETE FROM telegram_channels WHERE account_id = @accountId AND channel_id = 0;";
                             resetCmd.Parameters.AddWithValue("@accountId", accountId);
                             resetCmd.ExecuteNonQuery();
                         }

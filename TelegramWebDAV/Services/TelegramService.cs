@@ -1038,6 +1038,7 @@ namespace TelegramWebDAV.Services
 
         private TL.InputPeer? _storagePeer;
         private readonly SemaphoreSlim _storageLock = new SemaphoreSlim(1, 1);
+        private string? _pendingChannelTitle;
 
         public void UpdateApiCredentials(int apiId, string apiHash, string? channelTitle = null)
         {
@@ -1053,7 +1054,7 @@ namespace TelegramWebDAV.Services
                     }
                     else
                     {
-                        _repository.SaveOrUpdateTelegramChannel(account.Id, 0, 0, channelTitle.Trim(), isPrimary: true);
+                        _pendingChannelTitle = channelTitle.Trim();
                     }
                 }
             }
@@ -1075,6 +1076,10 @@ namespace TelegramWebDAV.Services
             {
                 _repository.UpdateChannelTitle(primary.ChannelId, title.Trim());
                 _storagePeer = null;
+            }
+            else if (primary == null)
+            {
+                _pendingChannelTitle = title.Trim();
             }
         }
 
@@ -1137,7 +1142,7 @@ namespace TelegramWebDAV.Services
                 var primaryChannel = _repository?.GetPrimaryTelegramChannel(account.Id);
                 string targetTitle = primaryChannel != null && !string.IsNullOrWhiteSpace(primaryChannel.Title)
                     ? primaryChannel.Title.Trim()
-                    : "Telegram WebDAV Drive";
+                    : (!string.IsNullOrWhiteSpace(_pendingChannelTitle) ? _pendingChannelTitle.Trim() : "Telegram WebDAV Drive");
 
                 // 1. Если StorageChannelId и StorageChannelAccessHash уже сохранены в базе SQLite — мгновенно используем их без сетевых вызовов!
                 if (primaryChannel != null && primaryChannel.ChannelId != 0 && primaryChannel.AccessHash != 0)
@@ -1183,6 +1188,7 @@ namespace TelegramWebDAV.Services
                         if (chat is TL.Channel newCh)
                         {
                             _storagePeer = newCh.ToInputPeer();
+                            _pendingChannelTitle = null;
                             _repository?.SaveOrUpdateTelegramChannel(account.Id, newCh.ID, newCh.access_hash, newCh.Title, isPrimary: true);
                             AppLogger.Info("TelegramService", $"Создан новый приватный канал '{newCh.Title}' (ID: {newCh.ID}). Записан в SQLite.");
                             return _storagePeer;

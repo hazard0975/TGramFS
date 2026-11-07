@@ -282,6 +282,20 @@ CREATE INDEX IF NOT EXISTS idx_node_parts_node ON node_parts(node_id);
             {
                 // Колонка уже существует, игнорируем ошибку
             }
+
+            // Миграция: удаление устаревших фиктивных записей каналов-заглушек с channel_id = 0
+            try
+            {
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = "DELETE FROM telegram_channels WHERE channel_id = 0;";
+                    command.ExecuteNonQuery();
+                }
+            }
+            catch
+            {
+                // Игнорируем ошибку
+            }
         }
 
         private string GetSchemaFilePath()
