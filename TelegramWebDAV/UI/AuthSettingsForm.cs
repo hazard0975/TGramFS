@@ -359,27 +359,26 @@ namespace TelegramWebDAV.UI
             _txtApiId = new TextBox 
             { 
                 Text = currentAccount != null && currentAccount.ApiId > 0 ? currentAccount.ApiId.ToString() : "", 
-                Width = 380, 
                 Font = UITheme.BaseFont 
             };
-            var rowApiId = UIFactory.CreateSettingRow("API ID:", _txtApiId, 90, UIFactory.DefaultInnerWidth);
+            var rowApiId = UIFactory.CreateInputRow("API ID:", _txtApiId, 90, UIFactory.DefaultInnerWidth);
 
             _txtApiHash = new TextBox 
             { 
                 Text = currentAccount?.ApiHash ?? "", 
-                Width = 380, 
                 UseSystemPasswordChar = true, 
                 Font = UITheme.BaseFont 
             };
-            var rowApiHash = UIFactory.CreateSettingRow("API Hash:", _txtApiHash, 90, UIFactory.DefaultInnerWidth);
+            var rowApiHash = UIFactory.CreateInputRow("API Hash:", _txtApiHash, 90, UIFactory.DefaultInnerWidth);
 
-            _btnSaveApi = UIFactory.CreateButton("Сохранить параметры Telegram", (s, e) => SaveTelegramApiKeys(), width: UIFactory.DefaultInnerWidth);
+            _btnSaveApi = UIFactory.CreateButton("Сохранить параметры Telegram", (s, e) => SaveTelegramApiKeys());
             _btnSaveApi.Enabled = false;
+            var rowSaveApi = UIFactory.CreateInputRow("", _btnSaveApi, 90, UIFactory.DefaultInnerWidth);
 
             _txtApiId.TextChanged += (s, e) => UpdateSaveApiButtonState();
             _txtApiHash.TextChanged += (s, e) => UpdateSaveApiButtonState();
 
-            pnlTgApiInner.Controls.AddRange(new Control[] { rowApiId, rowApiHash, _btnSaveApi });
+            pnlTgApiInner.Controls.AddRange(new Control[] { rowApiId, rowApiHash, rowSaveApi });
             grpTelegramApi.Controls.Add(pnlTgApiInner);
 
             // 2. Рамка: Основной канал хранилища
@@ -389,35 +388,39 @@ namespace TelegramWebDAV.UI
             _txtChannelTitle = new TextBox 
             { 
                 Text = primaryChannel != null && !string.IsNullOrWhiteSpace(primaryChannel.Title) ? primaryChannel.Title : "TGramFS Storage", 
-                Width = 335, 
                 Font = UITheme.BaseFont 
             };
-            var rowPrimaryTitle = UIFactory.CreateSettingRow("Название канала:", _txtChannelTitle, 140, UIFactory.DefaultInnerWidth);
+            var rowPrimaryTitle = UIFactory.CreateInputRow("Название канала:", _txtChannelTitle, 140, UIFactory.DefaultInnerWidth);
 
             bool isPrimaryReady = primaryChannel != null && primaryChannel.ChannelId != 0;
             _lblPrimaryChannelStatus = new Label
             {
                 Text = isPrimaryReady ? "✓ Канал подключен" : "• Будет создан при первой авторизации",
-                Width = 140,
-                Height = 28,
+                Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleLeft,
                 Font = UITheme.SmallFont,
                 ForeColor = isPrimaryReady ? Color.DarkGreen : UITheme.TextMuted,
-                Margin = new Padding(0, 2, 8, 0)
+                Margin = new Padding(0, 4, 4, 4)
             };
 
-            _btnRenamePrimaryChannel = UIFactory.CreateButton("Переименовать канал", async (s, e) => await RenamePrimaryChannelAsync(), width: 335);
+            _btnRenamePrimaryChannel = UIFactory.CreateButton("Переименовать канал", async (s, e) => await RenamePrimaryChannelAsync());
+            _btnRenamePrimaryChannel.Dock = DockStyle.Fill;
             _btnRenamePrimaryChannel.Enabled = false;
 
-            var pnlPrimaryChannelRow2 = new FlowLayoutPanel
+            var pnlPrimaryChannelRow2 = new TableLayoutPanel
             {
                 Width = UIFactory.DefaultInnerWidth,
-                Height = 32,
-                FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = false,
-                Margin = new Padding(0, 4, 0, 4)
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                ColumnCount = 2,
+                RowCount = 1,
+                Margin = UITheme.RowMargin,
+                Padding = Padding.Empty
             };
-            pnlPrimaryChannelRow2.Controls.AddRange(new Control[] { _lblPrimaryChannelStatus, _btnRenamePrimaryChannel });
+            pnlPrimaryChannelRow2.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 140));
+            pnlPrimaryChannelRow2.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+            pnlPrimaryChannelRow2.Controls.Add(_lblPrimaryChannelStatus, 0, 0);
+            pnlPrimaryChannelRow2.Controls.Add(_btnRenamePrimaryChannel, 1, 0);
 
             _txtChannelTitle.TextChanged += (s, e) => UpdatePrimaryRenameButtonState();
 
@@ -634,10 +637,9 @@ namespace TelegramWebDAV.UI
             _txtBackupChannelTitle = new TextBox 
             { 
                 Text = currentBackupCh?.Title ?? "TGramFS DB Backups", 
-                Width = 335, 
                 Font = UITheme.BaseFont 
             };
-            var rowBkupTitle = UIFactory.CreateSettingRow("Название канала:", _txtBackupChannelTitle, 140, UIFactory.DefaultInnerWidth);
+            var rowBkupTitle = UIFactory.CreateInputRow("Название канала:", _txtBackupChannelTitle, 140, UIFactory.DefaultInnerWidth);
 
             bool isBackupReady = currentBackupCh != null && currentBackupCh.ChannelId != 0;
             _lblBackupChannelStatus = new Label
@@ -645,26 +647,31 @@ namespace TelegramWebDAV.UI
                 Text = isBackupReady 
                     ? "✓ Канал подключен" 
                     : "• Канал будет создан автоматически при первом бэкапе",
-                Width = 140,
-                Height = 28,
+                Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleLeft,
                 Font = UITheme.SmallFont,
                 ForeColor = isBackupReady ? Color.DarkGreen : UITheme.TextMuted,
-                Margin = new Padding(0, 2, 8, 0)
+                Margin = new Padding(0, 4, 4, 4)
             };
 
-            _btnRenameBackupChannel = UIFactory.CreateButton("Переименовать канал", async (s, e) => await RenameBackupChannelAsync(), width: 335);
+            _btnRenameBackupChannel = UIFactory.CreateButton("Переименовать канал", async (s, e) => await RenameBackupChannelAsync());
+            _btnRenameBackupChannel.Dock = DockStyle.Fill;
             _btnRenameBackupChannel.Enabled = false;
 
-            var pnlBackupChannelRow2 = new FlowLayoutPanel
+            var pnlBackupChannelRow2 = new TableLayoutPanel
             {
                 Width = UIFactory.DefaultInnerWidth,
-                Height = 32,
-                FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = false,
-                Margin = new Padding(0, 4, 0, 4)
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                ColumnCount = 2,
+                RowCount = 1,
+                Margin = UITheme.RowMargin,
+                Padding = Padding.Empty
             };
-            pnlBackupChannelRow2.Controls.AddRange(new Control[] { _lblBackupChannelStatus, _btnRenameBackupChannel });
+            pnlBackupChannelRow2.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 140));
+            pnlBackupChannelRow2.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+            pnlBackupChannelRow2.Controls.Add(_lblBackupChannelStatus, 0, 0);
+            pnlBackupChannelRow2.Controls.Add(_btnRenameBackupChannel, 1, 0);
 
             _txtBackupChannelTitle.TextChanged += (s, e) => UpdateBackupRenameButtonState();
 
