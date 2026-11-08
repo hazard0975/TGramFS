@@ -33,8 +33,8 @@ namespace TelegramWebDAV.UI
         private TabPage _tabLogs = null!;
 
         // Backup Tab
+        private GroupBox _grpBackupChannel = null!;
         private TextBox _txtBackupChannelTitle = null!;
-        private Label _lblBackupChannelStatus = null!;
         private Button _btnRenameBackupChannel = null!;
         private CheckBox _chkEnableAutoBackup = null!;
         private NumericUpDown _numDebounceMinutes = null!;
@@ -82,8 +82,8 @@ namespace TelegramWebDAV.UI
         private TextBox _txtApiId = null!;
         private TextBox _txtApiHash = null!;
         private Button _btnSaveApi = null!;
+        private GroupBox _grpPrimaryChannel = null!;
         private TextBox _txtChannelTitle = null!;
-        private Label _lblPrimaryChannelStatus = null!;
         private Button _btnRenamePrimaryChannel = null!;
         private TextBox _txtInput = null!;
         private Button _btnAction = null!;
@@ -359,7 +359,7 @@ namespace TelegramWebDAV.UI
             _txtApiId = new TextBox 
             { 
                 Text = currentAccount != null && currentAccount.ApiId > 0 ? currentAccount.ApiId.ToString() : "", 
-                Width = 380,
+                Width = 395,
                 Font = UITheme.BaseFont 
             };
             var rowApiId = UIFactory.CreateSettingRow("API ID:", _txtApiId, 90, UIFactory.DefaultInnerWidth);
@@ -367,13 +367,13 @@ namespace TelegramWebDAV.UI
             _txtApiHash = new TextBox 
             { 
                 Text = currentAccount?.ApiHash ?? "", 
-                Width = 380,
+                Width = 395,
                 UseSystemPasswordChar = true, 
                 Font = UITheme.BaseFont 
             };
             var rowApiHash = UIFactory.CreateSettingRow("API Hash:", _txtApiHash, 90, UIFactory.DefaultInnerWidth);
 
-            _btnSaveApi = UIFactory.CreateButton("Сохранить параметры Telegram", (s, e) => SaveTelegramApiKeys(), width: 380);
+            _btnSaveApi = UIFactory.CreateButton("Сохранить параметры Telegram", (s, e) => SaveTelegramApiKeys(), width: 395);
             _btnSaveApi.Enabled = false;
             var rowSaveApi = UIFactory.CreateSettingRow("", _btnSaveApi, 90, UIFactory.DefaultInnerWidth);
 
@@ -384,47 +384,25 @@ namespace TelegramWebDAV.UI
             grpTelegramApi.Controls.Add(pnlTgApiInner);
 
             // 2. Рамка: Основной канал хранилища
-            var grpPrimaryChannel = UIFactory.CreateGroupBox("Основной канал хранилища");
+            _grpPrimaryChannel = UIFactory.CreateGroupBox("Основной канал хранилища");
             var pnlPrimaryChannelInner = UIFactory.CreateVerticalContainer();
 
             _txtChannelTitle = new TextBox 
             { 
                 Text = primaryChannel != null && !string.IsNullOrWhiteSpace(primaryChannel.Title) ? primaryChannel.Title : "TGramFS Storage", 
-                Width = 340,
                 Font = UITheme.BaseFont 
             };
-            var rowPrimaryTitle = UIFactory.CreateSettingRow("Название канала:", _txtChannelTitle, 130, UIFactory.DefaultInnerWidth);
 
-            bool isPrimaryReady = primaryChannel != null && primaryChannel.ChannelId != 0;
-            _lblPrimaryChannelStatus = new Label
-            {
-                Text = isPrimaryReady ? "✓ Канал подключен" : "• Будет создан при первой авторизации",
-                Width = 130,
-                Height = 28,
-                TextAlign = ContentAlignment.MiddleLeft,
-                Font = UITheme.SmallFont,
-                ForeColor = isPrimaryReady ? Color.DarkGreen : UITheme.TextMuted,
-                Margin = new Padding(0, 2, 0, 0)
-            };
-
-            _btnRenamePrimaryChannel = UIFactory.CreateButton("Переименовать канал", async (s, e) => await RenamePrimaryChannelAsync(), width: 340);
-            _btnRenamePrimaryChannel.Margin = new Padding(0, 2, 0, 0);
+            _btnRenamePrimaryChannel = UIFactory.CreateButton("Переименовать", async (s, e) => await RenamePrimaryChannelAsync(), width: 120);
             _btnRenamePrimaryChannel.Enabled = false;
-
-            var pnlPrimaryChannelRow2 = new FlowLayoutPanel
-            {
-                Width = UIFactory.DefaultInnerWidth,
-                Height = 32,
-                FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = false,
-                Margin = new Padding(0, 4, 0, 4)
-            };
-            pnlPrimaryChannelRow2.Controls.AddRange(new Control[] { _lblPrimaryChannelStatus, _btnRenamePrimaryChannel });
 
             _txtChannelTitle.TextChanged += (s, e) => UpdatePrimaryRenameButtonState();
 
-            pnlPrimaryChannelInner.Controls.AddRange(new Control[] { rowPrimaryTitle, pnlPrimaryChannelRow2 });
-            grpPrimaryChannel.Controls.Add(pnlPrimaryChannelInner);
+            var rowPrimaryChannel = UIFactory.CreateActionInputRow("Название:", _txtChannelTitle, _btnRenamePrimaryChannel, 90, 120, UIFactory.DefaultInnerWidth);
+
+            pnlPrimaryChannelInner.Controls.Add(rowPrimaryChannel);
+            _grpPrimaryChannel.Controls.Add(pnlPrimaryChannelInner);
+            UpdatePrimaryChannelControls();
 
             // 3. Рамка: Текущая сессия Telegram
             var grpTelegramSession = UIFactory.CreateGroupBox("Текущая сессия Telegram");
@@ -521,7 +499,7 @@ namespace TelegramWebDAV.UI
 
             pnlTg.Controls.AddRange(new Control[] { 
                 grpTelegramApi, 
-                grpPrimaryChannel,
+                _grpPrimaryChannel,
                 grpTelegramSession, 
                 new Panel { Height = 10, Width = 10, Margin = Padding.Empty } 
             });
@@ -627,8 +605,8 @@ namespace TelegramWebDAV.UI
             pnlDbInner.Controls.AddRange(new Control[] { lblDbStats, _chkAutoVacuum, rowDbButtons });
             grpDb.Controls.Add(pnlDbInner);
 
-            // 2. Рамка: Канал Telegram для резервных копий
-            var grpBackupChannel = UIFactory.CreateGroupBox("Канал Telegram для резервных копий");
+            // 2. Рамка: Канал для резервных копий
+            _grpBackupChannel = UIFactory.CreateGroupBox("Канал для резервных копий");
             var pnlBackupChannelInner = UIFactory.CreateVerticalContainer();
 
             var currentBackupCh = _repository?.GetBackupChannel();
@@ -636,43 +614,19 @@ namespace TelegramWebDAV.UI
             _txtBackupChannelTitle = new TextBox 
             { 
                 Text = currentBackupCh?.Title ?? "TGramFS DB Backups", 
-                Width = 340,
                 Font = UITheme.BaseFont 
             };
-            var rowBkupTitle = UIFactory.CreateSettingRow("Название канала:", _txtBackupChannelTitle, 130, UIFactory.DefaultInnerWidth);
 
-            bool isBackupReady = currentBackupCh != null && currentBackupCh.ChannelId != 0;
-            _lblBackupChannelStatus = new Label
-            {
-                Text = isBackupReady 
-                    ? "✓ Канал подключен" 
-                    : "• Канал будет создан автоматически при первом бэкапе",
-                Width = 130,
-                Height = 28,
-                TextAlign = ContentAlignment.MiddleLeft,
-                Font = UITheme.SmallFont,
-                ForeColor = isBackupReady ? Color.DarkGreen : UITheme.TextMuted,
-                Margin = new Padding(0, 2, 0, 0)
-            };
-
-            _btnRenameBackupChannel = UIFactory.CreateButton("Переименовать канал", async (s, e) => await RenameBackupChannelAsync(), width: 340);
-            _btnRenameBackupChannel.Margin = new Padding(0, 2, 0, 0);
+            _btnRenameBackupChannel = UIFactory.CreateButton("Переименовать", async (s, e) => await RenameBackupChannelAsync(), width: 120);
             _btnRenameBackupChannel.Enabled = false;
-
-            var pnlBackupChannelRow2 = new FlowLayoutPanel
-            {
-                Width = UIFactory.DefaultInnerWidth,
-                Height = 32,
-                FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = false,
-                Margin = new Padding(0, 4, 0, 4)
-            };
-            pnlBackupChannelRow2.Controls.AddRange(new Control[] { _lblBackupChannelStatus, _btnRenameBackupChannel });
 
             _txtBackupChannelTitle.TextChanged += (s, e) => UpdateBackupRenameButtonState();
 
-            pnlBackupChannelInner.Controls.AddRange(new Control[] { rowBkupTitle, pnlBackupChannelRow2 });
-            grpBackupChannel.Controls.Add(pnlBackupChannelInner);
+            var rowBackupChannel = UIFactory.CreateActionInputRow("Название:", _txtBackupChannelTitle, _btnRenameBackupChannel, 90, 120, UIFactory.DefaultInnerWidth);
+
+            pnlBackupChannelInner.Controls.Add(rowBackupChannel);
+            _grpBackupChannel.Controls.Add(pnlBackupChannelInner);
+            UpdateBackupChannelControls();
 
             // 2. Рамка: Автоматический бэкап
             var grpAutoBackup = UIFactory.CreateGroupBox("Политика автоматического бэкапа");
@@ -897,7 +851,7 @@ namespace TelegramWebDAV.UI
 
             pnlBackup.Controls.AddRange(new Control[] {
                 grpDb,
-                grpBackupChannel,
+                _grpBackupChannel,
                 grpAutoBackup,
                 grpBackupActions,
                 new Panel { Height = 10, Width = 10, Margin = Padding.Empty }
@@ -1185,7 +1139,7 @@ namespace TelegramWebDAV.UI
             var primary = _repository?.GetPrimaryTelegramChannel(account?.Id);
 
             _btnRenamePrimaryChannel.Enabled = false;
-            _btnRenamePrimaryChannel.Text = "Переименование...";
+            _btnRenamePrimaryChannel.Text = "Сохранение...";
             try
             {
                 if (primary != null && primary.ChannelId != 0)
@@ -1218,7 +1172,7 @@ namespace TelegramWebDAV.UI
             }
             finally
             {
-                _btnRenamePrimaryChannel.Text = "Переименовать канал";
+                _btnRenamePrimaryChannel.Text = "Переименовать";
                 UpdatePrimaryChannelControls();
             }
         }
@@ -1240,7 +1194,7 @@ namespace TelegramWebDAV.UI
             var currentBk = _repository?.GetBackupChannel();
 
             _btnRenameBackupChannel.Enabled = false;
-            _btnRenameBackupChannel.Text = "Переименование...";
+            _btnRenameBackupChannel.Text = "Сохранение...";
             try
             {
                 if (currentBk != null && currentBk.ChannelId != 0)
@@ -1287,7 +1241,7 @@ namespace TelegramWebDAV.UI
             }
             finally
             {
-                _btnRenameBackupChannel.Text = "Переименовать канал";
+                _btnRenameBackupChannel.Text = "Переименовать";
                 UpdateBackupChannelControls();
             }
         }
@@ -1314,8 +1268,12 @@ namespace TelegramWebDAV.UI
             var primary = _repository?.GetPrimaryTelegramChannel(account?.Id);
             bool isPrimaryReady = primary != null && primary.ChannelId != 0;
 
-            _lblPrimaryChannelStatus.Text = isPrimaryReady ? "✓ Канал подключен" : "• Будет создан при первой авторизации";
-            _lblPrimaryChannelStatus.ForeColor = isPrimaryReady ? Color.DarkGreen : UITheme.TextMuted;
+            if (_grpPrimaryChannel != null)
+            {
+                _grpPrimaryChannel.Text = isPrimaryReady 
+                    ? "Основной канал хранилища (✓ подключен)" 
+                    : "Основной канал хранилища (будет создан при авторизации)";
+            }
 
             UpdatePrimaryRenameButtonState();
         }
@@ -1336,8 +1294,12 @@ namespace TelegramWebDAV.UI
             var currentBk = _repository?.GetBackupChannel();
             bool isBackupReady = currentBk != null && currentBk.ChannelId != 0;
 
-            _lblBackupChannelStatus.Text = isBackupReady ? "✓ Канал подключен" : "• Будет создан при первом бэкапе";
-            _lblBackupChannelStatus.ForeColor = isBackupReady ? Color.DarkGreen : UITheme.TextMuted;
+            if (_grpBackupChannel != null)
+            {
+                _grpBackupChannel.Text = isBackupReady 
+                    ? "Канал для резервных копий (✓ подключен)" 
+                    : "Канал для резервных копий (будет создан при первом бэкапе)";
+            }
 
             UpdateBackupRenameButtonState();
         }

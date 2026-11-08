@@ -126,6 +126,47 @@ namespace TelegramWebDAV.UI
         }
 
         /// <summary>
+        /// Создает компактную строку с меткой заголовка, полем ввода и кнопкой действия в одну линию.
+        /// Гарантирует фиксированные размеры и единый правый край без схлопывания.
+        /// </summary>
+        public static FlowLayoutPanel CreateActionInputRow(string labelText, TextBox textBox, Button button, int labelWidth = 90, int buttonWidth = 120, int width = DefaultInnerWidth)
+        {
+            var pnl = new FlowLayoutPanel
+            {
+                Width = width,
+                Height = 32,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false,
+                Margin = UITheme.RowMargin,
+                Padding = Padding.Empty
+            };
+
+            var lbl = new Label
+            {
+                Text = labelText,
+                Width = labelWidth,
+                Height = 26,
+                Font = UITheme.BaseFont,
+                ForeColor = UITheme.TextMain,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Margin = new Padding(0, 2, 0, 0)
+            };
+
+            int textWidth = width - labelWidth - buttonWidth - 8;
+            textBox.Width = textWidth;
+            textBox.Height = 24;
+            textBox.Font = UITheme.BaseFont;
+            textBox.Margin = new Padding(0, 3, 8, 0);
+
+            button.Width = buttonWidth;
+            button.Height = 26;
+            button.Margin = new Padding(0, 1, 0, 0);
+
+            pnl.Controls.AddRange(new Control[] { lbl, textBox, button });
+            return pnl;
+        }
+
+        /// <summary>
         /// Создает числовое поле NumericUpDown с компактной шириной и единым шрифтом.
         /// </summary>
         public static NumericUpDown CreateNumericInput(decimal min, decimal max, decimal val, int width = UITheme.InputNumberWidth, int decimalPlaces = 0)
