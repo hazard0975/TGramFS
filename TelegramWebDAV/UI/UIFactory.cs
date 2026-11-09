@@ -145,22 +145,23 @@ namespace TelegramWebDAV.UI
             {
                 Text = labelText,
                 Width = labelWidth,
-                Height = 26,
+                Height = 23,
                 Font = UITheme.BaseFont,
                 ForeColor = UITheme.TextMain,
                 TextAlign = ContentAlignment.MiddleLeft,
-                Margin = new Padding(0, 2, 0, 0)
+                Margin = new Padding(0, 3, 0, 0)
             };
 
             int textWidth = width - labelWidth - buttonWidth - 8;
             textBox.Width = textWidth;
-            textBox.Height = 24;
+            textBox.Height = 23;
             textBox.Font = UITheme.BaseFont;
             textBox.Margin = new Padding(0, 3, 8, 0);
 
             button.Width = buttonWidth;
-            button.Height = 26;
-            button.Margin = new Padding(0, 1, 0, 0);
+            button.Height = 23;
+            button.MinimumSize = new Size(buttonWidth, 23);
+            button.Margin = new Padding(0, 3, 0, 0);
 
             pnl.Controls.AddRange(new Control[] { lbl, textBox, button });
             return pnl;
