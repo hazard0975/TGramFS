@@ -421,11 +421,13 @@ namespace TelegramWebDAV.UI
             };
 
             // Информационная карточка профиля пользователя Telegram
+            int profileCardWidth = UIFactory.DefaultInnerWidth - 135; // 460 px при 96 DPI: выравнивание по правому краю поля ввода (левому краю кнопки [Переименовать])
             _pnlUserDetails = new TableLayoutPanel
             {
-                Width = UIFactory.DefaultInnerWidth,
+                Width = profileCardWidth,
+                MinimumSize = new Size(profileCardWidth, 0),
                 AutoSize = true,
-                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                AutoSizeMode = AutoSizeMode.GrowOnly,
                 ColumnCount = 2,
                 RowCount = 6,
                 Margin = new Padding(0, 0, 0, 8),
