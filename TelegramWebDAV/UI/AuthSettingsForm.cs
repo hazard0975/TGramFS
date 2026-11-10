@@ -128,6 +128,7 @@ namespace TelegramWebDAV.UI
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
             this.StartPosition = FormStartPosition.CenterScreen;
+            this.AutoScaleMode = AutoScaleMode.Dpi;
             this.Font = UITheme.BaseFont;
 
             try

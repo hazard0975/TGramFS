@@ -126,45 +126,67 @@ namespace TelegramWebDAV.UI
         }
 
         /// <summary>
-        /// Создает компактную строку с меткой заголовка, полем ввода и кнопкой действия в одну линию.
-        /// Гарантирует фиксированные размеры и единый правый край без схлопывания.
+        /// Создает строку из названия, поля ввода и кнопки действия в одну линию.
+        /// Использует TableLayoutPanel для надежной DPI-адаптации и выравнивания базовой линии шрифта.
         /// </summary>
-        public static FlowLayoutPanel CreateActionInputRow(string labelText, TextBox textBox, Button button, int labelWidth = 90, int buttonWidth = 120, int width = DefaultInnerWidth)
+        public static TableLayoutPanel CreateActionInputRow(string labelText, TextBox textBox, Button button, int labelWidth = 90, int buttonWidth = 120, int width = DefaultInnerWidth)
         {
-            var pnl = new FlowLayoutPanel
+            var tbl = new TableLayoutPanel
             {
                 Width = width,
-                Height = 32,
-                FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = false,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                ColumnCount = 3,
+                RowCount = 1,
                 Margin = UITheme.RowMargin,
                 Padding = Padding.Empty
             };
+            int textWidth = width - labelWidth - buttonWidth;
+            tbl.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, labelWidth));
+            tbl.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, textWidth));
+            tbl.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, buttonWidth));
 
             var lbl = new Label
             {
                 Text = labelText,
-                Width = labelWidth,
-                Height = 23,
+                AutoSize = true,
                 Font = UITheme.BaseFont,
                 ForeColor = UITheme.TextMain,
+                Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleLeft,
-                Margin = new Padding(0, 3, 0, 0)
+                Margin = new Padding(0, 2, 4, 2)
             };
 
-            int textWidth = width - labelWidth - buttonWidth - 8;
-            textBox.Width = textWidth;
-            textBox.Height = 23;
             textBox.Font = UITheme.BaseFont;
-            textBox.Margin = new Padding(0, 3, 8, 0);
+            textBox.Width = textWidth - 8;
+            textBox.Margin = new Padding(0, 2, 8, 2);
+            textBox.Anchor = AnchorStyles.Left;
 
+            int targetHeight = textBox.PreferredHeight > 0 ? textBox.PreferredHeight : UITheme.ButtonHeightSmall;
             button.Width = buttonWidth;
-            button.Height = 23;
-            button.MinimumSize = new Size(buttonWidth, 23);
-            button.Margin = new Padding(0, 3, 0, 0);
+            button.Height = targetHeight;
+            button.MinimumSize = new Size(buttonWidth, targetHeight);
+            button.MaximumSize = new Size(buttonWidth * 2, targetHeight);
+            button.Margin = new Padding(0, 2, 0, 2);
+            button.Anchor = AnchorStyles.Left;
 
-            pnl.Controls.AddRange(new Control[] { lbl, textBox, button });
-            return pnl;
+            // Динамическая привязка высоты кнопки к системной высоте TextBox при любом DPI масштабировании
+            tbl.Layout += (s, e) =>
+            {
+                int currentBoxHeight = textBox.Height > 0 ? textBox.Height : textBox.PreferredHeight;
+                if (currentBoxHeight > 0 && button.Height != currentBoxHeight)
+                {
+                    button.Height = currentBoxHeight;
+                    button.MinimumSize = new Size(buttonWidth, currentBoxHeight);
+                    button.MaximumSize = new Size(buttonWidth * 2, currentBoxHeight);
+                }
+            };
+
+            tbl.Controls.Add(lbl, 0, 0);
+            tbl.Controls.Add(textBox, 1, 0);
+            tbl.Controls.Add(button, 2, 0);
+
+            return tbl;
         }
 
         /// <summary>
