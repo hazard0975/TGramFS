@@ -126,7 +126,7 @@ namespace TelegramWebDAV.UI
             this.Text = "TGramFS — Настройки";
             this.AutoScaleDimensions = new SizeF(96F, 96F);
             this.AutoScaleMode = AutoScaleMode.Dpi;
-            this.ClientSize = new Size(625, 660);
+            this.ClientSize = new Size(680, 660);
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
             this.StartPosition = FormStartPosition.CenterScreen;
