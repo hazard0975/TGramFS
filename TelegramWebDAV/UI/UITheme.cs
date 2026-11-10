@@ -24,9 +24,9 @@ namespace TelegramWebDAV.UI
         public static readonly Color BackgroundLight = Color.FromArgb(248, 249, 250);
 
         // === Размеры контролов (px при базовых 96 DPI / 100%) ===
-        public const int ContentWidth = 510;
-        public const int ButtonHeightDefault = 25; // 15 DLU — стандартная кнопка диалога Windows (23-25 px при 96 DPI)
-        public const int ButtonHeightPrimary = 27; // 16-17 DLU — акцентная кнопка диалога
+        public const int ContentWidth = 560;
+        public const int ButtonHeightDefault = 28; // Стандартная высота кнопок действий Windows 10/11 (28-30 px)
+        public const int ButtonHeightPrimary = 30; // Акцентная кнопка диалога
         public const int ButtonHeightSmall = 23;   // 14 DLU — канонический стандарт Microsoft Windows UX для однострочных элементов ввода и ассоциированных кнопок при 96 DPI
         public const int InputHeight = 23;         // 14 DLU — системная высота однострочного поля ввода (TextBox / ComboBox) при 96 DPI
         public const int InputNumberWidth = 90;

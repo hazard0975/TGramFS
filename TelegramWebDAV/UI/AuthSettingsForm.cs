@@ -124,11 +124,12 @@ namespace TelegramWebDAV.UI
         private void InitializeComponents()
         {
             this.Text = "TGramFS — Настройки";
-            this.Size = new Size(570, 640);
+            this.AutoScaleDimensions = new SizeF(96F, 96F);
+            this.AutoScaleMode = AutoScaleMode.Dpi;
+            this.ClientSize = new Size(625, 660);
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
             this.StartPosition = FormStartPosition.CenterScreen;
-            this.AutoScaleMode = AutoScaleMode.Dpi;
             this.Font = UITheme.BaseFont;
 
             try
@@ -357,10 +358,12 @@ namespace TelegramWebDAV.UI
             var currentAccount = _repository.GetActiveTelegramAccount();
             var primaryChannel = _repository.GetPrimaryTelegramChannel(currentAccount?.Id);
 
+            int apiInputWidth = UIFactory.DefaultInnerWidth - 90;
+
             _txtApiId = new TextBox 
             { 
                 Text = currentAccount != null && currentAccount.ApiId > 0 ? currentAccount.ApiId.ToString() : "", 
-                Width = 395,
+                Width = apiInputWidth,
                 Font = UITheme.BaseFont 
             };
             var rowApiId = UIFactory.CreateSettingRow("API ID:", _txtApiId, 90, UIFactory.DefaultInnerWidth);
@@ -368,13 +371,13 @@ namespace TelegramWebDAV.UI
             _txtApiHash = new TextBox 
             { 
                 Text = currentAccount?.ApiHash ?? "", 
-                Width = 395,
+                Width = apiInputWidth,
                 UseSystemPasswordChar = true, 
                 Font = UITheme.BaseFont 
             };
             var rowApiHash = UIFactory.CreateSettingRow("API Hash:", _txtApiHash, 90, UIFactory.DefaultInnerWidth);
 
-            _btnSaveApi = UIFactory.CreateButton("Сохранить параметры Telegram", (s, e) => SaveTelegramApiKeys(), width: 395);
+            _btnSaveApi = UIFactory.CreateButton("Сохранить параметры Telegram", (s, e) => SaveTelegramApiKeys(), width: apiInputWidth);
             _btnSaveApi.Enabled = false;
             var rowSaveApi = UIFactory.CreateSettingRow("", _btnSaveApi, 90, UIFactory.DefaultInnerWidth);
 
@@ -394,12 +397,12 @@ namespace TelegramWebDAV.UI
                 Font = UITheme.BaseFont 
             };
 
-            _btnRenamePrimaryChannel = UIFactory.CreateButton("Переименовать", async (s, e) => await RenamePrimaryChannelAsync(), width: 120);
+            _btnRenamePrimaryChannel = UIFactory.CreateButton("Переименовать", async (s, e) => await RenamePrimaryChannelAsync(), width: 135);
             _btnRenamePrimaryChannel.Enabled = false;
 
             _txtChannelTitle.TextChanged += (s, e) => UpdatePrimaryRenameButtonState();
 
-            var rowPrimaryChannel = UIFactory.CreateActionInputRow("Название:", _txtChannelTitle, _btnRenamePrimaryChannel, 90, 120, UIFactory.DefaultInnerWidth);
+            var rowPrimaryChannel = UIFactory.CreateActionInputRow("Название:", _txtChannelTitle, _btnRenamePrimaryChannel, 90, 135, UIFactory.DefaultInnerWidth);
 
             pnlPrimaryChannelInner.Controls.Add(rowPrimaryChannel);
             _grpPrimaryChannel.Controls.Add(pnlPrimaryChannelInner);
@@ -618,12 +621,12 @@ namespace TelegramWebDAV.UI
                 Font = UITheme.BaseFont 
             };
 
-            _btnRenameBackupChannel = UIFactory.CreateButton("Переименовать", async (s, e) => await RenameBackupChannelAsync(), width: 120);
+            _btnRenameBackupChannel = UIFactory.CreateButton("Переименовать", async (s, e) => await RenameBackupChannelAsync(), width: 135);
             _btnRenameBackupChannel.Enabled = false;
 
             _txtBackupChannelTitle.TextChanged += (s, e) => UpdateBackupRenameButtonState();
 
-            var rowBackupChannel = UIFactory.CreateActionInputRow("Название:", _txtBackupChannelTitle, _btnRenameBackupChannel, 90, 120, UIFactory.DefaultInnerWidth);
+            var rowBackupChannel = UIFactory.CreateActionInputRow("Название:", _txtBackupChannelTitle, _btnRenameBackupChannel, 90, 135, UIFactory.DefaultInnerWidth);
 
             pnlBackupChannelInner.Controls.Add(rowBackupChannel);
             _grpBackupChannel.Controls.Add(pnlBackupChannelInner);

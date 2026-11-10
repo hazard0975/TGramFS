@@ -10,7 +10,7 @@ namespace TelegramWebDAV.UI
     /// </summary>
     public static class UIFactory
     {
-        public const int DefaultInnerWidth = 485;
+        public const int DefaultInnerWidth = 535;
 
         /// <summary>
         /// Создает рамку GroupBox с защитой от сжатия (MinimumSize) и компактными отступами.
@@ -129,7 +129,7 @@ namespace TelegramWebDAV.UI
         /// Создает строку из названия, поля ввода и кнопки действия в одну линию.
         /// Использует TableLayoutPanel для надежной DPI-адаптации и выравнивания базовой линии шрифта.
         /// </summary>
-        public static TableLayoutPanel CreateActionInputRow(string labelText, TextBox textBox, Button button, int labelWidth = 90, int buttonWidth = 120, int width = DefaultInnerWidth)
+        public static TableLayoutPanel CreateActionInputRow(string labelText, TextBox textBox, Button button, int labelWidth = 90, int buttonWidth = 135, int width = DefaultInnerWidth)
         {
             var tbl = new TableLayoutPanel
             {
@@ -322,21 +322,21 @@ namespace TelegramWebDAV.UI
             var pnl = new TableLayoutPanel
             {
                 Dock = DockStyle.Bottom,
-                Height = 40,
+                Height = 44,
                 ColumnCount = 3,
                 RowCount = 1,
                 Padding = new Padding(12, 6, 22, 6),
                 BackColor = SystemColors.Control
             };
             pnl.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-            pnl.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 92f));
+            pnl.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 115f));
             if (closeBtn != null)
             {
-                pnl.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 92f));
+                pnl.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 115f));
                 closeBtn.Dock = DockStyle.Fill;
                 closeBtn.Font = UITheme.BaseFont;
-                closeBtn.Height = 27;
-                closeBtn.MinimumSize = new Size(88, 27);
+                closeBtn.Height = 28;
+                closeBtn.MinimumSize = new Size(110, 28);
                 closeBtn.Margin = new Padding(4, 0, 0, 0);
                 pnl.Controls.Add(closeBtn, 2, 0);
             }
@@ -347,8 +347,8 @@ namespace TelegramWebDAV.UI
 
             saveBtn.Dock = DockStyle.Fill;
             saveBtn.Font = UITheme.BaseFont;
-            saveBtn.Height = 27;
-            saveBtn.MinimumSize = new Size(88, 27);
+            saveBtn.Height = 28;
+            saveBtn.MinimumSize = new Size(110, 28);
             saveBtn.Margin = new Padding(0, 0, 4, 0);
             pnl.Controls.Add(saveBtn, 1, 0);
 
