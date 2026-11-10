@@ -432,7 +432,7 @@ namespace TelegramWebDAV.UI
                 Padding = new Padding(8, 6, 8, 6),
                 BackColor = UITheme.BackgroundLight
             };
-            _pnlUserDetails.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150));
+            _pnlUserDetails.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             _pnlUserDetails.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
 
             Label createDetailHeader(string title) => new Label
@@ -443,7 +443,7 @@ namespace TelegramWebDAV.UI
                 ForeColor = UITheme.TextMain,
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleLeft,
-                Margin = new Padding(0, 3, 4, 3)
+                Margin = new Padding(0, 3, 10, 3)
             };
 
             Label createDetailValue() => new Label
