@@ -53,6 +53,7 @@ namespace TelegramWebDAV.UI
 
         private const int BaseClientWidth = 580;
         private const int BaseClientHeight = 500;
+        private const int BaseIntervalComboWidth = 130;
 
         private void InitializeComponent()
         {
@@ -623,11 +624,7 @@ namespace TelegramWebDAV.UI
         private void UpdateIntervalComboWidth(float dpiScale)
         {
             if (_cmbInterval == null) return;
-            int textWidth = TextRenderer.MeasureText("Еженедельно", _cmbInterval.Font).Width;
-            int scrollArrowWidth = SystemInformation.VerticalScrollBarWidth;
-            int measuredWidth = textWidth + scrollArrowWidth + 28;
-            int scaledWidth = (int)Math.Round(165 * dpiScale);
-            _cmbInterval.Width = Math.Max(measuredWidth, scaledWidth);
+            _cmbInterval.Width = (int)Math.Round(BaseIntervalComboWidth * dpiScale);
         }
 
         protected override void OnDpiChanged(DpiChangedEventArgs e)
