@@ -25,9 +25,11 @@ namespace TelegramWebDAV.UI
         private readonly WebDavServer _webDavServer;
         private readonly VirtualDriveManager _virtualDriveManager;
         private readonly DatabaseBackupService? _backupService;
+        private readonly UpdateService _updateService;
         private readonly TrayProgressOverlay _progressOverlay;
         private AppSettings _settings;
         private AuthSettingsForm? _settingsForm;
+        private AboutForm? _aboutForm;
 
         public TrayContext(
             ConfigManager configManager,
@@ -43,6 +45,7 @@ namespace TelegramWebDAV.UI
             _webDavServer = webDavServer;
             _virtualDriveManager = virtualDriveManager;
             _backupService = backupService;
+            _updateService = new UpdateService(_configManager);
             _settings = _configManager.Load();
             _progressOverlay = new TrayProgressOverlay
             {
@@ -123,6 +126,22 @@ namespace TelegramWebDAV.UI
             {
                 AutoStartHelper.SetAutoStart(true);
             }
+
+            _updateService.OnUpdateAvailable += (updateInfo) =>
+            {
+                _notifyIcon.ShowBalloonTip(
+                    6000,
+                    "Доступно обновление TGramFS",
+                    $"Вышла новая версия {updateInfo.TagName}! Нажмите здесь для подробностей.",
+                    ToolTipIcon.Info);
+            };
+
+            _notifyIcon.BalloonTipClicked += (s, e) =>
+            {
+                ShowAboutDialog();
+            };
+
+            _updateService.StartPeriodicChecks();
 
             _telegramService.OnUploadProgress += (fileName, current, total) =>
             {
@@ -253,12 +272,43 @@ namespace TelegramWebDAV.UI
 
             menu.Items.Add(new ToolStripSeparator());
 
+            // О программе (Инфо)
+            var itemAbout = new ToolStripMenuItem("О программе");
+            itemAbout.Click += (s, e) => ShowAboutDialog();
+            menu.Items.Add(itemAbout);
+
             // Выход
             var itemExit = new ToolStripMenuItem("Выход");
             itemExit.Click += async (s, e) => await ExitApplicationAsync();
             menu.Items.Add(itemExit);
 
             _notifyIcon.ContextMenuStrip = menu;
+        }
+
+        private void ShowAboutDialog()
+        {
+            if (_aboutForm != null && !_aboutForm.IsDisposed)
+            {
+                if (_aboutForm.WindowState == FormWindowState.Minimized)
+                {
+                    _aboutForm.WindowState = FormWindowState.Normal;
+                }
+                _aboutForm.BringToFront();
+                _aboutForm.Activate();
+                return;
+            }
+
+            _aboutForm = new AboutForm(_configManager, _updateService, _telegramService, () =>
+            {
+                _ = ExitApplicationAsync();
+            });
+            _aboutForm.FormClosed += (s, e) =>
+            {
+                _aboutForm = null;
+            };
+            _aboutForm.Show();
+            _aboutForm.BringToFront();
+            _aboutForm.Activate();
         }
 
         private void ShowSettingsDialog()
@@ -503,6 +553,7 @@ namespace TelegramWebDAV.UI
             _progressOverlay.Dispose();
             _virtualDriveManager.Dispose();
             _webDavServer?.Stop();
+            _updateService?.Dispose();
             AppLogger.Shutdown();
             Application.Exit();
         }

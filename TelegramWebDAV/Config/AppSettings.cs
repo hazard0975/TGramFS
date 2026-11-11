@@ -14,6 +14,7 @@ namespace TelegramWebDAV.Config
         public ServerSettings Server { get; set; } = new ServerSettings();
         public DatabaseSettings Database { get; set; } = new DatabaseSettings();
         public LoggingSettings Logging { get; set; } = new LoggingSettings();
+        public UpdateSettings Updates { get; set; } = new UpdateSettings();
 
         // Обратная совместимость
         public WebDavSettings WebDav => new WebDavSettings
@@ -103,5 +104,13 @@ namespace TelegramWebDAV.Config
 
         public int MaxLogFileSizeMb { get; set; } = 5;
         public int MaxArchivedFiles { get; set; } = 3;
+    }
+
+    public class UpdateSettings
+    {
+        public bool AutoCheckUpdates { get; set; } = true;
+        public string CheckInterval { get; set; } = "Daily"; // Daily, Weekly, Monthly
+        public DateTime? LastCheckTime { get; set; } = null;
+        public string GitHubRepo { get; set; } = "hazard0975/TGramFS";
     }
 }
