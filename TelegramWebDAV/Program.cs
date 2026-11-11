@@ -23,6 +23,9 @@ namespace TelegramWebDAV
             // Принудительно фиксируем рабочую директорию на папку с исполняемым файлом
             Directory.SetCurrentDirectory(AppDomain.CurrentDomain.BaseDirectory);
 
+            // Регистрация провайдера кодовых страниц для поддержки legacy OEM/ANSI кодировок (866, 1251 и др.) в .NET 8
+            System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+
             // Обработка запроса на применение твиков реестра с повышенными привилегиями (UAC)
             if (args != null && args.Length > 0 && args[0] == "--apply-registry-fix")
             {

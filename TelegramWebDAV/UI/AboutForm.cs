@@ -546,31 +546,10 @@ namespace TelegramWebDAV.UI
                 _lblProgress.Text = $"Загрузка: {mbReceived:F1} МБ из {mbTotal:F1} МБ ({p.ProgressPercentage}%)";
             });
 
+            string tempFile;
             try
             {
-                string tempFile = await _updateService.DownloadUpdateAsync(_foundUpdate, progress, _downloadCts.Token);
-
-                _lblProgress.Text = "Загрузка завершена! Подготовка к перезапуску...";
-
-                var confirm = MessageBox.Show(
-                    $"Обновление {_foundUpdate.TagName} успешно загружено!\n\n" +
-                    "Для завершения установки старая версия программы будет закрыта и запустится новая.\n\n" +
-                    "Перезапустить программу прямо сейчас?",
-                    "Обновление готово",
-                    MessageBoxButtons.YesNo,
-                    MessageBoxIcon.Question);
-
-                if (confirm == DialogResult.Yes)
-                {
-                    _updateService.ApplyUpdateAndRestart(tempFile, _onExitRequested);
-                }
-                else
-                {
-                    _lblProgress.Text = "Обновление отложено пользователем.";
-                    _btnDownloadAndInstall.Enabled = true;
-                    _btnCancelDownload.Visible = false;
-                    _btnCheckNow.Enabled = true;
-                }
+                tempFile = await _updateService.DownloadUpdateAsync(_foundUpdate, progress, _downloadCts.Token);
             }
             catch (OperationCanceledException)
             {
@@ -580,13 +559,54 @@ namespace TelegramWebDAV.UI
                 _btnCancelDownload.Visible = false;
                 _btnDownloadAndInstall.Enabled = true;
                 _btnCheckNow.Enabled = true;
+                return;
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка при скачивании обновления: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Ошибка при скачивании обновления: {ex.Message}", "Ошибка скачивания", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 _lblProgress.Text = $"Ошибка загрузки: {ex.Message}";
                 _btnCancelDownload.Visible = false;
                 _btnDownloadAndInstall.Enabled = true;
+                _btnCheckNow.Enabled = true;
+                return;
+            }
+
+            _lblProgress.Text = "Загрузка завершена! Ожидание подтверждения...";
+
+            var confirm = MessageBox.Show(
+                $"Обновление {_foundUpdate.TagName} успешно загружено!\n\n" +
+                "Для завершения установки старая версия программы будет закрыта и запустится новая.\n\n" +
+                "Перезапустить программу прямо сейчас?",
+                "Обновление готово",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            if (confirm == DialogResult.Yes)
+            {
+                try
+                {
+                    _lblProgress.Text = "Запуск новой версии...";
+                    _updateService.ApplyUpdateAndRestart(tempFile, _onExitRequested);
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Error("AboutForm", $"Ошибка запуска новой версии: {ex.Message}", ex);
+                    MessageBox.Show(
+                        $"Не удалось запустить скрипт обновления:\n{ex.Message}\n\nФайл новой версии сохранен по пути:\n{tempFile}",
+                        "Ошибка применения обновления",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                    _lblProgress.Text = "Ошибка применения обновления.";
+                    _btnDownloadAndInstall.Enabled = true;
+                    _btnCancelDownload.Visible = false;
+                    _btnCheckNow.Enabled = true;
+                }
+            }
+            else
+            {
+                _lblProgress.Text = "Обновление отложено пользователем.";
+                _btnDownloadAndInstall.Enabled = true;
+                _btnCancelDownload.Visible = false;
                 _btnCheckNow.Enabled = true;
             }
         }

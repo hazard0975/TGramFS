@@ -332,7 +332,7 @@ start """" %NEW_EXE%
 del ""%~f0"" > nul 2>&1
 ";
 
-            File.WriteAllText(scriptPath, scriptContent, System.Text.Encoding.GetEncoding(866)); // OEM кодировка для cmd
+            File.WriteAllText(scriptPath, scriptContent, new System.Text.UTF8Encoding(false)); // UTF-8 без BOM для cmd с chcp 65001
 
             AppLogger.Info("UpdateService", $"Создан скрипт запуска новой версии {scriptPath}. Старый процесс закрывается, затем запустится {newExePath}.");
 
