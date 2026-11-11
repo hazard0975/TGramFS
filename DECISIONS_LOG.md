@@ -3609,6 +3609,38 @@ _telegramService.UpdateSettings(_settings);
 4. **Синхронизация при смене DPI (`OnDpiChanged`)**:
    - Метод `UpdateHeaderIconSize(scale)` подключен в обработчик `OnDpiChanged`, обеспечивая пересчет габаритов иконки при перетаскивании окна между мониторами.
 
+---
+
+## 112. Встраивание icon.ico в тело сборки (EmbeddedResource) и централизованный AppIconHelper
+
+### Проблема и симптомы:
+При запуске приложения из каталога, где находится только один исполняемый файл `TGramFS.exe` (без внешнего файла `icon.ico`), иконка в окне «О программе» становилась размытой и пикселизованной («мыло»). На экранах с масштабом 150%–175% размытие было особенно заметно, так как изображение растягивалось до 112 px.
+
+### Первопричина:
+По умолчанию код искал внешний файл `icon.ico` рядом с бинарником (`AppDomain.CurrentDomain.BaseDirectory`). Если этот файл отсутствовал, срабатывал фолбэк на `Icon.ExtractAssociatedIcon(exe)`. Внутренний механизм Windows API для `ExtractAssociatedIcon` возвращает исключительно базовый значок 32x32 px. При отрисовке в `_picIcon` размером 112x112 px картинка 32x32 интерполировалась и теряла резкость.
+
+### Принятое решение:
+1. **Встраивание ресурса в бинарник (`TelegramWebDAV.csproj`)**:
+   - Файл `icon.ico` со всеми его 6 слоями (`16x16`, `32x32`, `48x48`, `64x64`, `128x128`, `256x256`) встроен непосредственно в тело сборки как `EmbeddedResource` с фиксированным логическим именем `TelegramWebDAV.icon.ico`:
+     ```xml
+     <ItemGroup>
+       <EmbeddedResource Include="icon.ico">
+         <LogicalName>TelegramWebDAV.icon.ico</LogicalName>
+       </EmbeddedResource>
+     </ItemGroup>
+     ```
+2. **Создание централизованного помощника `AppIconHelper.cs`**:
+   - Реализованы методы:
+     - `GetAppIcon()`: извлекает полный многослойный `Icon` из `GetManifestResourceStream("TelegramWebDAV.icon.ico")` без обращения к файловой системе, с фолбэком на локальный файл и `ExtractAssociatedIcon`.
+     - `GetAppIconBitmap(desiredWidth, desiredHeight)`: извлекает нативный слой нужного разрешения (`128 x 128 px` или `256 x 256 px`) напрямую из ресурса, предотвращая интерполяционные артефакты при масштабировании.
+3. **Единый стандарт для всех UI-компонентов**:
+   - `AboutForm.cs`: шапка окна загружает четкий растр `AppIconHelper.GetAppIconBitmap(128, 128)` напрямую из сборки, а заголовок окна получает `this.Icon = AppIconHelper.GetAppIcon()`.
+   - `TrayContext.cs`: значок трея Windows инициализируется через `AppIconHelper.GetAppIcon()`.
+   - `AuthSettingsForm.cs`: заголовок окна настроек получает `this.Icon = AppIconHelper.GetAppIcon()`.
+4. **Полная переносимость (Single-File / Zero-External-Assets)**:
+   - Исполняемый файл теперь полностью автономен: даже если в каталоге лежит только один бинарник `TGramFS.exe`, все значки приложения отображаются в максимальном Ultra-HD качестве при любом масштабировании экрана (100%–200%).
+
+
 
 
 

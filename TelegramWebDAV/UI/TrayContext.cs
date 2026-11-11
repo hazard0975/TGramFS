@@ -52,32 +52,7 @@ namespace TelegramWebDAV.UI
                 AutoShowOverlay = _settings.Server.AutoShowProgressOverlay
             };
 
-            Icon? appIcon = null;
-            try
-            {
-                string? exePath = Environment.ProcessPath ?? Application.ExecutablePath;
-                if (!string.IsNullOrEmpty(exePath) && File.Exists(exePath))
-                {
-                    appIcon = Icon.ExtractAssociatedIcon(exePath);
-                }
-            }
-            catch (Exception ex)
-            {
-                AppLogger.Warn("Tray", $"Не удалось извлечь иконку приложения: {ex.Message}");
-            }
-
-            if (appIcon == null)
-            {
-                try
-                {
-                    string localIcon = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "icon.ico");
-                    if (File.Exists(localIcon))
-                    {
-                        appIcon = new Icon(localIcon);
-                    }
-                }
-                catch { }
-            }
+            Icon? appIcon = AppIconHelper.GetAppIcon();
 
             _notifyIcon = new NotifyIcon
             {

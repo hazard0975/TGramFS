@@ -36,4 +36,10 @@
     </None>
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="icon.ico">
+      <LogicalName>TelegramWebDAV.icon.ico</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
 </Project>

@@ -76,15 +76,7 @@ namespace TelegramWebDAV.UI
             Font = UITheme.BaseFont;
             BackColor = Color.White;
 
-            try
-            {
-                string? exe = Environment.ProcessPath;
-                if (!string.IsNullOrEmpty(exe) && File.Exists(exe))
-                {
-                    Icon = Icon.ExtractAssociatedIcon(exe);
-                }
-            }
-            catch { }
+            Icon = AppIconHelper.GetAppIcon();
 
             // Главный вертикальный контейнер
             var mainLayout = new TableLayoutPanel
@@ -115,23 +107,7 @@ namespace TelegramWebDAV.UI
             headerPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             headerPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
-            Image? iconImage = null;
-            try
-            {
-                string localIcoPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "icon.ico");
-                if (File.Exists(localIcoPath))
-                {
-                    using var fs = new FileStream(localIcoPath, FileMode.Open, FileAccess.Read, FileShare.Read);
-                    using var ico = new Icon(fs, 128, 128);
-                    iconImage = ico.ToBitmap();
-                }
-            }
-            catch { }
-
-            if (iconImage == null && Icon != null)
-            {
-                iconImage = Icon.ToBitmap();
-            }
+            Image? iconImage = AppIconHelper.GetAppIconBitmap(128, 128) ?? Icon?.ToBitmap();
 
             _picIcon = new PictureBox
             {
