@@ -54,7 +54,9 @@ namespace TelegramWebDAV.UI
         private void InitializeComponent()
         {
             Text = "О программе — TGramFS";
-            ClientSize = new Size(520, 480);
+            AutoScaleDimensions = new SizeF(96F, 96F);
+            AutoScaleMode = AutoScaleMode.Dpi;
+            ClientSize = new Size(540, 480);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
@@ -208,7 +210,7 @@ namespace TelegramWebDAV.UI
             _cmbInterval = new ComboBox
             {
                 DropDownStyle = ComboBoxStyle.DropDownList,
-                Width = 130,
+                Width = 140,
                 Font = UITheme.BaseFont,
                 Margin = new Padding(0, 0, 0, 0)
             };
@@ -230,7 +232,9 @@ namespace TelegramWebDAV.UI
             {
                 Text = "Проверить сейчас",
                 Height = UITheme.ButtonHeightDefault,
-                Width = 140,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Padding = new Padding(14, 0, 14, 0),
                 Font = UITheme.BaseFont,
                 UseVisualStyleBackColor = true,
                 Margin = new Padding(0, 0, 12, 0)
@@ -285,6 +289,7 @@ namespace TelegramWebDAV.UI
                 Font = UITheme.HeaderFont,
                 ForeColor = Color.FromArgb(0, 102, 204),
                 AutoSize = true,
+                Dock = DockStyle.Top,
                 Margin = new Padding(0, 0, 0, 6)
             };
             updateCardLayout.Controls.Add(_lblNewVersionTitle, 0, 0);
@@ -335,7 +340,9 @@ namespace TelegramWebDAV.UI
             {
                 Text = "Скачать и обновить",
                 Height = UITheme.ButtonHeightPrimary,
-                Width = 160,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Padding = new Padding(16, 0, 16, 0),
                 Font = UITheme.BoldFont,
                 BackColor = Color.FromArgb(0, 120, 215),
                 ForeColor = Color.White,
@@ -350,7 +357,9 @@ namespace TelegramWebDAV.UI
             {
                 Text = "Отмена",
                 Height = UITheme.ButtonHeightPrimary,
-                Width = 90,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Padding = new Padding(14, 0, 14, 0),
                 Font = UITheme.BaseFont,
                 Visible = false,
                 Margin = Padding.Empty
@@ -373,8 +382,10 @@ namespace TelegramWebDAV.UI
             _btnClose = new Button
             {
                 Text = "Закрыть",
-                Width = 95,
                 Height = UITheme.ButtonHeightDefault,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Padding = new Padding(22, 0, 22, 0),
                 Font = UITheme.BaseFont,
                 DialogResult = DialogResult.OK
             };
