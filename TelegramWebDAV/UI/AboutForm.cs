@@ -51,12 +51,21 @@ namespace TelegramWebDAV.UI
             LoadSettings();
         }
 
+        private const int BaseClientWidth = 580;
+        private const int BaseClientHeight = 500;
+
         private void InitializeComponent()
         {
             Text = "О программе — TGramFS";
             AutoScaleDimensions = new SizeF(96F, 96F);
             AutoScaleMode = AutoScaleMode.Dpi;
-            ClientSize = new Size(540, 480);
+
+            float dpiScale = this.DeviceDpi > 0 ? this.DeviceDpi / 96f : 1.0f;
+            int scaledWidth = (int)Math.Round(BaseClientWidth * dpiScale);
+            int scaledHeight = (int)Math.Round(BaseClientHeight * dpiScale);
+            ClientSize = new Size(scaledWidth, scaledHeight);
+            MinimumSize = new Size(scaledWidth, scaledHeight);
+
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
@@ -192,7 +201,7 @@ namespace TelegramWebDAV.UI
             var rowCheck = new FlowLayoutPanel
             {
                 FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = false,
+                WrapContents = true,
                 AutoSize = true,
                 Margin = new Padding(0, 0, 0, 6)
             };
@@ -223,7 +232,7 @@ namespace TelegramWebDAV.UI
             var rowBtn = new FlowLayoutPanel
             {
                 FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = false,
+                WrapContents = true,
                 AutoSize = true,
                 Margin = new Padding(0, 4, 0, 0)
             };
@@ -609,6 +618,16 @@ namespace TelegramWebDAV.UI
                 _btnCancelDownload.Visible = false;
                 _btnCheckNow.Enabled = true;
             }
+        }
+
+        protected override void OnDpiChanged(DpiChangedEventArgs e)
+        {
+            base.OnDpiChanged(e);
+            float scale = e.DeviceDpiNew > 0 ? e.DeviceDpiNew / 96f : 1.0f;
+            int newWidth = (int)Math.Round(BaseClientWidth * scale);
+            int newHeight = (int)Math.Round(BaseClientHeight * scale);
+            ClientSize = new Size(newWidth, newHeight);
+            MinimumSize = new Size(newWidth, newHeight);
         }
 
         protected override void Dispose(bool disposing)
