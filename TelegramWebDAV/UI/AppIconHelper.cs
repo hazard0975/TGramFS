@@ -7,9 +7,9 @@ using System.Windows.Forms;
 namespace TelegramWebDAV.UI
 {
     /// <summary>
-    /// Централизованный помощник для загрузки иконки приложения с поддержкой
-    /// встроенного ресурса EmbeddedResource (высокое разрешение 128x128 / 256x256),
-    /// внешнего файла icon.ico и системного фолбэка.
+    /// Централизованный помощник для загрузки иконки приложения из встроенного
+    /// ресурса EmbeddedResource (высокое разрешение 128x128 / 256x256)
+    /// с системным фолбэком.
     /// </summary>
     public static class AppIconHelper
     {
@@ -17,7 +17,7 @@ namespace TelegramWebDAV.UI
 
         /// <summary>
         /// Возвращает полноценный многослойный системный Icon.
-        /// Приоритет: EmbeddedResource -> файл icon.ico рядом с exe -> ExtractAssociatedIcon.
+        /// Приоритет: EmbeddedResource -> ExtractAssociatedIcon.
         /// </summary>
         public static Icon? GetAppIcon()
         {
@@ -28,16 +28,6 @@ namespace TelegramWebDAV.UI
                 if (stream != null)
                 {
                     return new Icon(stream);
-                }
-            }
-            catch { }
-
-            try
-            {
-                string localIco = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "icon.ico");
-                if (File.Exists(localIco))
-                {
-                    return new Icon(localIco);
                 }
             }
             catch { }
@@ -68,18 +58,6 @@ namespace TelegramWebDAV.UI
                 if (stream != null)
                 {
                     using var ico = new Icon(stream, desiredWidth, desiredHeight);
-                    return ico.ToBitmap();
-                }
-            }
-            catch { }
-
-            try
-            {
-                string localIco = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "icon.ico");
-                if (File.Exists(localIco))
-                {
-                    using var fs = new FileStream(localIco, FileMode.Open, FileAccess.Read, FileShare.Read);
-                    using var ico = new Icon(fs, desiredWidth, desiredHeight);
                     return ico.ToBitmap();
                 }
             }
