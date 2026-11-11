@@ -232,10 +232,35 @@ namespace TelegramWebDAV.Services
             }
 
             string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            string tempFileName = $"TGramFS_update_{Guid.NewGuid():N}.tmp";
-            string tempFilePath = Path.Combine(baseDir, tempFileName);
+            string fileName = !string.IsNullOrWhiteSpace(info.AssetName)
+                ? info.AssetName
+                : $"TGramFS-{(info.TagName.StartsWith("v", StringComparison.OrdinalIgnoreCase) ? info.TagName : "v" + info.Version)}.exe";
 
-            AppLogger.Info("UpdateService", $"Скачивание обновления {info.TagName} в {tempFilePath} из {info.DownloadUrl}");
+            string finalFilePath = Path.Combine(baseDir, fileName);
+
+            // Если файл с таким именем уже существует и его размер совпадает с размером в релизе — не скачиваем повторно
+            if (File.Exists(finalFilePath) && info.SizeBytes > 0)
+            {
+                var existingFi = new FileInfo(finalFilePath);
+                if (existingFi.Length == info.SizeBytes)
+                {
+                    AppLogger.Info("UpdateService", $"Файл обновления {fileName} уже существует на диске ({existingFi.Length} байт). Повторное скачивание пропущено.");
+                    progress?.Report(new UpdateDownloadProgress
+                    {
+                        BytesReceived = existingFi.Length,
+                        TotalBytesToReceive = existingFi.Length
+                    });
+                    return finalFilePath;
+                }
+            }
+
+            string downloadTempPath = finalFilePath + ".download";
+            if (File.Exists(downloadTempPath))
+            {
+                try { File.Delete(downloadTempPath); } catch { }
+            }
+
+            AppLogger.Info("UpdateService", $"Скачивание обновления {fileName} в {downloadTempPath} из {info.DownloadUrl}");
 
             using (var response = await _httpClient.GetAsync(info.DownloadUrl, HttpCompletionOption.ResponseHeadersRead, ct))
             {
@@ -243,7 +268,7 @@ namespace TelegramWebDAV.Services
                 long totalBytes = response.Content.Headers.ContentLength ?? info.SizeBytes;
 
                 using (var contentStream = await response.Content.ReadAsStreamAsync(ct))
-                using (var fileStream = new FileStream(tempFilePath, FileMode.Create, FileAccess.Write, FileShare.None, 81920, true))
+                using (var fileStream = new FileStream(downloadTempPath, FileMode.Create, FileAccess.Write, FileShare.None, 81920, true))
                 {
                     byte[] buffer = new byte[81920];
                     long totalRead = 0;
@@ -263,35 +288,36 @@ namespace TelegramWebDAV.Services
             }
 
             // Проверяем корректность скачанного файла
-            var fi = new FileInfo(tempFilePath);
+            var fi = new FileInfo(downloadTempPath);
             if (fi.Length == 0)
             {
-                try { File.Delete(tempFilePath); } catch { }
+                try { File.Delete(downloadTempPath); } catch { }
                 throw new IOException("Скачанный файл обновления пуст.");
             }
 
-            AppLogger.Info("UpdateService", $"Файл обновления успешно скачан: {fi.Length} байт.");
-            return tempFilePath;
+            // Перемещаем готовый файл на целевое постоянное имя с версией
+            File.Move(downloadTempPath, finalFilePath, true);
+
+            AppLogger.Info("UpdateService", $"Файл обновления успешно сохранен как {finalFilePath}: {fi.Length} байт.");
+            return finalFilePath;
         }
 
-        public void ApplyUpdateAndRestart(string tempDownloadedFilePath, Action onExitRequested)
+        public void ApplyUpdateAndRestart(string newExePath, Action onExitRequested)
         {
-            string? currentExePath = Environment.ProcessPath;
-            if (string.IsNullOrEmpty(currentExePath) || !File.Exists(currentExePath))
+            if (string.IsNullOrEmpty(newExePath) || !File.Exists(newExePath))
             {
-                throw new FileNotFoundException("Не удалось определить путь к текущему исполняемому файлу программы.");
+                throw new FileNotFoundException($"Файл новой версии не найден по пути: {newExePath}");
             }
 
             int currentPid = Environment.ProcessId;
             string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            string scriptPath = Path.Combine(baseDir, $"apply_update_{Guid.NewGuid():N}.cmd");
+            string scriptPath = Path.Combine(baseDir, $"launch_update_{Guid.NewGuid():N}.cmd");
 
-            // Формируем надежный cmd-скрипт с ожиданием завершения процесса по PID
+            // Формируем cmd-скрипт с ожиданием завершения старого процесса и прямым запуском нового exe с версией
             string scriptContent = $@"@echo off
 chcp 65001 > nul
 set TARGET_PID={currentPid}
-set NEW_FILE=""{tempDownloadedFilePath}""
-set TARGET_EXE=""{currentExePath}""
+set NEW_EXE=""{newExePath}""
 
 :wait_loop
 tasklist /fi ""PID eq %TARGET_PID%"" 2>nul | find ""%TARGET_PID%"" > nul
@@ -302,25 +328,13 @@ if not errorlevel 1 (
 
 timeout /t 1 /nobreak > nul
 
-set RETRY_COUNT=0
-:copy_loop
-copy /y %NEW_FILE% %TARGET_EXE% > nul
-if errorlevel 1 (
-    set /a RETRY_COUNT+=1
-    if %RETRY_COUNT% leq 10 (
-        timeout /t 1 /nobreak > nul
-        goto copy_loop
-    )
-)
-
-del /f /q %NEW_FILE% > nul 2>&1
-start """" %TARGET_EXE%
+start """" %NEW_EXE%
 del ""%~f0"" > nul 2>&1
 ";
 
             File.WriteAllText(scriptPath, scriptContent, System.Text.Encoding.GetEncoding(866)); // OEM кодировка для cmd
 
-            AppLogger.Info("UpdateService", $"Создан скрипт обновления {scriptPath}. Запуск скрипта и завершение программы.");
+            AppLogger.Info("UpdateService", $"Создан скрипт запуска новой версии {scriptPath}. Старый процесс закрывается, затем запустится {newExePath}.");
 
             var psi = new ProcessStartInfo
             {
