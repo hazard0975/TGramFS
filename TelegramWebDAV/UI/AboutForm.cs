@@ -219,12 +219,12 @@ namespace TelegramWebDAV.UI
             _cmbInterval = new ComboBox
             {
                 DropDownStyle = ComboBoxStyle.DropDownList,
-                Width = 140,
                 Font = UITheme.BaseFont,
                 Margin = new Padding(0, 0, 0, 0)
             };
             _cmbInterval.Items.AddRange(new object[] { "Ежедневно", "Еженедельно", "Ежемесячно" });
             _cmbInterval.SelectedIndexChanged += CmbInterval_SelectedIndexChanged;
+            UpdateIntervalComboWidth(dpiScale);
             rowCheck.Controls.Add(_cmbInterval);
 
             settingsLayout.Controls.Add(rowCheck);
@@ -620,6 +620,16 @@ namespace TelegramWebDAV.UI
             }
         }
 
+        private void UpdateIntervalComboWidth(float dpiScale)
+        {
+            if (_cmbInterval == null) return;
+            int textWidth = TextRenderer.MeasureText("Еженедельно", _cmbInterval.Font).Width;
+            int scrollArrowWidth = SystemInformation.VerticalScrollBarWidth;
+            int measuredWidth = textWidth + scrollArrowWidth + 28;
+            int scaledWidth = (int)Math.Round(165 * dpiScale);
+            _cmbInterval.Width = Math.Max(measuredWidth, scaledWidth);
+        }
+
         protected override void OnDpiChanged(DpiChangedEventArgs e)
         {
             base.OnDpiChanged(e);
@@ -628,6 +638,7 @@ namespace TelegramWebDAV.UI
             int newHeight = (int)Math.Round(BaseClientHeight * scale);
             ClientSize = new Size(newWidth, newHeight);
             MinimumSize = new Size(newWidth, newHeight);
+            UpdateIntervalComboWidth(scale);
         }
 
         protected override void Dispose(bool disposing)
