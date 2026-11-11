@@ -7,6 +7,8 @@ coverage/
 .env*
 !.env.example
 .aistudio/
+public/assets/aistudio/
+public/assets/
 
 # .NET / C# Build Outputs
 [Bb]in/
