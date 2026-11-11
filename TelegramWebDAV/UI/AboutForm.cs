@@ -34,6 +34,7 @@ namespace TelegramWebDAV.UI
         private Label _lblProgress = null!;
         private Button _btnCancelDownload = null!;
         private Button _btnClose = null!;
+        private PictureBox _picIcon = null!;
 
         public AboutForm(
             ConfigManager configManager,
@@ -54,6 +55,7 @@ namespace TelegramWebDAV.UI
         private const int BaseClientWidth = 580;
         private const int BaseClientHeight = 500;
         private const int BaseIntervalComboWidth = 130;
+        private const int BaseIconSize = 64;
 
         private void InitializeComponent()
         {
@@ -110,17 +112,35 @@ namespace TelegramWebDAV.UI
                 Margin = Padding.Empty,
                 Padding = Padding.Empty
             };
-            headerPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 52));
+            headerPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             headerPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
-            var picIcon = new PictureBox
+            Image? iconImage = null;
+            try
             {
-                Size = new Size(40, 40),
+                string localIcoPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "icon.ico");
+                if (File.Exists(localIcoPath))
+                {
+                    using var fs = new FileStream(localIcoPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                    using var ico = new Icon(fs, 128, 128);
+                    iconImage = ico.ToBitmap();
+                }
+            }
+            catch { }
+
+            if (iconImage == null && Icon != null)
+            {
+                iconImage = Icon.ToBitmap();
+            }
+
+            _picIcon = new PictureBox
+            {
                 SizeMode = PictureBoxSizeMode.Zoom,
-                Margin = new Padding(0, 2, 8, 0)
+                Margin = new Padding(0, 0, 12, 0),
+                Image = iconImage
             };
-            if (Icon != null) picIcon.Image = Icon.ToBitmap();
-            headerPanel.Controls.Add(picIcon, 0, 0);
+            UpdateHeaderIconSize(dpiScale);
+            headerPanel.Controls.Add(_picIcon, 0, 0);
 
             var infoPanel = new FlowLayoutPanel
             {
@@ -627,6 +647,13 @@ namespace TelegramWebDAV.UI
             _cmbInterval.Width = (int)Math.Round(BaseIntervalComboWidth * dpiScale);
         }
 
+        private void UpdateHeaderIconSize(float dpiScale)
+        {
+            if (_picIcon == null) return;
+            int iconPx = (int)Math.Round(BaseIconSize * dpiScale);
+            _picIcon.Size = new Size(iconPx, iconPx);
+        }
+
         protected override void OnDpiChanged(DpiChangedEventArgs e)
         {
             base.OnDpiChanged(e);
@@ -636,6 +663,7 @@ namespace TelegramWebDAV.UI
             ClientSize = new Size(newWidth, newHeight);
             MinimumSize = new Size(newWidth, newHeight);
             UpdateIntervalComboWidth(scale);
+            UpdateHeaderIconSize(scale);
         }
 
         protected override void Dispose(bool disposing)
