@@ -467,7 +467,7 @@ namespace TGramFS.UI
 
             _lblInstruction = new Label
             {
-                Text = "Введите номер телефона в международном формате (+7...):",
+                Text = "Введите номер телефона в международном формате (+3...):",
                 AutoSize = true,
                 Font = UITheme.BaseFont,
                 Margin = new Padding(0, 0, 0, 6)
@@ -1379,7 +1379,7 @@ namespace TGramFS.UI
                         switch (_telegramService.CurrentStep)
                         {
                             case AuthStep.NeedsPhone:
-                                _lblInstruction.Text = "Введите номер телефона в международном формате (+7...):";
+                                _lblInstruction.Text = "Введите номер телефона в международном формате (+3...):";
                                 _btnAction.Text = "Получить код в Telegram";
                                 _txtInput.UseSystemPasswordChar = false;
                                 break;

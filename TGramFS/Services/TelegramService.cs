@@ -1947,7 +1947,7 @@ namespace TGramFS.Services
 
         /// <summary>
         /// Пошаговый вход в Telegram:
-        /// 1. Передаем телефон ("+7999...") -> Telegram отправляет код в официальное приложение
+        /// 1. Передаем телефон ("+3...") -> Telegram отправляет код в официальное приложение
         /// 2. Передаем код подтверждения -> если включен 2FA, требуется "password", иначе успех
         /// 3. Передаем 2FA пароль -> успех
         /// </summary>
@@ -2011,7 +2011,7 @@ namespace TGramFS.Services
                     CurrentStep = AuthStep.NeedsPhone;
                     try { _client?.Dispose(); } catch { }
                     _client = null;
-                    LastError = "Неверный формат номера телефона. Проверьте правильность и код страны (например, +79991234567).";
+                    LastError = "Неверный формат номера телефона. Проверьте правильность и код страны (например, +3...).";
                     throw new InvalidOperationException(LastError, rpcEx);
                 }
                 else if (rpcEx.Code == 400 && rpcEx.Message.Contains("PHONE_CODE_INVALID"))
