@@ -140,8 +140,11 @@ namespace TGramFS
                 }
                 catch (Exception exInit)
                 {
-                    AppLogger.Warn("Program", $"Начальное подключение к Telegram отложено (сеть недоступна): {exInit.Message}");
-                    telegramService.TriggerReactorReconnect("запуск программы при отсутствии сети");
+                    AppLogger.Warn("Program", $"Начальное подключение к Telegram не выполнено: {exInit.Message}");
+                    if (telegramService.IsAuthorized)
+                    {
+                        telegramService.TriggerReactorReconnect("запуск программы при отсутствии сети");
+                    }
                 }
 
                 // 4. Инициализация службы резервного копирования базы данных

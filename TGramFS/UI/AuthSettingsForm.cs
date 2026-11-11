@@ -87,7 +87,9 @@ namespace TGramFS.UI
         private Button _btnRenamePrimaryChannel = null!;
         private TextBox _txtInput = null!;
         private Button _btnAction = null!;
+        private Button _btnResetAuth = null!;
         private Button _btnLogout = null!;
+        private System.Windows.Forms.Timer? _floodTimer;
 
         // Registry Tab
         private Label _lblRegStatus = null!;
@@ -474,10 +476,11 @@ namespace TGramFS.UI
             _txtInput = new TextBox { Width = UIFactory.DefaultInnerWidth, Font = UITheme.BaseFont, Margin = new Padding(0, 0, 0, 8) };
 
             _btnAction = UIFactory.CreateButton("Отправить", async (s, e) => await HandleTelegramActionAsync(), width: 180);
+            _btnResetAuth = UIFactory.CreateButton("Изменить номер", (s, e) => HandleResetAuth(), width: 140, foreColor: UITheme.TextMuted);
             _btnLogout = UIFactory.CreateButton("Выйти из аккаунта", (s, e) => HandleTelegramLogout(), width: 160, foreColor: UITheme.TextDanger);
 
             var pnlTgButtons = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.LeftToRight, WrapContents = false, Margin = new Padding(0, 4, 0, 4) };
-            pnlTgButtons.Controls.AddRange(new Control[] { _btnAction, _btnLogout });
+            pnlTgButtons.Controls.AddRange(new Control[] { _btnAction, _btnResetAuth, _btnLogout });
 
             pnlTgSessionInner.Controls.AddRange(new Control[] { _lblStatus, _pnlUserDetails, _lblInstruction, _txtInput, pnlTgButtons });
             grpTelegramSession.Controls.Add(pnlTgSessionInner);
@@ -1332,7 +1335,9 @@ namespace TGramFS.UI
                 _lblInstruction.Visible = false;
                 _txtInput.Visible = false;
                 _btnAction.Visible = false;
+                _btnResetAuth.Visible = false;
                 _btnLogout.Visible = true;
+                StopFloodTimer();
             }
             else
             {
@@ -1343,33 +1348,54 @@ namespace TGramFS.UI
                 _btnAction.Visible = hasApiKeys;
                 _btnLogout.Visible = false;
 
-                if (!hasApiKeys)
+                int floodSec = TelegramService.GetRemainingFloodWaitSeconds();
+                if (floodSec > 0)
                 {
-                    _lblInstruction.Text = "Сначала укажите и сохраните API ID и API Hash (получить на my.telegram.org).";
-                    _lblInstruction.ForeColor = Color.DarkOrange;
+                    _btnAction.Enabled = false;
+                    _btnAction.Text = $"Подождите ({floodSec} с)";
+                    _btnResetAuth.Text = "Изменить номер";
+                    _btnResetAuth.Visible = hasApiKeys;
+                    _lblInstruction.Text = TelegramService.FormatFloodWaitMessage(floodSec);
+                    _lblInstruction.ForeColor = Color.OrangeRed;
                     _lblInstruction.Visible = true;
+                    StartOrEnsureFloodTimer();
                 }
                 else
                 {
-                    _lblInstruction.ForeColor = UITheme.TextMain;
-                    _lblInstruction.Visible = true;
-                    switch (_telegramService.CurrentStep)
+                    StopFloodTimer();
+                    _btnAction.Enabled = true;
+                    _btnResetAuth.Visible = hasApiKeys && (_telegramService.CurrentStep != AuthStep.NeedsPhone);
+
+                    if (!hasApiKeys)
                     {
-                        case AuthStep.NeedsPhone:
-                            _lblInstruction.Text = "Введите номер телефона в международном формате (+7...):";
-                            _btnAction.Text = "Получить код в Telegram";
-                            _txtInput.UseSystemPasswordChar = false;
-                            break;
-                        case AuthStep.NeedsCode:
-                            _lblInstruction.Text = "Введите проверочный код из Telegram (пришел в приложение Telegram):";
-                            _btnAction.Text = "Подтвердить код";
-                            _txtInput.UseSystemPasswordChar = false;
-                            break;
-                        case AuthStep.Needs2FA:
-                            _lblInstruction.Text = "Введите облачный пароль 2FA (двухфакторной аутентификации):";
-                            _btnAction.Text = "Войти";
-                            _txtInput.UseSystemPasswordChar = true;
-                            break;
+                        _lblInstruction.Text = "Сначала укажите и сохраните API ID и API Hash (получить на my.telegram.org).";
+                        _lblInstruction.ForeColor = Color.DarkOrange;
+                        _lblInstruction.Visible = true;
+                    }
+                    else
+                    {
+                        _lblInstruction.ForeColor = UITheme.TextMain;
+                        _lblInstruction.Visible = true;
+                        switch (_telegramService.CurrentStep)
+                        {
+                            case AuthStep.NeedsPhone:
+                                _lblInstruction.Text = "Введите номер телефона в международном формате (+7...):";
+                                _btnAction.Text = "Получить код в Telegram";
+                                _txtInput.UseSystemPasswordChar = false;
+                                break;
+                            case AuthStep.NeedsCode:
+                                _lblInstruction.Text = "Введите проверочный код из Telegram (пришел в приложение Telegram):";
+                                _btnAction.Text = "Подтвердить код";
+                                _btnResetAuth.Text = "Изменить номер";
+                                _txtInput.UseSystemPasswordChar = false;
+                                break;
+                            case AuthStep.Needs2FA:
+                                _lblInstruction.Text = "Введите облачный пароль 2FA (двухфакторной аутентификации):";
+                                _btnAction.Text = "Войти";
+                                _btnResetAuth.Text = "Сбросить ввод";
+                                _txtInput.UseSystemPasswordChar = true;
+                                break;
+                        }
                     }
                 }
             }
@@ -1398,12 +1424,65 @@ namespace TGramFS.UI
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка авторизации: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(ex.Message, "Авторизация Telegram", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                UpdateUiState();
             }
             finally
             {
-                _btnAction.Enabled = true;
+                if (TelegramService.GetRemainingFloodWaitSeconds() == 0)
+                {
+                    _btnAction.Enabled = true;
+                }
             }
+        }
+
+        private void HandleResetAuth()
+        {
+            _telegramService.ResetAuthToPhone();
+            _txtInput.Clear();
+            UpdateUiState();
+        }
+
+        private void StartOrEnsureFloodTimer()
+        {
+            if (_floodTimer == null)
+            {
+                _floodTimer = new System.Windows.Forms.Timer { Interval = 1000 };
+                _floodTimer.Tick += (s, e) =>
+                {
+                    if (IsDisposed || !IsHandleCreated) return;
+                    int rem = TelegramService.GetRemainingFloodWaitSeconds();
+                    if (rem > 0)
+                    {
+                        _lblInstruction.Text = TelegramService.FormatFloodWaitMessage(rem);
+                        _btnAction.Text = $"Подождите ({rem} с)";
+                    }
+                    else
+                    {
+                        UpdateUiState();
+                    }
+                };
+            }
+            if (!_floodTimer.Enabled)
+            {
+                _floodTimer.Start();
+            }
+        }
+
+        private void StopFloodTimer()
+        {
+            if (_floodTimer != null && _floodTimer.Enabled)
+            {
+                _floodTimer.Stop();
+            }
+        }
+
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            StopFloodTimer();
+            _floodTimer?.Dispose();
+            _floodTimer = null;
+            base.OnFormClosed(e);
         }
 
         private void HandleTelegramLogout()

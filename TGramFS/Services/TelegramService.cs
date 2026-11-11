@@ -1456,6 +1456,15 @@ namespace TGramFS.Services
                 string? result = await _client.Login(null);
                 HandleWTelegramResult(result);
             }
+            catch (TL.RpcException rpcEx) when (rpcEx.Code == 420) // FLOOD_WAIT_X
+            {
+                TriggerGlobalFloodWait(rpcEx.X);
+                LastError = FormatFloodWaitMessage(rpcEx.X);
+                AppLogger.Warn("TelegramService", $"Ошибка подключения существующей сессии: {LastError}");
+                try { _client?.Dispose(); } catch { }
+                _client = null;
+                throw new InvalidOperationException(LastError, rpcEx);
+            }
             catch (Exception ex)
             {
                 if (isSilentRetry)
@@ -1578,6 +1587,13 @@ namespace TGramFS.Services
                 return;
             }
 
+            // Защита от паразитного цикла: реактор должен работать ТОЛЬКО для уже успешно авторизованных сессий
+            if (!IsAuthorized || CurrentStep != AuthStep.Authorized)
+            {
+                AppLogger.Debug("TelegramService", $"[Reactor] Запрос переподключения ({reason}) пропущен: аккаунт не находится в состоянии успешной авторизации (Статус: {CurrentStep}).");
+                return;
+            }
+
             if (Interlocked.CompareExchange(ref _isReconnecting, 1, 0) != 0)
             {
                 return;
@@ -1672,6 +1688,22 @@ namespace TGramFS.Services
                                 AppLogger.Info("TelegramService", "[Reactor] Сессия Telegram успешно восстановлена!");
                                 break;
                             }
+                        }
+                        catch (TL.RpcException rpcEx) when (rpcEx.Code == 420) // FLOOD_WAIT_X
+                        {
+                            TriggerGlobalFloodWait(rpcEx.X);
+                            AppLogger.Warn("TelegramService", $"[Reactor] Получен FLOOD_WAIT на {rpcEx.X} сек от серверов Telegram. Приостановка реактора на {rpcEx.X} секунд...");
+                            int waitMs = Math.Max(5000, rpcEx.X * 1000);
+                            await Task.Delay(waitMs);
+                            continue;
+                        }
+                        catch (TL.RpcException rpcEx) when (rpcEx.Code == 400 && (rpcEx.Message.Contains("PHONE_NUMBER_INVALID") || rpcEx.Message.Contains("PHONE_CODE_INVALID") || rpcEx.Message.Contains("PHONE_CODE_EXPIRED") || rpcEx.Message.Contains("SESSION_REVOKED") || rpcEx.Message.Contains("AUTH_KEY_UNREGISTERED") || rpcEx.Message.Contains("USER_DEACTIVATED")))
+                        {
+                            AppLogger.Error("TelegramService", $"[Reactor] Фатальная ошибка авторизации: {rpcEx.Message} (Код: {rpcEx.Code}). Остановка реактора.");
+                            IsAuthorized = false;
+                            CurrentStep = AuthStep.NeedsPhone;
+                            LastError = rpcEx.Message;
+                            break;
                         }
                         catch (Exception ex)
                         {
@@ -1924,6 +1956,14 @@ namespace TGramFS.Services
             if (string.IsNullOrWhiteSpace(input))
                 throw new ArgumentException("Входные данные не могут быть пустыми", nameof(input));
 
+            int remainingFlood = GetRemainingFloodWaitSeconds();
+            if (remainingFlood > 0)
+            {
+                string floodMsg = FormatFloodWaitMessage(remainingFlood);
+                LastError = floodMsg;
+                throw new InvalidOperationException(floodMsg);
+            }
+
             var account = _repository?.GetActiveTelegramAccount();
             if (account == null || account.ApiId == 0 || string.IsNullOrWhiteSpace(account.ApiHash))
             {
@@ -1960,11 +2000,40 @@ namespace TGramFS.Services
             catch (TL.RpcException rpcEx)
             {
                 AppLogger.Error("TelegramService", $"RPC Ошибка: {rpcEx.Message} (Код: {rpcEx.Code})", rpcEx);
-                LastError = rpcEx.Message;
                 if (rpcEx.Code == 420) // FLOOD_WAIT_X
                 {
                     TriggerFloodWait(rpcEx.X);
+                    LastError = FormatFloodWaitMessage(rpcEx.X);
+                    throw new InvalidOperationException(LastError, rpcEx);
                 }
+                else if (rpcEx.Code == 400 && rpcEx.Message.Contains("PHONE_NUMBER_INVALID"))
+                {
+                    CurrentStep = AuthStep.NeedsPhone;
+                    try { _client?.Dispose(); } catch { }
+                    _client = null;
+                    LastError = "Неверный формат номера телефона. Проверьте правильность и код страны (например, +79991234567).";
+                    throw new InvalidOperationException(LastError, rpcEx);
+                }
+                else if (rpcEx.Code == 400 && rpcEx.Message.Contains("PHONE_CODE_INVALID"))
+                {
+                    LastError = "Неверный проверочный код. Проверьте цифры кода из приложения Telegram.";
+                    throw new InvalidOperationException(LastError, rpcEx);
+                }
+                else if (rpcEx.Code == 400 && rpcEx.Message.Contains("PHONE_CODE_EXPIRED"))
+                {
+                    CurrentStep = AuthStep.NeedsPhone;
+                    try { _client?.Dispose(); } catch { }
+                    _client = null;
+                    LastError = "Срок действия кода подтверждения истек. Запросите код заново.";
+                    throw new InvalidOperationException(LastError, rpcEx);
+                }
+                else if (rpcEx.Code == 400 && rpcEx.Message.Contains("PASSWORD_HASH_INVALID"))
+                {
+                    LastError = "Неверный облачный пароль двухфакторной аутентификации (2FA).";
+                    throw new InvalidOperationException(LastError, rpcEx);
+                }
+
+                LastError = rpcEx.Message;
                 throw;
             }
             catch (Exception ex)
@@ -2021,6 +2090,45 @@ namespace TGramFS.Services
             CurrentUser = null;
             _storagePeer = null;
             AppLogger.Info("TelegramService", "Сессия сброшена.");
+        }
+
+        /// <summary>
+        /// Сбрасывает процесс авторизации обратно к вводу номера телефона.
+        /// Позволяет пользователю исправить опечатку в номере или начать заново при сбое.
+        /// </summary>
+        public void ResetAuthToPhone()
+        {
+            try { _client?.Dispose(); } catch { }
+            _client = null;
+            CurrentStep = AuthStep.NeedsPhone;
+            LastError = null;
+            AppLogger.Info("TelegramService", "Процесс авторизации сброшен к шагу ввода номера телефона.");
+        }
+
+        /// <summary>
+        /// Возвращает оставшееся время ожидания в секундах при активном FLOOD_WAIT.
+        /// </summary>
+        public static int GetRemainingFloodWaitSeconds()
+        {
+            if (_globalFloodWaitUntil > DateTime.UtcNow)
+            {
+                return (int)Math.Ceiling((_globalFloodWaitUntil - DateTime.UtcNow).TotalSeconds);
+            }
+            return 0;
+        }
+
+        /// <summary>
+        /// Форматирует человекочитаемое сообщение об ошибке FLOOD_WAIT.
+        /// </summary>
+        public static string FormatFloodWaitMessage(int seconds)
+        {
+            if (seconds >= 60)
+            {
+                int min = seconds / 60;
+                int sec = seconds % 60;
+                return $"Слишком много запросов (FLOOD_WAIT). Сервер Telegram просит подождать {min} мин {sec} сек перед повторной попыткой.";
+            }
+            return $"Слишком много запросов (FLOOD_WAIT). Сервер Telegram просит подождать {seconds} сек перед повторной попыткой.";
         }
 
         /// <summary>

@@ -1281,6 +1281,14 @@
       3. **Синхронизация CI/CD и правил**: Обновлен `.github/workflows/release.yml`, правила `AGENTS.md` и карта `MAP.md`.
       4. **Валидация**: `dotnet build` завершен с 0 предупреждений и 0 ошибок.
 
+- [x] **8.104. Защита от спама в Telegram API, усыпление FLOOD_WAIT и улучшение UI авторизации**:
+    - **Реализовано**:
+      1. **Изоляция наблюдателя сокета (`TriggerReactorReconnect`)**: Реактор блокируется от запуска, если клиент не авторизован (`!IsAuthorized || CurrentStep != AuthStep.Authorized`), исключая спам серверов Telegram при опечатках в номере или на этапах ввода кода/пароля.
+      2. **Честная пауза при `FLOOD_WAIT_X`**: В реакторе и `ConnectAsync` добавлен перехват `TL.RpcException` с кодом `420`, вызов `TriggerGlobalFloodWait(rpcEx.X)` и пауза потока ровно на `rpcEx.X` секунд.
+      3. **Предотвращение повторных запросов во время флуд-лока (`LoginStepAsync`)**: Метод проверяет `GetRemainingFloodWaitSeconds()` и не отправляет сетевые пакеты, если Telegram запросил таймаут. Ошибки `FLOOD_WAIT_X`, `PHONE_NUMBER_INVALID`, `PHONE_CODE_INVALID`, `PHONE_CODE_EXPIRED`, `PASSWORD_HASH_INVALID` переводятся на понятный русский язык.
+      4. **Кнопка возврата к вводу номера и обратный отсчет в UI (`AuthSettingsForm`)**: Добавлена кнопка «Изменить номер» (`_btnResetAuth`), позволяющая сбросить застрявший шаг `NeedsCode` / `Needs2FA`, а также таймер обратного отсчета секунд разблокировки при `FLOOD_WAIT`.
+
+
 
 
 
