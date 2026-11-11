@@ -16,7 +16,7 @@
 4. **Обязательная компиляция и валидация C# проекта**:
    - При любых изменениях C# кода обязательно запускать сборку и валидацию:
      ```bash
-     dotnet build /app/applet/TelegramWebDAV/TelegramWebDAV.csproj -p:EnableWindowsTargeting=true
+     dotnet build /app/applet/TGramFS/TGramFS.csproj -p:EnableWindowsTargeting=true
      ```
    - Если .NET SDK отсутствует в сессии (новый контейнер), установка выполняется командой:
      ```bash

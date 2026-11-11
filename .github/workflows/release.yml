@@ -32,7 +32,7 @@ jobs:
 
       - name: Publish Self-Contained Executable
         run: |
-          dotnet publish TelegramWebDAV/TelegramWebDAV.csproj `
+          dotnet publish TGramFS/TGramFS.csproj `
             -c Release `
             -r win-x64 `
             --self-contained true `

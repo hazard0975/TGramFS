@@ -3652,7 +3652,52 @@ _telegramService.UpdateSettings(_settings);
    - Правило копирования `icon.ico` полностью исключено из проекта. В папку сборки попадает только бинарник приложения `TGramFS.exe` без посторонних файлов значков.
 2. **Очистка `AppIconHelper.cs` от обращений к диску**:
    - Из методов `GetAppIcon()` и `GetAppIconBitmap()` удалены любые проверки файловой системы на наличие внешнего `icon.ico`.
-   - Логика стала чистой и детерминированной: прямое чтение встроенного ресурса `TelegramWebDAV.icon.ico` из оперативной памяти процесса с системным фолбэком на `ExtractAssociatedIcon`.
+   - Логика стала чистой и детерминированной: прямое чтение встроенного ресурса из оперативной памяти процесса с системным фолбэком на `ExtractAssociatedIcon`.
+
+---
+
+## 114. Ребрендинг имени встроенного ресурса иконки в TGramFS.icon.ico
+
+### Проблема:
+При первоначальном объявлении `EmbeddedResource` логическое имя ресурса было по инерции задано как `TelegramWebDAV.icon.ico`. Это приводило к присутствию устаревшего названия проекта в манифесте метаданных скомпилированной сборки `TGramFS.dll` / `TGramFS.exe`.
+
+### Принятое решение:
+1. **Синхронизация LogicalName с именем сборки (`TelegramWebDAV.csproj`)**:
+   - Логическое имя встроенного ресурса обновлено до `TGramFS.icon.ico`:
+     ```xml
+     <ItemGroup>
+       <EmbeddedResource Include="icon.ico">
+         <LogicalName>TGramFS.icon.ico</LogicalName>
+       </EmbeddedResource>
+     </ItemGroup>
+     ```
+2. **Обновление константы `AppIconHelper.cs`**:
+   - Константа `EmbeddedResourceName` переведена на `"TGramFS.icon.ico"`.
+   - Внутри сборки манифест ресурсов теперь строго соответствует официальному брендингу `TGramFS`, а в бинарнике полностью отсутствуют старые ссылки на `TelegramWebDAV.icon.ico`.
+
+---
+
+## 115. Полный архитектурный ребрендинг проекта: переименование каталога, csproj, RootNamespace и всех namespaces в TGramFS
+
+### Проблема:
+Несмотря на официальное переименование продукта в `TGramFS` (Решение 57), папка проекта на диске продолжала называться `TelegramWebDAV/`, файл проекта — `TelegramWebDAV.csproj`, а весь исходный код C# (36 файлов) находился внутри устаревшего пространства имён `namespace TelegramWebDAV`. Это вносило путаницу в репозиторий и CI-скрипты.
+
+### Принятое решение:
+1. **Переименование директории и файла проекта**:
+   - Каталог `/TelegramWebDAV/` переименован в `/TGramFS/`.
+   - Файл `TelegramWebDAV.csproj` переименован в `TGramFS.csproj`.
+   - Параметр `<RootNamespace>TelegramWebDAV</RootNamespace>` переведён на `<RootNamespace>TGramFS</RootNamespace>`.
+2. **Массовый синхронный рефакторинг исходного кода C# (36 файлов)**:
+   - Все файлы `.cs` переведены с `namespace TelegramWebDAV.*` на `namespace TGramFS.*`.
+   - Все директивы `using TelegramWebDAV.*` синхронно обновлены до `using TGramFS.*`.
+3. **Обновление скриптов CI/CD и правил репозитория**:
+   - В `.github/workflows/release.yml` команда публикации обновлена на `dotnet publish TGramFS/TGramFS.csproj`.
+   - В `AGENTS.md` системная команда сборки и валидации переведена на `dotnet build /app/applet/TGramFS/TGramFS.csproj -p:EnableWindowsTargeting=true`.
+   - В `MAP.md` обновлена карта каталогов и файлов.
+4. **Результат сборки**:
+   - Сборка `dotnet build` завершилась без единого предупреждения или ошибки (`0 Warning, 0 Error`). Полная монолитная чистота архитектуры.
+
+
 
 
 

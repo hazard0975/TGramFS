@@ -1,0 +1,116 @@
+using System;
+using System.Text.Json.Serialization;
+
+namespace TGramFS.Config
+{
+    public enum DriveEngine
+    {
+        WinFsp,
+        WebDav
+    }
+
+    public class AppSettings
+    {
+        public ServerSettings Server { get; set; } = new ServerSettings();
+        public DatabaseSettings Database { get; set; } = new DatabaseSettings();
+        public LoggingSettings Logging { get; set; } = new LoggingSettings();
+        public UpdateSettings Updates { get; set; } = new UpdateSettings();
+
+        // Обратная совместимость
+        public WebDavSettings WebDav => new WebDavSettings
+        {
+            Port = Server.Port,
+            DriveLetter = Server.DriveLetter,
+            DriveName = Server.DriveName,
+            AutoMountOnStartup = Server.MountDrive
+        };
+    }
+
+    public class ServerSettings
+    {
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public DriveEngine Engine { get; set; } = DriveEngine.WinFsp;
+
+        public bool WebDavEnabled { get; set; } = true;
+        public int Port { get; set; } = 37000;
+        public bool MountDrive { get; set; } = true;
+        public bool MountForAdministrator { get; set; } = false; // Автоматически подключать диск в сессию Администратора (UAC)
+        public string DriveLetter { get; set; } = "Z:";
+        public string DriveName { get; set; } = "TGramFS Drive";
+        public bool AutoStartWithWindows { get; set; } = true;
+        public bool HideTrashFromRoot { get; set; } = true;
+        public bool AddTrashToContextMenu { get; set; } = true;
+        public bool AutoShowProgressOverlay { get; set; } = true;
+
+        // Настройки емкости виртуального диска
+        public long VirtualDiskCapacityGb { get; set; } = 1024;
+        public bool AutoExpandDiskCapacity { get; set; } = true;
+        public bool IncludeTrashInUsedSpace { get; set; } = true;
+
+        // Публикация изображений
+        public bool CreatePhotoGalleryPreview { get; set; } = true; // Создавать фото-превью для нативной галереи Telegram
+
+        // Константы по умолчанию и диапазоны для MTProto скачивания
+        public const int DefaultDownloadWorkerCount = 3;
+        public const int MinDownloadWorkerCount = 1;
+        public const int MaxDownloadWorkerCount = 3;
+        public const int DefaultPacingDelayMs = 180;
+        public const int MinPacingDelayMs = 0;
+        public const int MaxPacingDelayMs = 500;
+
+        // Настройки кэширования и производительности скачивания
+        public bool EnableDiskReadCache { get; set; } = false; // По умолчанию 100% через ОЗУ
+        public int MemoryCacheSizeMb { get; set; } = 128; // Динамический RAM-буфер 128 МБ
+        public int ChunkMemoryCacheTtlMinutes { get; set; } = 10; // Время жизни чанков в ОЗУ (минут)
+        public int AudioPrefetchWindowMb { get; set; } = 2; // Буфер претча для аудиофайлов (.mp3, .flac, .ogg и т.д.) - по умолчанию 2 МБ
+        public int StreamingActivationThresholdMb { get; set; } = 1; // Объем вычитанных данных (МБ) для старта упреждения/префетча
+        public int StreamingPrefetchWindowMb { get; set; } = 20; // Окно упреждения для видео и крупных файлов
+        public int DownloadWorkerCount { get; set; } = DefaultDownloadWorkerCount; // Количество параллельных воркеров MTProto (1-3)
+        public int PacingDelayMs { get; set; } = DefaultPacingDelayMs; // Задержка между запросами MTProto в мс (0-500)
+        public long? CustomMaxUploadPartSizeBytes { get; set; } = null; // Пользовательский лимит размера одной части (по умолчанию авто: 2000 МБ / 4000 МБ)
+    }
+
+    public class DatabaseSettings
+    {
+        public string Path { get; set; } = "base.db";
+        public bool AutoVacuumOnTrashDelete { get; set; } = true;
+        public DatabaseBackupSettings Backup { get; set; } = new DatabaseBackupSettings();
+    }
+
+    public class DatabaseBackupSettings
+    {
+        public bool EnableAutoBackup { get; set; } = true;
+        public int DebounceMinutes { get; set; } = 15;
+        public bool BackupOnExit { get; set; } = true;
+        public bool CheckForRemoteOnStartup { get; set; } = true;
+        public int RemoteCheckIntervalMinutes { get; set; } = 5;
+        public int LastSyncedBackupMessageId { get; set; } = 0;
+    }
+
+    public class WebDavSettings
+    {
+        public int Port { get; set; } = 37000;
+        public string DriveLetter { get; set; } = "Z:";
+        public string DriveName { get; set; } = "TGramFS Drive";
+        public bool AutoMountOnStartup { get; set; } = true;
+    }
+
+    public class LoggingSettings
+    {
+        public bool EnableDebug { get; set; } = false;
+        public bool EnableInfo { get; set; } = true;
+        public bool EnableWarn { get; set; } = true;
+        public bool EnableError { get; set; } = true;
+
+        public int MaxLogFileSizeMb { get; set; } = 5;
+        public int MaxArchivedFiles { get; set; } = 3;
+    }
+
+    public class UpdateSettings
+    {
+        public bool AutoCheckUpdates { get; set; } = true;
+        public string CheckInterval { get; set; } = "Daily"; // Daily, Weekly, Monthly
+        public DateTime? LastCheckTime { get; set; } = null;
+        public string GitHubRepo { get; set; } = "hazard0975/TGramFS";
+    }
+}

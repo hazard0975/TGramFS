@@ -1,0 +1,21 @@
+using System;
+
+namespace TGramFS.Models
+{
+    /// <summary>
+    /// Канал-хранилище Telegram для файлов и папок виртуального диска.
+    /// </summary>
+    public class TelegramChannel
+    {
+        public int Id { get; set; }
+        public int AccountId { get; set; }
+        public long ChannelId { get; set; }
+        public long AccessHash { get; set; }
+        public string Title { get; set; } = "TGramFS Storage";
+        public bool IsPrimary { get; set; } = true;
+        public bool IsActive { get; set; } = true;
+        public string ChannelType { get; set; } = "storage"; // "storage" или "backup"
+        public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
+    }
+}

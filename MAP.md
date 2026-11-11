@@ -7,8 +7,8 @@
 ## 📁 Структура каталогов и файлов проекта
 
 ```text
-/TelegramWebDAV
-├── TelegramWebDAV.csproj         # Файл проекта (.NET 8.0-windows, WinForms, x64)
+/TGramFS
+├── TGramFS.csproj                # Файл проекта (.NET 8.0-windows, WinForms, x64)
 ├── Program.cs                    # Точка входа: инициализация БД, конфига, старт сервера и трея
 ├── appsettings.json              # Конфигурация по умолчанию (порты, пути к базе, параметры диска)
 │

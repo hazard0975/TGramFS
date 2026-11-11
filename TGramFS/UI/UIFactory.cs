@@ -1,0 +1,358 @@
+using System;
+using System.Drawing;
+using System.Windows.Forms;
+
+namespace TGramFS.UI
+{
+    /// <summary>
+    /// Фабрика компонентов интерфейса Windows Forms.
+    /// Гарантирует соблюдение единого стиля, защиту от схлопывания в FlowLayoutPanel и единообразные размеры.
+    /// </summary>
+    public static class UIFactory
+    {
+        public const int DefaultInnerWidth = 595;
+
+        /// <summary>
+        /// Создает рамку GroupBox с защитой от сжатия (MinimumSize) и компактными отступами.
+        /// </summary>
+        public static GroupBox CreateGroupBox(string title, int width = UITheme.ContentWidth)
+        {
+            var grp = new GroupBox
+            {
+                Text = title,
+                Width = width,
+                MinimumSize = new Size(width, 0),
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Font = UITheme.BaseFont,
+                Margin = UITheme.GroupBoxMargin,
+                Padding = UITheme.GroupBoxPadding
+            };
+            return grp;
+        }
+
+        /// <summary>
+        /// Создает внутренний контейнер FlowLayoutPanel для GroupBox с направлением сверху вниз и гарантированным нижним зазором.
+        /// </summary>
+        public static FlowLayoutPanel CreateVerticalContainer(int width = DefaultInnerWidth)
+        {
+            return new FlowLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                Width = width,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                Margin = Padding.Empty,
+                Padding = new Padding(0, 0, 0, 3)
+            };
+        }
+
+        /// <summary>
+        /// Создает строку параметра: компактная колонка названия слева + контрол сразу справа.
+        /// </summary>
+        public static TableLayoutPanel CreateSettingRow(string labelText, Control control, int labelWidth = 140, int width = DefaultInnerWidth)
+        {
+            var tbl = new TableLayoutPanel
+            {
+                Width = width,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                ColumnCount = 2,
+                RowCount = 1,
+                Margin = UITheme.RowMargin,
+                Padding = Padding.Empty
+            };
+            tbl.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, labelWidth));
+            tbl.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+
+            var lbl = new Label
+            {
+                Text = labelText,
+                AutoSize = true,
+                Font = UITheme.BaseFont,
+                ForeColor = UITheme.TextMain,
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Margin = new Padding(0, 4, 4, 4)
+            };
+
+            control.Margin = new Padding(0, 2, 0, 2);
+            control.Anchor = AnchorStyles.Left;
+
+            tbl.Controls.Add(lbl, 0, 0);
+            tbl.Controls.Add(control, 1, 0);
+
+            return tbl;
+        }
+
+        /// <summary>
+        /// Создает строку для текстового поля ввода на всю оставшуюся ширину.
+        /// </summary>
+        public static TableLayoutPanel CreateInputRow(string labelText, Control control, int labelWidth = 90, int width = DefaultInnerWidth)
+        {
+            var tbl = new TableLayoutPanel
+            {
+                Width = width,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                ColumnCount = 2,
+                RowCount = 1,
+                Margin = UITheme.RowMargin,
+                Padding = Padding.Empty
+            };
+            tbl.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, labelWidth));
+            tbl.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+
+            var lbl = new Label
+            {
+                Text = labelText,
+                AutoSize = true,
+                Font = UITheme.BaseFont,
+                ForeColor = UITheme.TextMain,
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Margin = new Padding(0, 4, 4, 4)
+            };
+
+            control.Margin = new Padding(0, 2, 0, 2);
+            control.Dock = DockStyle.Fill;
+
+            tbl.Controls.Add(lbl, 0, 0);
+            tbl.Controls.Add(control, 1, 0);
+
+            return tbl;
+        }
+
+        /// <summary>
+        /// Создает строку из названия, поля ввода и кнопки действия в одну линию.
+        /// Использует TableLayoutPanel для надежной DPI-адаптации и выравнивания базовой линии шрифта.
+        /// </summary>
+        public static TableLayoutPanel CreateActionInputRow(string labelText, TextBox textBox, Button button, int labelWidth = 90, int buttonWidth = 135, int width = DefaultInnerWidth)
+        {
+            var tbl = new TableLayoutPanel
+            {
+                Width = width,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                ColumnCount = 3,
+                RowCount = 1,
+                Margin = UITheme.RowMargin,
+                Padding = Padding.Empty
+            };
+            int textWidth = width - labelWidth - buttonWidth;
+            tbl.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, labelWidth));
+            tbl.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, textWidth));
+            tbl.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, buttonWidth));
+
+            var lbl = new Label
+            {
+                Text = labelText,
+                AutoSize = true,
+                Font = UITheme.BaseFont,
+                ForeColor = UITheme.TextMain,
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Margin = new Padding(0, 2, 4, 2)
+            };
+
+            textBox.Font = UITheme.BaseFont;
+            textBox.Width = textWidth - 8;
+            textBox.Margin = new Padding(0, 2, 8, 2);
+            textBox.Anchor = AnchorStyles.Left;
+
+            int targetHeight = textBox.PreferredHeight > 0 ? textBox.PreferredHeight : UITheme.ButtonHeightSmall;
+            button.Width = buttonWidth;
+            button.Height = targetHeight;
+            button.MinimumSize = new Size(buttonWidth, targetHeight);
+            button.MaximumSize = new Size(buttonWidth * 2, targetHeight);
+            button.Margin = new Padding(0, 2, 0, 2);
+            button.Anchor = AnchorStyles.Left;
+
+            // Динамическая привязка высоты кнопки к системной высоте TextBox при любом DPI масштабировании
+            tbl.Layout += (s, e) =>
+            {
+                int currentBoxHeight = textBox.Height > 0 ? textBox.Height : textBox.PreferredHeight;
+                if (currentBoxHeight > 0 && button.Height != currentBoxHeight)
+                {
+                    button.Height = currentBoxHeight;
+                    button.MinimumSize = new Size(buttonWidth, currentBoxHeight);
+                    button.MaximumSize = new Size(buttonWidth * 2, currentBoxHeight);
+                }
+            };
+
+            tbl.Controls.Add(lbl, 0, 0);
+            tbl.Controls.Add(textBox, 1, 0);
+            tbl.Controls.Add(button, 2, 0);
+
+            return tbl;
+        }
+
+        /// <summary>
+        /// Создает числовое поле NumericUpDown с компактной шириной и единым шрифтом.
+        /// </summary>
+        public static NumericUpDown CreateNumericInput(decimal min, decimal max, decimal val, int width = UITheme.InputNumberWidth, int decimalPlaces = 0)
+        {
+            return new NumericUpDown
+            {
+                Minimum = min,
+                Maximum = max,
+                Value = Math.Max(min, Math.Min(max, val)),
+                Width = width,
+                DecimalPlaces = decimalPlaces,
+                Font = UITheme.BaseFont,
+                Margin = UITheme.ControlMargin
+            };
+        }
+
+        /// <summary>
+        /// Создает стандартную кнопку действия через единую фабрику с защитой от сплющивания (MinimumSize).
+        /// </summary>
+        public static Button CreateButton(
+            string text, 
+            EventHandler? onClick = null, 
+            bool isPrimary = false, 
+            int height = UITheme.ButtonHeightDefault, 
+            int? width = null, 
+            bool autoSize = false,
+            DockStyle dock = DockStyle.None,
+            Color? foreColor = null)
+        {
+            var btn = new Button
+            {
+                Text = text,
+                Height = height,
+                MinimumSize = new Size(width ?? 0, height),
+                Font = isPrimary ? UITheme.BoldFont : UITheme.BaseFont,
+                UseVisualStyleBackColor = true,
+                AutoSize = autoSize,
+                Dock = dock,
+                Padding = autoSize ? new Padding(12, 4, 12, 4) : Padding.Empty,
+                Margin = new Padding(0, 2, 0, 2)
+            };
+            if (foreColor.HasValue)
+            {
+                btn.ForeColor = foreColor.Value;
+            }
+            if (width.HasValue)
+            {
+                btn.Width = width.Value;
+            }
+            if (onClick != null)
+            {
+                btn.Click += onClick;
+            }
+            return btn;
+        }
+
+        /// <summary>
+        /// Создает чекбокс со стандартным шрифтом и отступами.
+        /// </summary>
+        public static CheckBox CreateCheckBox(string text, bool isChecked, EventHandler? onCheckedChanged = null)
+        {
+            var chk = new CheckBox
+            {
+                Text = text,
+                Checked = isChecked,
+                AutoSize = true,
+                Font = UITheme.BaseFont,
+                ForeColor = UITheme.TextMain,
+                Margin = new Padding(0, 3, 0, 5)
+            };
+            if (onCheckedChanged != null)
+            {
+                chk.CheckedChanged += onCheckedChanged;
+            }
+            return chk;
+        }
+
+        /// <summary>
+        /// Создает информационную подпись или подсказку мелким приглушенным шрифтом.
+        /// </summary>
+        public static Label CreateHintLabel(string text, int width = DefaultInnerWidth)
+        {
+            return new Label
+            {
+                Text = text,
+                Width = width,
+                MaximumSize = new Size(width, 0),
+                AutoSize = true,
+                Font = UITheme.SmallFont,
+                ForeColor = UITheme.TextMuted,
+                Margin = new Padding(0, 1, 0, 6)
+            };
+        }
+
+        /// <summary>
+        /// Создает панель кнопок с равномерным распределением колонок на всю ширину блока.
+        /// </summary>
+        public static TableLayoutPanel CreateActionRow(params Control[] buttons)
+        {
+            var tbl = new TableLayoutPanel
+            {
+                Width = DefaultInnerWidth,
+                Height = UITheme.ButtonHeightDefault + 4,
+                MinimumSize = new Size(DefaultInnerWidth, UITheme.ButtonHeightDefault + 4),
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                ColumnCount = buttons.Length,
+                RowCount = 1,
+                Margin = new Padding(0, 2, 0, 2),
+                Padding = Padding.Empty
+            };
+            float percentPerCol = 100f / buttons.Length;
+            for (int i = 0; i < buttons.Length; i++)
+            {
+                tbl.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, percentPerCol));
+                buttons[i].Dock = DockStyle.Fill;
+                int leftMargin = i == 0 ? 0 : 3;
+                int rightMargin = i == buttons.Length - 1 ? 0 : 3;
+                buttons[i].Margin = new Padding(leftMargin, 1, rightMargin, 1);
+                tbl.Controls.Add(buttons[i], i, 0);
+            }
+            return tbl;
+        }
+
+        /// <summary>
+        /// Создает нижнюю фиксированную панель окна с компактным центрированием кнопок (высота 40px).
+        /// </summary>
+        public static TableLayoutPanel CreateBottomBar(Button saveBtn, Button? closeBtn = null)
+        {
+            var pnl = new TableLayoutPanel
+            {
+                Dock = DockStyle.Bottom,
+                Height = 44,
+                ColumnCount = 3,
+                RowCount = 1,
+                Padding = new Padding(12, 6, 22, 6),
+                BackColor = SystemColors.Control
+            };
+            pnl.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+            pnl.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 115f));
+            if (closeBtn != null)
+            {
+                pnl.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 115f));
+                closeBtn.Dock = DockStyle.Fill;
+                closeBtn.Font = UITheme.BaseFont;
+                closeBtn.Height = 28;
+                closeBtn.MinimumSize = new Size(110, 28);
+                closeBtn.Margin = new Padding(4, 0, 0, 0);
+                pnl.Controls.Add(closeBtn, 2, 0);
+            }
+            else
+            {
+                pnl.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 0f));
+            }
+
+            saveBtn.Dock = DockStyle.Fill;
+            saveBtn.Font = UITheme.BaseFont;
+            saveBtn.Height = 28;
+            saveBtn.MinimumSize = new Size(110, 28);
+            saveBtn.Margin = new Padding(0, 0, 4, 0);
+            pnl.Controls.Add(saveBtn, 1, 0);
+
+            return pnl;
+        }
+    }
+}
