@@ -640,7 +640,8 @@ namespace TGramFS.Services
                 int callerPid = 0;
                 try { callerPid = FileSystemBase.GetOperationProcessId(); } catch { }
 
-                var (virtualSource, originalSource) = ResolveFileSource(itemName, cleanPath, callerPid, _repository);
+                long expectedSize = allocationSize > 0 ? (long)allocationSize : -1;
+                var (virtualSource, originalSource) = ResolveFileSource(itemName, cleanPath, callerPid, _repository, expectedSize);
                 if (virtualSource != null)
                 {
                     AppLogger.Info("WinFsp", $"[VirtualCopy] Обнаружен исходный виртуальный файл для '{cleanPath}': ID {virtualSource.Id} ('{virtualSource.Name}'), размер: {AppLogger.FormatSizeDetailed(virtualSource.Size)}, MsgId: {virtualSource.TgMessageId?.ToString() ?? "null"}.");
@@ -765,7 +766,7 @@ namespace TGramFS.Services
             int effectivePid = ctx.CreatorProcessId;
 
             string fullNodePath = _repository.GetNodeFullPath(node.Id);
-            var (virtualSource, originalSource) = ResolveFileSource(node.Name, fullNodePath, effectivePid, _repository);
+            var (virtualSource, originalSource) = ResolveFileSource(node.Name, fullNodePath, effectivePid, _repository, ctx.KnownTargetSize);
             if (virtualSource != null)
             {
                 ctx.VirtualSourceNode = virtualSource;
@@ -870,7 +871,7 @@ namespace TGramFS.Services
                         if (string.IsNullOrEmpty(ctx.OriginalSourcePath) && ctx.VirtualSourceNode == null)
                         {
                             AppLogger.Info("WinFsp", $"[Write] Пробуем определить источник (Drag-and-Drop / Буфер обмена) для '{nodeName}'...");
-                            ctx.OriginalSourcePath = TryFindSourceFile(nodeName, $"{parentPath}/{nodeName}", ctx.CreatorProcessId, _repository);
+                            ctx.OriginalSourcePath = TryFindSourceFile(nodeName, $"{parentPath}/{nodeName}", ctx.CreatorProcessId, _repository, targetTotalSize);
                         }
 
                         AudioMetadataResult? audioMeta = null;
@@ -1394,6 +1395,7 @@ namespace TGramFS.Services
                                     node.UpdatedAt = targetUpdatedAt;
                                     node.CreatedAt = targetCreatedAt;
 
+                                    MarkSessionFileCompleted(cleanFilePath);
                                     AppLogger.Info("WinFsp", $"[VirtualCopy] Файл '{nodeName}' успешно сохранен через Telegram ForwardMessages (новый Msg ID: {fwdResult.MessageId}, размер: {AppLogger.FormatSizeDetailed(node.Size)}" +
                                         (fwdResult.Parts != null ? $", частей: {fwdResult.Parts.Count}" : "") + ").");
                                 }
@@ -1431,6 +1433,7 @@ namespace TGramFS.Services
                             node.UpdatedAt = targetUpdatedAt;
                             node.CreatedAt = targetCreatedAt;
 
+                            MarkSessionFileCompleted(cleanFilePath);
                             AppLogger.Info("WinFsp", $"[VirtualCopy] Файл '{nodeName}' сохранен мгновенно из локальных данных ({AppLogger.FormatSizeDetailed(node.Size)}).");
                         }
 
@@ -1478,6 +1481,7 @@ namespace TGramFS.Services
                                 node.UpdatedAt = targetUpdatedAt;
                                 node.CreatedAt = targetCreatedAt;
 
+                                MarkSessionFileCompleted(cleanFilePath);
                                 AppLogger.Info("WinFsp", $"Файл '{nodeName}' успешно сохранен в Telegram (Msg ID: {uploadResult.MessageId}" + (uploadResult.PreviewMessageId != null ? $", Preview ID: {uploadResult.PreviewMessageId}" : "") + $", дата изменения: {targetUpdatedAt:yyyy-MM-dd HH:mm:ss}). Загрузка на лету (Zero-Temp) завершена.");
                             }
                             else
@@ -1540,6 +1544,10 @@ namespace TGramFS.Services
                                 node.UpdatedAt = targetUpdatedAt;
                                 node.CreatedAt = targetCreatedAt;
 
+                                if (finalLength > 0)
+                                {
+                                    MarkSessionFileCompleted(cleanFilePath);
+                                }
                                 AppLogger.Info("WinFsp", $"Файл '{nodeName}' ({AppLogger.FormatSizeDetailed(finalLength)}) сохранен в базе данных без отправки в Telegram (inline_data).");
                             }
                             else
@@ -1610,6 +1618,7 @@ namespace TGramFS.Services
                                     node.UpdatedAt = targetUpdatedAt;
                                     node.CreatedAt = targetCreatedAt;
 
+                                    MarkSessionFileCompleted(cleanFilePath);
                                     AppLogger.Info("WinFsp", $"Файл '{nodeName}' успешно сохранен в Telegram (Msg ID: {uploadResult.MessageId}" + (uploadResult.PreviewMessageId != null ? $", Preview ID: {uploadResult.PreviewMessageId}" : "") + $", дата изменения: {targetUpdatedAt:yyyy-MM-dd HH:mm:ss}).");
                                 }
                                 else
@@ -1877,6 +1886,9 @@ namespace TGramFS.Services
 
 #region Windows Drag-and-Drop & Clipboard Source Detection (NtHandles & CF_HDROP)
 
+        [DllImport("user32.dll")]
+        private static extern uint GetClipboardSequenceNumber();
+
         [DllImport("user32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool OpenClipboard(IntPtr hWndNewOwner);
@@ -1927,31 +1939,116 @@ namespace TGramFS.Services
         private class CopySession
         {
             public List<string> PendingFiles { get; } = new List<string>();
-            public List<string> SourceRoots { get; } = new List<string>();
+            public Dictionary<string, string> VirtualDirToPhysicalDir { get; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            public HashSet<string> ConsumedVirtualFiles { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            public uint ClipboardSequenceNumber { get; set; }
             public int InitialCount { get; set; }
             public DateTime LastActivityUtc { get; set; } = DateTime.UtcNow;
 
-            public string? FindAndConsume(string targetFileName, string? relativeVirtualPath)
+            public bool IsVirtualFileConsumed(string? virtualPath)
             {
+                if (string.IsNullOrWhiteSpace(virtualPath))
+                    return false;
+                return ConsumedVirtualFiles.Contains(NormalizePath(virtualPath));
+            }
+
+            public void MarkConsumed(string? virtualPath)
+            {
+                if (!string.IsNullOrWhiteSpace(virtualPath))
+                {
+                    ConsumedVirtualFiles.Add(NormalizePath(virtualPath));
+                }
                 LastActivityUtc = DateTime.UtcNow;
+            }
+
+            public void UnmarkConsumed(string? virtualPath)
+            {
+                if (!string.IsNullOrWhiteSpace(virtualPath))
+                {
+                    ConsumedVirtualFiles.Remove(NormalizePath(virtualPath));
+                }
+            }
+
+            public void MapVirtualDirectory(string? virtualPath, string? physicalFilePath)
+            {
+                if (string.IsNullOrWhiteSpace(virtualPath) || string.IsNullOrWhiteSpace(physicalFilePath))
+                    return;
+
+                string virtualParent = GetParentPath(virtualPath);
+                string? physicalDir = Path.GetDirectoryName(physicalFilePath);
+                if (!string.IsNullOrEmpty(physicalDir))
+                {
+                    VirtualDirToPhysicalDir[virtualParent] = physicalDir;
+                }
+            }
+
+            public string? FindAndConsume(string targetFileName, string? relativeVirtualPath, long expectedSize = -1)
+            {
+                if (IsVirtualFileConsumed(relativeVirtualPath))
+                {
+                    return null;
+                }
+
+                // 1. Сначала проверяем явную очередь файлов (например, Ctrl+C / CF_HDROP),
+                // выбирая лучший вариант по совпадению сегментов пути и размеру файла
+                int bestIndex = -1;
+                int bestScore = -1;
+                string? bestMatch = null;
 
                 for (int i = 0; i < PendingFiles.Count; i++)
                 {
                     string candidate = PendingFiles[i];
-                    string? match = CheckCandidate(candidate, targetFileName, relativeVirtualPath);
-                    if (match != null)
+                    if (IsCandidateOnMountedDrive(candidate) || !File.Exists(candidate))
+                        continue;
+
+                    string candidateName = Path.GetFileName(candidate);
+                    if (!string.Equals(candidateName, targetFileName, StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    if (!DoesFileSizeMatch(candidate, expectedSize))
+                        continue;
+
+                    int score = ScoreCandidatePathMatch(candidate, relativeVirtualPath);
+                    if (score > bestScore)
                     {
-                        PendingFiles.RemoveAt(i);
-                        return match;
+                        string? verified = VerifyReadable(candidate);
+                        if (verified != null)
+                        {
+                            bestScore = score;
+                            bestIndex = i;
+                            bestMatch = verified;
+                        }
                     }
                 }
 
-                foreach (var root in SourceRoots)
+                if (bestIndex >= 0 && bestMatch != null)
                 {
-                    string? match = CheckCandidate(root, targetFileName, relativeVirtualPath);
-                    if (match != null)
+                    PendingFiles.RemoveAt(bestIndex);
+                    MapVirtualDirectory(relativeVirtualPath, bestMatch);
+                    LastActivityUtc = DateTime.UtcNow;
+                    return bestMatch;
+                }
+
+                // 2. Если файл не из очереди Ctrl+C — проверяем физическую папку-источник,
+                // привязанную СТРОГО к текущей виртуальной папке назначения (VirtualParentDir)
+                if (!string.IsNullOrWhiteSpace(relativeVirtualPath))
+                {
+                    string virtualParent = GetParentPath(relativeVirtualPath);
+                    if (VirtualDirToPhysicalDir.TryGetValue(virtualParent, out string? mappedPhysicalDir))
                     {
-                        return match;
+                        string directCandidate = Path.Combine(mappedPhysicalDir, targetFileName);
+                        if (!IsCandidateOnMountedDrive(directCandidate) && File.Exists(directCandidate))
+                        {
+                            if (DoesFileSizeMatch(directCandidate, expectedSize))
+                            {
+                                string? verified = VerifyReadable(directCandidate);
+                                if (verified != null)
+                                {
+                                    LastActivityUtc = DateTime.UtcNow;
+                                    return verified;
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -1960,20 +2057,45 @@ namespace TGramFS.Services
 
             public bool IsExpired(TimeSpan timeout)
             {
-                // Если ещё есть необработанные файлы из заранее известного списка (пачка),
+                // Если ещё есть необработанные файлы из заранее известного списка (пачка Ctrl+C),
                 // даём увеличенный таймаут (2 минуты)
                 if (PendingFiles.Count > 0)
                 {
                     return (DateTime.UtcNow - LastActivityUtc) > TimeSpan.FromMinutes(2);
                 }
-                // Если файлы идут по одному (бэкапер), держим запомненный корень активным заданный таймаут
+                // Если файлы идут по одному (Drag-and-Drop или бэкапер), держим привязки активными заданный таймаут
                 return (DateTime.UtcNow - LastActivityUtc) > timeout;
             }
         }
 
-        private static CopySession CreateCopySession(List<string> rawCandidates)
+        private static uint SafeGetClipboardSequenceNumber()
         {
-            var session = new CopySession();
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                return 0;
+            try
+            {
+                return GetClipboardSequenceNumber();
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
+        private static void MarkSessionFileCompleted(string? virtualPath)
+        {
+            lock (_sessionLock)
+            {
+                _activeSession?.MarkConsumed(virtualPath);
+            }
+        }
+
+        private static CopySession CreateCopySession(List<string> rawCandidates, uint clipboardSequence = 0)
+        {
+            var session = new CopySession
+            {
+                ClipboardSequenceNumber = clipboardSequence
+            };
             var addedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             bool hasExplicitFiles = rawCandidates.Exists(c => File.Exists(c));
 
@@ -1985,22 +2107,11 @@ namespace TGramFS.Services
                     {
                         session.PendingFiles.Add(raw);
                     }
-
-                    string? dir = Path.GetDirectoryName(raw);
-                    if (!string.IsNullOrEmpty(dir) && !session.SourceRoots.Exists(r => string.Equals(r, dir, StringComparison.OrdinalIgnoreCase)))
-                    {
-                        session.SourceRoots.Add(dir);
-                    }
                 }
                 else if (Directory.Exists(raw))
                 {
-                    if (!session.SourceRoots.Exists(r => string.Equals(r, raw, StringComparison.OrdinalIgnoreCase)))
-                    {
-                        session.SourceRoots.Add(raw);
-                    }
-
                     // Рекурсивное перечисление файлов папки в очередь выполняется ТОЛЬКО если в списке кандидатов
-                    // нет явных файлов (т.е. пользователь действительно копирует всю папку целиком, а не файлы из неё).
+                    // нет явных файлов (т.е. пользователь скопировал папку целиком через Ctrl+C).
                     if (!hasExplicitFiles)
                     {
                         try
@@ -2028,17 +2139,17 @@ namespace TGramFS.Services
 
         /// <summary>
         /// Единый детерминированный метод разрешения источника создаваемого файла (Root Cause First):
-        /// За ОДИН-ЕДИНСТВЕННЫЙ опрос дескрипторов ядра классифицирует входящий файл:
-        /// 1. Виртуальная копия внутри диска Y: (VirtualCopy -> мгновенный форвардинг в Telegram без трафика)
-        /// 2. Локальный оригинальный файл на диске D:, C: и др. (OriginalSourcePath -> потоковая загрузка с чтением метаданных)
-        /// Устраняет двойное сканирование 88 000 дескрипторов ядра и гарантирует, что дескриптор бэкапера (SyncBackFree и др.)
-        /// никогда не потеряется между фазами подготовки и записи.
+        /// 1. Проверяет свежее изменение буфера обмена (GetClipboardSequenceNumber)
+        /// 2. Проверяет активную сессию строго для текущей виртуальной родительской папки (VirtualParentDir)
+        /// 3. Если виртуальная папка сменилась, файл повторный (коллизия имён) или кэша нет —
+        ///    опрашивает открытые файловые дескрипторы процесса callerPid через ядро Windows.
         /// </summary>
         private static (Node? VirtualSource, string? OriginalSource) ResolveFileSource(
             string targetFileName,
             string? relativeVirtualPath,
             int callerPid,
-            NodeRepository? repository)
+            NodeRepository? repository,
+            long expectedSize = -1)
         {
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 return (null, null);
@@ -2052,9 +2163,14 @@ namespace TGramFS.Services
                 catch { }
             }
 
-            AppLogger.Info("WinFsp", $"[Источник] Поиск оригинального файла для '{targetFileName}' (виртуальный путь: '{relativeVirtualPath}')...");
+            string? cleanVirtualPath = string.IsNullOrWhiteSpace(relativeVirtualPath) ? null : NormalizePath(relativeVirtualPath);
+            uint currentClipSeq = SafeGetClipboardSequenceNumber();
 
-            // Шаг 1: Проверяем активную сессию (0 мс доступ через SourceRoots и кэш сессии)
+            AppLogger.Info("WinFsp", $"[Источник] Поиск оригинального файла для '{targetFileName}' (виртуальный путь: '{cleanVirtualPath ?? relativeVirtualPath}')...");
+
+            bool shouldCheckClipboardFirst = false;
+            bool isRepeatInSameSession = false;
+
             lock (_sessionLock)
             {
                 if (_activeSession != null)
@@ -2066,67 +2182,107 @@ namespace TGramFS.Services
                     }
                     else
                     {
-                        string? match = _activeSession.FindAndConsume(targetFileName, relativeVirtualPath);
-                        if (match != null)
+                        if (currentClipSeq != 0 && currentClipSeq != _activeSession.ClipboardSequenceNumber)
                         {
-                            if (_activeSession.InitialCount > 0 && _activeSession.PendingFiles.Count > 0)
+                            // Буфер обмена изменился с момента инициализации текущей сессии -> новый Ctrl+C имеет приоритет
+                            shouldCheckClipboardFirst = true;
+                        }
+                        else if (_activeSession.IsVirtualFileConsumed(cleanVirtualPath))
+                        {
+                            // Тот же виртуальный файл (или имя в той же папке) загружается повторно -> принудительно пересканируем источник
+                            isRepeatInSameSession = true;
+                            AppLogger.Info("WinFsp", $"[Источник] Повторная запись '{cleanVirtualPath}' в рамках текущей сессии — пропускаем кэш папки и обновляем источник.");
+                        }
+                        else
+                        {
+                            string? match = _activeSession.FindAndConsume(targetFileName, cleanVirtualPath, expectedSize);
+                            if (match != null)
                             {
-                                AppLogger.Info("WinFsp", $"[Источник] Найдено совпадение в активной сессии (осталось файлов в очереди: {_activeSession.PendingFiles.Count}/{_activeSession.InitialCount}): '{match}'");
+                                if (_activeSession.InitialCount > 0 && _activeSession.PendingFiles.Count > 0)
+                                {
+                                    AppLogger.Info("WinFsp", $"[Источник] Найдено совпадение в активной сессии (осталось файлов в очереди: {_activeSession.PendingFiles.Count}/{_activeSession.InitialCount}): '{match}'");
+                                }
+                                else
+                                {
+                                    AppLogger.Info("WinFsp", $"[Источник] Найдено совпадение в активной сессии для папки '{GetParentPath(cleanVirtualPath ?? "/")}': '{match}'");
+                                }
+                                return (null, match);
                             }
-                            else
-                            {
-                                AppLogger.Info("WinFsp", $"[Источник] Найдено совпадение в активной сессии: '{match}'");
-                            }
-                            return (null, match);
                         }
                     }
+                }
+                else
+                {
+                    shouldCheckClipboardFirst = true;
                 }
             }
 
-            // Шаг 2: Проверяем системный буфер обмена Windows (Ctrl+C / Ctrl+V, CF_HDROP).
-            // Если пользователь явно скопировал файл через Ctrl+C, в буфере лежит точный путь.
-            // Буфер обмена отражает прямое действие пользователя и имеет абсолютный приоритет над случайными фоновыми окнами Проводника!
-            var clipboardCandidates = CollectClipboardCandidates(includeMountedDrive: true);
-            if (clipboardCandidates.Count > 0)
+            // Шаг 2: Проверяем системный буфер обмена Windows (Ctrl+C / Ctrl+V, CF_HDROP),
+            // если сессии ещё нет, буфер обновился или кэш сессии не дал точного совпадения.
+            if (shouldCheckClipboardFirst || !isRepeatInSameSession)
             {
-                // 2.1 Проверяем виртуальные кандидаты в буфере обмена (диск Y:)
-                if (repository != null)
+                var clipboardCandidates = CollectClipboardCandidates(includeMountedDrive: true);
+                if (clipboardCandidates.Count > 0)
                 {
-                    foreach (var clip in clipboardCandidates)
+                    // 2.1 Проверяем виртуальные кандидаты в буфере обмена (диск Z:)
+                    if (repository != null)
                     {
-                        if (IsCandidateOnMountedDrive(clip))
+                        foreach (var clip in clipboardCandidates)
                         {
-                            var vMatch = MatchVirtualCandidate(clip, targetFileName, relativeVirtualPath ?? "", repository);
-                            if (vMatch != null)
+                            if (IsCandidateOnMountedDrive(clip))
                             {
-                                AppLogger.Info("WinFsp", $"[Источник] Найдено прямое совпадение в буфере обмена Windows (Виртуальная копия): '{clip}'");
-                                return (vMatch, null);
+                                var vMatch = MatchVirtualCandidate(clip, targetFileName, cleanVirtualPath ?? "", repository);
+                                if (vMatch != null)
+                                {
+                                    lock (_sessionLock)
+                                    {
+                                        // Новая виртуальная копия из буфера обмена сбрасывает устаревшую физическую сессию
+                                        if (shouldCheckClipboardFirst)
+                                        {
+                                            _activeSession = null;
+                                        }
+                                    }
+                                    AppLogger.Info("WinFsp", $"[Источник] Найдено прямое совпадение в буфере обмена Windows (Виртуальная копия): '{clip}'");
+                                    return (vMatch, null);
+                                }
                             }
                         }
                     }
-                }
 
-                // 2.2 Проверяем физические кандидаты в буфере обмена (диски D:, C: и др.)
-                var physicalClip = clipboardCandidates.Where(c => !IsCandidateOnMountedDrive(c)).ToList();
-                if (physicalClip.Count > 0)
-                {
-                    lock (_sessionLock)
+                    // 2.2 Проверяем физические кандидаты в буфере обмена (диски D:, C: и др.)
+                    var physicalClip = clipboardCandidates.Where(c => !IsCandidateOnMountedDrive(c)).ToList();
+                    if (physicalClip.Count > 0)
                     {
-                        var clipSession = CreateCopySession(physicalClip);
-                        string? match = clipSession.FindAndConsume(targetFileName, relativeVirtualPath);
+                        var clipSession = CreateCopySession(physicalClip, currentClipSeq);
+                        string? match = clipSession.FindAndConsume(targetFileName, cleanVirtualPath, expectedSize);
                         if (match != null)
                         {
-                            _activeSession = clipSession;
+                            lock (_sessionLock)
+                            {
+                                _activeSession = clipSession;
+                            }
                             AppLogger.Info("WinFsp", $"[Источник] Найдено прямое совпадение в буфере обмена Windows (Локальный файл): '{match}'");
                             return (null, match);
                         }
                     }
                 }
+
+                if (shouldCheckClipboardFirst)
+                {
+                    lock (_sessionLock)
+                    {
+                        if (_activeSession != null && currentClipSeq != 0)
+                        {
+                            // Буфер изменился не на файлы (например, текст), фиксируем sequence, чтобы не переоткрывать Clipboard на каждый файл
+                            _activeSession.ClipboardSequenceNumber = currentClipSeq;
+                        }
+                    }
+                }
             }
 
-            // Шаг 3: Если в буфере обмена совпадений нет (Drag-and-Drop или сторонний копировщик/бэкапер),
-            // опрашиваем открытые файловые дескрипторы (Handles) через ядро Windows
-            var handleCandidates = CollectOpenFileHandles(targetFileName, includeMountedDrive: true, callerPid: callerPid, targetVirtualPath: relativeVirtualPath);
+            // Шаг 3: Если в кэше виртуальной папки и буфере обмена совпадений нет (Drag-and-Drop, смена папки или бэкапер),
+            // опрашиваем открытые файловые дескрипторы (Handles) процесса callerPid через ядро Windows
+            var handleCandidates = CollectOpenFileHandles(targetFileName, includeMountedDrive: true, callerPid: callerPid, targetVirtualPath: cleanVirtualPath, expectedSize: expectedSize);
             if (handleCandidates.Count == 0)
             {
                 return (null, null);
@@ -2136,49 +2292,48 @@ namespace TGramFS.Services
             var physicalCandidates = handleCandidates.Where(c => !IsCandidateOnMountedDrive(c)).ToList();
             if (physicalCandidates.Count > 0)
             {
-                lock (_sessionLock)
+                string? matchedPhysical = null;
+                foreach (var phys in physicalCandidates)
                 {
-                    var newSession = CreateCopySession(physicalCandidates);
-                    AppLogger.Info("WinFsp", $"[Источник] Инициализирована новая сессия копирования: файлов в очереди {newSession.PendingFiles.Count}, папок-источников {newSession.SourceRoots.Count}");
+                    matchedPhysical = CheckCandidate(phys, targetFileName, cleanVirtualPath, expectedSize);
+                    if (matchedPhysical != null)
+                        break;
+                }
 
-                    string? match = newSession.FindAndConsume(targetFileName, relativeVirtualPath);
-                    if (match != null)
+                if (matchedPhysical != null)
+                {
+                    lock (_sessionLock)
                     {
-                        if (_activeSession == null)
+                        if (_activeSession == null || _activeSession.IsExpired(TimeSpan.FromSeconds(20)))
                         {
-                            _activeSession = newSession;
+                            _activeSession = new CopySession
+                            {
+                                ClipboardSequenceNumber = currentClipSeq
+                            };
                         }
-                        else
+                        else if (currentClipSeq != 0)
                         {
-                            foreach (var r in newSession.SourceRoots)
-                            {
-                                if (!_activeSession.SourceRoots.Exists(x => string.Equals(x, r, StringComparison.OrdinalIgnoreCase)))
-                                {
-                                    _activeSession.SourceRoots.Add(r);
-                                }
-                            }
-                            foreach (var f in newSession.PendingFiles)
-                            {
-                                if (!_activeSession.PendingFiles.Exists(x => string.Equals(x, f, StringComparison.OrdinalIgnoreCase)))
-                                {
-                                    _activeSession.PendingFiles.Add(f);
-                                }
-                            }
-                            _activeSession.LastActivityUtc = DateTime.UtcNow;
+                            _activeSession.ClipboardSequenceNumber = currentClipSeq;
                         }
-                        return (null, match);
+
+                        _activeSession.UnmarkConsumed(cleanVirtualPath);
+                        _activeSession.MapVirtualDirectory(cleanVirtualPath, matchedPhysical);
+                        _activeSession.LastActivityUtc = DateTime.UtcNow;
+
+                        AppLogger.Info("WinFsp", $"[Источник] Привязана папка-источник '{Path.GetDirectoryName(matchedPhysical)}' для виртуального каталога '{GetParentPath(cleanVirtualPath ?? "/")}'");
                     }
+                    return (null, matchedPhysical);
                 }
             }
 
-            // Шаг 3.2: ТОЛЬКО если среди дескрипторов физический файл не найден, проверяем виртуальный файл на диске Y:
+            // Шаг 3.2: ТОЛЬКО если среди дескрипторов физический файл не найден, проверяем виртуальный файл на диске Z:
             if (repository != null)
             {
                 foreach (var cand in handleCandidates)
                 {
                     if (IsCandidateOnMountedDrive(cand))
                     {
-                        var vMatch = MatchVirtualCandidate(cand, targetFileName, relativeVirtualPath ?? "", repository);
+                        var vMatch = MatchVirtualCandidate(cand, targetFileName, cleanVirtualPath ?? "", repository);
                         if (vMatch != null)
                         {
                             return (vMatch, null);
@@ -2190,9 +2345,9 @@ namespace TGramFS.Services
             return (null, null);
         }
 
-        private static string? TryFindSourceFile(string targetFileName, string? relativeVirtualPath = null, int callerPid = 0, NodeRepository? repository = null)
+        private static string? TryFindSourceFile(string targetFileName, string? relativeVirtualPath = null, int callerPid = 0, NodeRepository? repository = null, long expectedSize = -1)
         {
-            var (_, originalSource) = ResolveFileSource(targetFileName, relativeVirtualPath, callerPid, repository);
+            var (_, originalSource) = ResolveFileSource(targetFileName, relativeVirtualPath, callerPid, repository, expectedSize);
             return originalSource;
         }
 
@@ -2380,9 +2535,10 @@ namespace TGramFS.Services
         /// Опрашивает открытые файловые дескрипторы через ядро Windows (NtQuerySystemInformation),
         /// не отправляя оконных сообщений и не обращаясь к OLE/COM, что полностью исключает дедлоки.
         /// </summary>
-        private static List<string> CollectOpenFileHandles(string? targetFileName, bool includeMountedDrive = false, int callerPid = 0, string? targetVirtualPath = null)
+        private static List<string> CollectOpenFileHandles(string? targetFileName, bool includeMountedDrive = false, int callerPid = 0, string? targetVirtualPath = null, long expectedSize = -1)
         {
             var results = new List<string>();
+            var dirFallbackResults = new List<string>();
             try
             {
                 var targetPids = new HashSet<int>();
@@ -2556,12 +2712,14 @@ namespace TGramFS.Services
                                                     if (string.IsNullOrEmpty(targetFileName) ||
                                                         string.Equals(name, targetFileName, StringComparison.OrdinalIgnoreCase))
                                                     {
-                                                        if (!results.Exists(x => string.Equals(x, path, StringComparison.OrdinalIgnoreCase)))
+                                                        bool sizeOk = DoesFileSizeMatch(path, expectedSize);
+
+                                                        if (sizeOk && !results.Exists(x => string.Equals(x, path, StringComparison.OrdinalIgnoreCase)))
                                                         {
                                                             AppLogger.Info("WinFsp", $"[Handles DragDrop] Обнаружен открытый файл в процессе PID {processId}: '{path}'");
                                                             results.Add(path);
 
-                                                            // Если мы искали конкретный целевой файл и нашли его,
+                                                            // Если мы искали конкретный целевой файл и нашли его среди РЕАЛЬНО ОТКРЫТЫХ файлов,
                                                             // МГНОВЕННО прекращаем опрос остальных дескрипторов (Fast-Break)
                                                             if (!string.IsNullOrEmpty(targetFileName))
                                                             {
@@ -2572,10 +2730,9 @@ namespace TGramFS.Services
                                                 }
                                                 else if (Directory.Exists(path))
                                                 {
-                                                    // Проверяем файлы внутри открытой папки ТОЛЬКО для вызывающего процесса (callerPid),
-                                                    // например утилит бэкапа/синхронизации (SyncBackFree) или активного окна.
-                                                    // Для чужих фоновых окон Проводника (processId != callerPid) не гадаем по содержимому их открытых папок,
-                                                    // чтобы случайные файлы с такими же именами (например, 'Новый текстовый документ.txt') не привязывались ложно
+                                                    // Приоритет открытых ФАЙЛОВ над открытыми ПАПКАМИ:
+                                                    // Не возвращаемся сразу на первом совпадении по открытой папке — складываем в резервный список dirFallbackResults,
+                                                    // чтобы реально открытый сейчас файл в таблице ядра всегда победил случайно удержанную вкладку/папку того же процесса.
                                                     if (!string.IsNullOrEmpty(targetFileName) && callerPid > 0 && processId == callerPid)
                                                     {
                                                         try
@@ -2583,12 +2740,13 @@ namespace TGramFS.Services
                                                             string candidateFile = Path.Combine(path, targetFileName);
                                                             if (File.Exists(candidateFile))
                                                             {
-                                                                AppLogger.Info("WinFsp", $"[Handles DragDrop] Обнаружен файл '{targetFileName}' внутри открытой папки процесса PID {processId}: '{candidateFile}'");
-                                                                if (!results.Exists(x => string.Equals(x, candidateFile, StringComparison.OrdinalIgnoreCase)))
+                                                                bool sizeOk = DoesFileSizeMatch(candidateFile, expectedSize);
+
+                                                                if (sizeOk && !dirFallbackResults.Exists(x => string.Equals(x, candidateFile, StringComparison.OrdinalIgnoreCase)))
                                                                 {
-                                                                    results.Add(candidateFile);
+                                                                    AppLogger.Debug("WinFsp", $"[Handles DragDrop] Резервный кандидат '{targetFileName}' внутри открытой папки процесса PID {processId}: '{candidateFile}'");
+                                                                    dirFallbackResults.Add(candidateFile);
                                                                 }
-                                                                return results;
                                                             }
                                                         }
                                                         catch { }
@@ -2636,6 +2794,20 @@ namespace TGramFS.Services
                 AppLogger.Warn("WinFsp", $"[Handles DragDrop] Исключение при сканировании хэндлов: {ex.Message}");
             }
 
+            // Если среди открытых дескрипторов самого файла не нашлось (например, очень мелкий файл или бэкапер открыл только каталог),
+            // используем резервный список кандидатов из открытых папок процесса callerPid
+            if (!results.Exists(r => !IsCandidateOnMountedDrive(r)) && dirFallbackResults.Count > 0)
+            {
+                foreach (var fallback in dirFallbackResults)
+                {
+                    if (!results.Exists(x => string.Equals(x, fallback, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        AppLogger.Info("WinFsp", $"[Handles DragDrop] Используем резервный файл из открытой папки процесса: '{fallback}'");
+                        results.Add(fallback);
+                    }
+                }
+            }
+
             return results;
         }
 
@@ -2678,7 +2850,60 @@ namespace TGramFS.Services
             return false;
         }
 
-        private static string? CheckCandidate(string candidatePath, string targetFileName, string? relativeVirtualPath)
+        private static bool DoesFileSizeMatch(string filePath, long expectedSize)
+        {
+            if (expectedSize <= 0)
+                return true;
+            try
+            {
+                long actualSize = new System.IO.FileInfo(filePath).Length;
+                return DoesSizeMatch(actualSize, expectedSize);
+            }
+            catch
+            {
+                return true;
+            }
+        }
+
+        private static bool DoesSizeMatch(long actualSize, long expectedSize)
+        {
+            if (expectedSize <= 0)
+                return true;
+            if (actualSize == expectedSize)
+                return true;
+
+            // Windows / WinFsp округляет allocationSize вверх до границы кластера (обычно 4 КБ, реже до 64 КБ)
+            return actualSize > 0 && actualSize <= expectedSize && (expectedSize - actualSize) <= 65536;
+        }
+
+        private static int ScoreCandidatePathMatch(string candidateFilePath, string? relativeVirtualPath)
+        {
+            if (string.IsNullOrWhiteSpace(relativeVirtualPath))
+                return 0;
+
+            string? physDir = Path.GetDirectoryName(candidateFilePath);
+            string virtDir = GetParentPath(relativeVirtualPath);
+            if (string.IsNullOrEmpty(physDir) || virtDir == "/")
+                return 0;
+
+            var physParts = physDir.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries);
+            var virtParts = virtDir.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
+
+            int score = 0;
+            int pIdx = physParts.Length - 1;
+            int vIdx = virtParts.Length - 1;
+            while (pIdx >= 0 && vIdx >= 0 &&
+                   string.Equals(physParts[pIdx], virtParts[vIdx], StringComparison.OrdinalIgnoreCase))
+            {
+                score++;
+                pIdx--;
+                vIdx--;
+            }
+
+            return score;
+        }
+
+        private static string? CheckCandidate(string candidatePath, string targetFileName, string? relativeVirtualPath, long expectedSize = -1)
         {
             if (IsCandidateOnMountedDrive(candidatePath))
                 return null;
@@ -2688,6 +2913,8 @@ namespace TGramFS.Services
                 string candidateName = Path.GetFileName(candidatePath);
                 if (string.Equals(candidateName, targetFileName, StringComparison.OrdinalIgnoreCase))
                 {
+                    if (!DoesFileSizeMatch(candidatePath, expectedSize))
+                        return null;
                     return VerifyReadable(candidatePath);
                 }
                 return null;
@@ -2697,7 +2924,7 @@ namespace TGramFS.Services
             {
                 // Сценарий 1: Прямой дочерний файл в скопированной папке
                 string directChild = Path.Combine(candidatePath, targetFileName);
-                if (File.Exists(directChild))
+                if (File.Exists(directChild) && DoesFileSizeMatch(directChild, expectedSize))
                 {
                     return VerifyReadable(directChild);
                 }
@@ -2712,7 +2939,7 @@ namespace TGramFS.Services
                     {
                         string sub = cleanVirtual.Substring(idx + candidateDirName.Length).TrimStart(Path.DirectorySeparatorChar);
                         string candidateWithSub = Path.Combine(candidatePath, sub);
-                        if (File.Exists(candidateWithSub))
+                        if (File.Exists(candidateWithSub) && DoesFileSizeMatch(candidateWithSub, expectedSize))
                         {
                             return VerifyReadable(candidateWithSub);
                         }
@@ -2724,6 +2951,8 @@ namespace TGramFS.Services
                 {
                     foreach (var file in Directory.EnumerateFiles(candidatePath, targetFileName, SearchOption.AllDirectories))
                     {
+                        if (!DoesFileSizeMatch(file, expectedSize))
+                            continue;
                         var match = VerifyReadable(file);
                         if (match != null) return match;
                     }
