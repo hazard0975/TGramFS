@@ -2400,20 +2400,16 @@ namespace TGramFS.Services
                     catch { }
                 }
 
-                if (callerPid > 0 && callerPid != currentPid && !isCallerExplorer)
+                if (callerPid > 0 && callerPid != currentPid)
                 {
-                    // 1. Вызывающий процесс — это сторонняя утилита (Create Synchronicity, SyncBack, Total Commander и др.)
-                    // Опрашиваем СТРОГО только её дескрипторы, исключая сотни чужих хэндлов Проводника и таймауты
+                    // Опрашиваем СТРОГО процесс, инициировавший операцию (callerPid) —
+                    // будь то сторонняя утилита (Create Synchronicity) или конкретный рабочий процесс Проводника (explorer.exe),
+                    // исключая сотни чужих дескрипторов посторонних фоновых окон Explorer и гарантируя удержание в бюджете времени.
                     targetPids.Add(callerPid);
                 }
                 else
                 {
-                    // 2. Копирование инициировано Проводником Windows (или callerPid неизвестен / равен explorer)
-                    if (callerPid > 0 && callerPid != currentPid)
-                    {
-                        targetPids.Add(callerPid);
-                    }
-
+                    // Резерв: если callerPid неизвестен или совпал с текущим процессом, опрашиваем процессы Проводника
                     var explorerProcesses = Process.GetProcessesByName("explorer");
                     foreach (var p in explorerProcesses)
                     {
