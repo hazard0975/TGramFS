@@ -907,7 +907,7 @@ namespace TGramFS.Services
                         }
                         else
                         {
-                            AppLogger.Warn("WinFsp", $"[Write] Исходный путь для '{nodeName}' НЕ найден в буфере обмена Windows.");
+                            AppLogger.Warn("WinFsp", $"[Write] Исходный путь на диске для '{nodeName}' НЕ найден (буфер обмена / хэндлы процесса).");
                         }
 
                         // Если оригинал не найден в буфере обмена (например, перетаскивание), для аудио извлекаем из первых 256 КБ
@@ -2388,19 +2388,39 @@ namespace TGramFS.Services
                 var targetPids = new HashSet<int>();
                 int currentPid = Process.GetCurrentProcess().Id;
 
-                // 1. Вызывающий процесс WinFsp (бэкапер, Total Commander, Robocopy, скрипт и т.д.)
+                string callerName = "unknown";
+                bool isCallerExplorer = false;
                 if (callerPid > 0 && callerPid != currentPid)
                 {
-                    targetPids.Add(callerPid);
+                    try
+                    {
+                        callerName = Process.GetProcessById(callerPid).ProcessName;
+                        isCallerExplorer = callerName.Equals("explorer", StringComparison.OrdinalIgnoreCase);
+                    }
+                    catch { }
                 }
 
-                // 2. Все процессы explorer.exe (для перетаскивания и копирования через Проводник Windows)
-                var explorerProcesses = Process.GetProcessesByName("explorer");
-                foreach (var p in explorerProcesses)
+                if (callerPid > 0 && callerPid != currentPid && !isCallerExplorer)
                 {
-                    if (p.Id != currentPid)
+                    // 1. Вызывающий процесс — это сторонняя утилита (Create Synchronicity, SyncBack, Total Commander и др.)
+                    // Опрашиваем СТРОГО только её дескрипторы, исключая сотни чужих хэндлов Проводника и таймауты
+                    targetPids.Add(callerPid);
+                }
+                else
+                {
+                    // 2. Копирование инициировано Проводником Windows (или callerPid неизвестен / равен explorer)
+                    if (callerPid > 0 && callerPid != currentPid)
                     {
-                        targetPids.Add(p.Id);
+                        targetPids.Add(callerPid);
+                    }
+
+                    var explorerProcesses = Process.GetProcessesByName("explorer");
+                    foreach (var p in explorerProcesses)
+                    {
+                        if (p.Id != currentPid)
+                        {
+                            targetPids.Add(p.Id);
+                        }
                     }
                 }
 
@@ -2410,14 +2430,7 @@ namespace TGramFS.Services
                     return results;
                 }
 
-                string callerInfo = "";
-                if (callerPid > 0 && callerPid != currentPid)
-                {
-                    string callerName = "unknown";
-                    try { callerName = Process.GetProcessById(callerPid).ProcessName; } catch { }
-                    callerInfo = $", вызывающий процесс: {callerName} (PID: {callerPid})";
-                }
-
+                string callerInfo = callerPid > 0 && callerPid != currentPid ? $", вызывающий процесс: {callerName} (PID: {callerPid})" : "";
                 AppLogger.Info("WinFsp", $"[Handles DragDrop] Сканирование хэндлов для {targetPids.Count} процессов (PID: {string.Join(", ", targetPids)}{callerInfo})...");
 
                 // STATUS_INFO_LENGTH_MISMATCH = 0xC0000004
