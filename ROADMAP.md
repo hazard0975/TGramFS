@@ -1343,3 +1343,9 @@
       2. **Восстановление `OriginalSourcePath` в ветке `<= 1 МБ` (`WinFspServer.Cleanup`)**: вызов `TryFindSourceFile` при `finalLength > 1` устраняет потерю источника и метаданных после 0-байтных заглушек Explorer (`Create` -> `Cleanup (0 байт)` -> `Open` -> `Write` -> `Cleanup`).
       3. **Потоковый парсинг `ID3v1` (`ParseId3v1Tail` в `ExtractFromStream`) и сохранение `Artist` в `InferFromFileName`**: поля `ID3v1` читаются до первого `0x00` из хвоста `MemoryStream`, если отсутствуют в `ID3v2`.
       4. **Временный флаг тестирования `TemporarilyDisableLegacyEncodingDecoder = true`**: по запросу пользователя временно отключено автодекодирование `NormalizeTagValue` / `DecodeLegacyBytes` (с сохранением кода) для контрольной проверки срабатывания `bad_audio_tags.txt` на старых `CP1251`-треках.
+- [x] **8.114. High-DPI масштабирование всплывающей плашки прогресса над треем (`TrayProgressOverlay.cs`)**:
+    - **Проблема**: После включения `HighDpiMode.PerMonitorV2` шрифты плашки (в `Point`) масштабировались GDI+ под DPI экрана, а размер окна (`370 x 96`), координаты в `OnPaint`, скорость бегущей строки и отступы в `PositionNearTray()` оставались жёстко в 96 DPI пикселях — на экранах 125%–200% плашка уменьшалась и обрезала строку со скоростью.
+    - **Реализовано**:
+      1. Базовые константы 96 DPI (`BaseWidth = 396`, `BaseHeight = 96`, координаты, радиусы, скорость `Marquee`, отступ `16 px`), `AutoScaleMode = AutoScaleMode.None`, `GetDpiScale()` / `ApplyDpiScale()`, `OnDpiChanged` и пересчёт размера в `PositionNearTray()` строго до вычисления координат.
+      2. В `OnPaint` все координаты, толщина рамки, прогресс-бар и скорость бегущей строки синхронизированы с `g.DpiY / 96f`, высота клипа бегущей строки рассчитывается от `nameFont.GetHeight(g)`, добавлен `StringTrimming.EllipsisCharacter`.
+      3. В `Dispose` добавлен пропущенный вызов `_completionTimer.Dispose()`.

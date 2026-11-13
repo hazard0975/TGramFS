@@ -3951,3 +3951,27 @@ _telegramService.UpdateSettings(_settings);
 2. **Гарантированная очистка временных файлов бэкапа при сбое (`DatabaseManager.cs`, `DatabaseBackupService.cs`)**:
    - В `DatabaseManager.CreateConsistentSnapshot` блок `catch` удаляет недописанный `targetPath`, если `VACUUM INTO` завершился ошибкой.
    - В `DatabaseBackupService.CheckAndSyncFromTelegramAsync` удаление временного `backups/restore_incoming.db` перенесено в блок `finally`.
+
+---
+
+## 127. High-DPI масштабирование всплывающей плашки прогресса над треем (`TrayProgressOverlay.cs`)
+
+### Контекст и симптомы:
+После внедрения `Application.SetHighDpiMode(HighDpiMode.PerMonitorV2)` в `Program.cs` (Решение 102) и адаптации окон настроек (`AuthSettingsForm`) и информации (`AboutForm`) всплывающая плашка прогресса передачи файлов (`TrayProgressOverlay`) на экранах со 125%–200% масштабом визуально уменьшилась, а строка статистики со скоростью и временем (`stats`) перестала помещаться в ширину плашки.
+
+### Первопричина:
+1. До включения `PerMonitorV2` процесс работал как `DPI-Unaware`: плашка рисовалась в `370 x 96`, а композитор Windows DWM растягивал её целиком на экранный масштаб с сохранением пропорций.
+2. После включения `PerMonitorV2` системное растягивание DWM отключилось: окно `TrayProgressOverlay` сохраняло физический размер `Size = new Size(370, 96)` и жёсткие пиксельные координаты в `OnPaint` / `PositionNearTray`, в то время как GDI+ продолжал масштабировать шрифты (`GraphicsUnit.Point`) пропорционально физическому `DeviceDpi` монитора. В результате крупные шрифты перестали влезать в сжатую до `370 x 96` физических пикселей плашку.
+
+### Принятое решение (`TrayProgressOverlay.cs`):
+1. **Пропорциональное масштабирование геометрии от `DeviceDpi`**:
+   - Вынесены базовые эталонные константы для 96 DPI (`BaseWidth = 396`, `BaseHeight = 96`, `BasePaddingX = 12`, `BaseTitleY = 10`, `BaseNameY = 28`, `BaseBarY = 52`, `BaseBarHeight = 8`, `BaseStatsY = 68`, радиусы скругления `8`/`4`, отступ от края экрана `BaseScreenMargin = 16`, скорость бегущей строки `BaseScrollSpeedPxPerSec = 32f`).
+   - Отключено вмешательство `AutoScaleMode` (`AutoScaleMode = AutoScaleMode.None`, т.к. у оверлея нет дочерних контролов и всё рисуется вручную в `OnPaint`, что исключает двойное масштабирование).
+   - Реализованы `GetDpiScale()` и `ApplyDpiScale(dpiScale)`, вызываемые в конструкторе, в `OnDpiChanged` и в `PositionNearTray()` строго **до** вычисления `Location` у правого нижнего края рабочей области (с повторной сверкой DPI после перемещения).
+2. **Адаптивная отрисовка в `OnPaint`**:
+   - Используется актуальный масштаб холста `g.DpiY / 96f` — шрифты и геометрия синхронизированы 1-в-1.
+   - Высота области отсечения бегущей строки вычисляется через `nameFont.GetHeight(g)` вместо жёстких `22 px`; для заголовка, статичного имени файла и строки статистики добавлено `StringTrimming.EllipsisCharacter`.
+   - Защита скругления минимальной заливки прогресс-бара (`Math.Max(minFillWidth, barRadius * 2)`).
+3. **Попутное исправление утечки ресурса**:
+   - В `Dispose(bool)` добавлен пропущенный вызов `_completionTimer.Dispose()`.
+

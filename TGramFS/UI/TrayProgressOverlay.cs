@@ -142,6 +142,23 @@ namespace TGramFS.UI
         private DateTime _marqueeStartTime = DateTime.UtcNow;
         private string _marqueeLastFileName = string.Empty;
 
+        private const int BaseWidth = 396;
+        private const int BaseHeight = 96;
+        private const int BasePaddingX = 12;
+        private const int BaseTitleY = 10;
+        private const int BaseNameY = 28;
+        private const int BaseBarY = 52;
+        private const int BaseBarHeight = 8;
+        private const int BaseStatsY = 68;
+        private const int BaseCornerRadius = 8;
+        private const int BaseBarCornerRadius = 4;
+        private const int BaseMinFillWidth = 8;
+        private const int BaseScreenMargin = 16;
+        private const float BaseScrollSpeedPxPerSec = 32f;
+        private const float BaseMarqueeEndGap = 8f;
+
+        private float _currentDpiScale = 1.0f;
+
         public TrayProgressOverlay()
         {
             _syncContext = SynchronizationContext.Current;
@@ -152,15 +169,16 @@ namespace TGramFS.UI
                      ControlStyles.ResizeRedraw, true);
             UpdateStyles();
 
+            AutoScaleMode = AutoScaleMode.None;
             FormBorderStyle = FormBorderStyle.None;
             ShowInTaskbar = false;
             TopMost = true;
             StartPosition = FormStartPosition.Manual;
-            Size = new Size(370, 96);
             BackColor = Color.FromArgb(30, 41, 59); // Slate 800
 
-            // Принудительно создаем дескриптор Win32 HWND
+            // Принудительно создаем дескриптор Win32 HWND и сразу масштабируем форму под текущий DPI
             CreateControl();
+            ApplyDpiScale(GetDpiScale());
 
             _updateTimer = new System.Windows.Forms.Timer { Interval = 35 };
             _updateTimer.Tick += (s, e) => Invalidate();
@@ -480,14 +498,68 @@ namespace TGramFS.UI
             Invalidate();
         }
 
+        private float GetDpiScale()
+        {
+            int dpi = DeviceDpi;
+            if (dpi <= 0 && IsHandleCreated)
+            {
+                using var g = CreateGraphics();
+                dpi = (int)Math.Round(g.DpiX);
+            }
+            return dpi > 0 ? dpi / 96f : 1.0f;
+        }
+
+        private static int ScalePx(int basePx, float dpiScale) => Math.Max(1, (int)Math.Round(basePx * dpiScale));
+
+        private static float ScalePxF(float basePx, float dpiScale) => basePx * dpiScale;
+
+        private void ApplyDpiScale(float dpiScale)
+        {
+            if (dpiScale <= 0f) dpiScale = 1.0f;
+            _currentDpiScale = dpiScale;
+
+            int targetWidth = ScalePx(BaseWidth, dpiScale);
+            int targetHeight = ScalePx(BaseHeight, dpiScale);
+            if (Size.Width != targetWidth || Size.Height != targetHeight)
+            {
+                Size = new Size(targetWidth, targetHeight);
+            }
+        }
+
+        protected override void OnDpiChanged(DpiChangedEventArgs e)
+        {
+            base.OnDpiChanged(e);
+            float scale = e.DeviceDpiNew > 0 ? e.DeviceDpiNew / 96f : GetDpiScale();
+            ApplyDpiScale(scale);
+            if (Visible)
+            {
+                PositionNearTray();
+                Invalidate();
+            }
+        }
+
         private void PositionNearTray()
         {
-            // Автоматическое позиционирование в правом нижнем углу над панелью задач
+            // Автоматическое позиционирование в правом нижнем углу над панелью задач.
+            // Сначала масштабируем размер под актуальный DPI, затем вычисляем координаты.
+            float dpiScale = GetDpiScale();
+            ApplyDpiScale(dpiScale);
+
             var workingArea = Screen.PrimaryScreen?.WorkingArea ?? Screen.GetWorkingArea(Point.Empty);
-            int x = workingArea.Right - Width - 16;
-            int y = workingArea.Bottom - Height - 16;
+            int margin = ScalePx(BaseScreenMargin, dpiScale);
+            int x = workingArea.Right - Width - margin;
+            int y = workingArea.Bottom - Height - margin;
 
             Location = new Point(x, y);
+
+            // Если перенос в область рабочего стола вызвал смену монитора/DPI — синхронизируем размер и позицию повторно
+            float postMoveScale = GetDpiScale();
+            if (Math.Abs(postMoveScale - dpiScale) > 0.01f)
+            {
+                ApplyDpiScale(postMoveScale);
+                margin = ScalePx(BaseScreenMargin, postMoveScale);
+                Location = new Point(workingArea.Right - Width - margin, workingArea.Bottom - Height - margin);
+            }
         }
 
         private void HideCheckTimer_Tick(object? sender, EventArgs e)
@@ -525,18 +597,32 @@ namespace TGramFS.UI
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
+            float dpiScale = g.DpiY > 0 ? g.DpiY / 96f : _currentDpiScale;
+            if (dpiScale <= 0f) dpiScale = 1.0f;
+
+            float padX = ScalePxF(BasePaddingX, dpiScale);
+            float availableWidth = Math.Max(10f, Width - padX * 2f);
+
             // 1. Скругленный контур и фон
-            using (var path = GetRoundedRect(new Rectangle(0, 0, Width - 1, Height - 1), 8))
+            int cornerRadius = ScalePx(BaseCornerRadius, dpiScale);
+            float borderWidth = Math.Max(1f, dpiScale);
+            using (var path = GetRoundedRect(new Rectangle(0, 0, Math.Max(1, Width - 1), Math.Max(1, Height - 1)), cornerRadius))
             {
                 using (var brush = new SolidBrush(Color.FromArgb(30, 41, 59))) // Slate 800
                 {
                     g.FillPath(brush, path);
                 }
-                using (var pen = new Pen(Color.FromArgb(71, 85, 105), 1)) // Slate 600
+                using (var pen = new Pen(Color.FromArgb(71, 85, 105), borderWidth)) // Slate 600
                 {
                     g.DrawPath(pen, path);
                 }
             }
+
+            using var ellipsisFormat = new StringFormat(StringFormat.GenericTypographic)
+            {
+                Trimming = StringTrimming.EllipsisCharacter,
+                FormatFlags = StringFormatFlags.NoWrap
+            };
 
             // 2. Заголовок
             using (var titleFont = new Font("Segoe UI", 8.5f, FontStyle.Bold))
@@ -576,7 +662,10 @@ namespace TGramFS.UI
                 {
                     header = "TGRAMFS";
                 }
-                g.DrawString(header, titleFont, titleBrush, new PointF(12, 10));
+
+                float titleY = ScalePxF(BaseTitleY, dpiScale);
+                float titleHeight = titleFont.GetHeight(g) + ScalePxF(4f, dpiScale);
+                g.DrawString(header, titleFont, titleBrush, new RectangleF(padX, titleY, availableWidth, titleHeight), ellipsisFormat);
             }
 
             // 3. Имя файла с плавной бегущей строкой (Marquee / Ping-Pong)
@@ -584,9 +673,8 @@ namespace TGramFS.UI
             using (var nameBrush = new SolidBrush(Color.White))
             {
                 string displayName = string.IsNullOrEmpty(_currentFileName) ? "Готов к передаче" : _currentFileName;
-                float textX = 12f;
-                float textY = 28f;
-                float availableWidth = Width - 24f;
+                float textX = padX;
+                float textY = ScalePxF(BaseNameY, dpiScale);
 
                 if (displayName != _marqueeLastFileName)
                 {
@@ -600,19 +688,20 @@ namespace TGramFS.UI
 
                 if (textWidth <= availableWidth || _isCompleted)
                 {
-                    // Текст полностью помещается либо передача завершена — отрисовываем статично
-                    g.DrawString(displayName, nameFont, nameBrush, textX, textY, StringFormat.GenericTypographic);
+                    // Текст полностью помещается либо передача завершена — отрисовываем статично (с аккуратным многоточием при переполнении на финише)
+                    float nameHeight = nameFont.GetHeight(g) + ScalePxF(4f, dpiScale);
+                    g.DrawString(displayName, nameFont, nameBrush, new RectangleF(textX, textY, availableWidth, nameHeight), ellipsisFormat);
                 }
                 else
                 {
                     // Бегущая строка (Marquee Ping-Pong):
                     // 1. Пауза 1.8 сек в начале (читаем имя)
-                    // 2. Плавный скролл влево со скоростью 32 px/сек
+                    // 2. Плавный скролл влево со скоростью 32 px/сек (масштабируется под DPI)
                     // 3. Пауза 1.8 сек в конце (читаем расширение и часть)
                     // 4. Плавный возврат на старт
-                    float maxScroll = textWidth - availableWidth + 8f;
+                    float maxScroll = textWidth - availableWidth + ScalePxF(BaseMarqueeEndGap, dpiScale);
                     float pauseStartMs = 1800f;
-                    float scrollSpeed = 32f;
+                    float scrollSpeed = ScalePxF(BaseScrollSpeedPxPerSec, dpiScale);
                     float scrollDurationMs = (maxScroll / scrollSpeed) * 1000f;
                     float pauseEndMs = 1800f;
                     float returnDurationMs = (maxScroll / (scrollSpeed * 1.5f)) * 1000f;
@@ -640,17 +729,21 @@ namespace TGramFS.UI
                     }
 
                     var oldClip = g.Clip;
-                    g.SetClip(new RectangleF(textX, textY - 2, availableWidth, 22));
+                    float clipTopPad = ScalePxF(2f, dpiScale);
+                    float clipHeight = Math.Max(ScalePxF(22f, dpiScale), nameFont.GetHeight(g) + ScalePxF(4f, dpiScale));
+                    g.SetClip(new RectangleF(textX, textY - clipTopPad, availableWidth, clipHeight));
                     g.DrawString(displayName, nameFont, nameBrush, textX - scrollOffset, textY, StringFormat.GenericTypographic);
                     g.Clip = oldClip;
                 }
             }
 
             // 4. Шкала прогресса
-            int barX = 12;
-            int barY = 52;
-            int barWidth = Width - 24;
-            int barHeight = 8;
+            int barX = (int)Math.Round(padX);
+            int barY = ScalePx(BaseBarY, dpiScale);
+            int barWidth = Math.Max(10, Width - barX * 2);
+            int barHeight = ScalePx(BaseBarHeight, dpiScale);
+            int barRadius = Math.Min(barHeight / 2, ScalePx(BaseBarCornerRadius, dpiScale));
+            int minFillWidth = Math.Max(ScalePx(BaseMinFillWidth, dpiScale), barRadius * 2);
             int percent = 0;
 
             if (_isCompleted)
@@ -666,7 +759,7 @@ namespace TGramFS.UI
                 percent = (int)Math.Min(100, Math.Max(0, (_currentBytes * 100) / _totalBytes));
             }
 
-            using (var barBgPath = GetRoundedRect(new Rectangle(barX, barY, barWidth, barHeight), 4))
+            using (var barBgPath = GetRoundedRect(new Rectangle(barX, barY, barWidth, barHeight), barRadius))
             {
                 using (var bgBrush = new SolidBrush(Color.FromArgb(51, 65, 85))) // Slate 700
                 {
@@ -676,8 +769,8 @@ namespace TGramFS.UI
 
             if (percent > 0)
             {
-                int fillWidth = Math.Max(6, (barWidth * percent) / 100);
-                using (var fillPath = GetRoundedRect(new Rectangle(barX, barY, fillWidth, barHeight), 4))
+                int fillWidth = Math.Min(barWidth, Math.Max(minFillWidth, (barWidth * percent) / 100));
+                using (var fillPath = GetRoundedRect(new Rectangle(barX, barY, fillWidth, barHeight), barRadius))
                 {
                     Color startColor;
                     Color endColor;
@@ -753,7 +846,9 @@ namespace TGramFS.UI
                     stats = "Все файлы синхронизированы ✔";
                 }
 
-                g.DrawString(stats, statsFont, statsBrush, new PointF(12, 68));
+                float statsY = ScalePxF(BaseStatsY, dpiScale);
+                float statsHeight = statsFont.GetHeight(g) + ScalePxF(4f, dpiScale);
+                g.DrawString(stats, statsFont, statsBrush, new RectangleF(padX, statsY, availableWidth, statsHeight), ellipsisFormat);
             }
         }
 
@@ -818,6 +913,7 @@ namespace TGramFS.UI
             {
                 _updateTimer.Dispose();
                 _hideCheckTimer.Dispose();
+                _completionTimer.Dispose();
             }
             base.Dispose(disposing);
         }
