@@ -437,6 +437,10 @@ CREATE INDEX IF NOT EXISTS idx_node_parts_node ON node_parts(node_id);
                 }
                 catch (Exception ex)
                 {
+                    if (File.Exists(targetPath))
+                    {
+                        try { File.Delete(targetPath); } catch { }
+                    }
                     AppLogger.Error("Database", $"Ошибка при создании снимка базы данных: {ex.Message}", ex);
                     throw;
                 }

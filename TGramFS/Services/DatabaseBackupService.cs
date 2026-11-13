@@ -549,6 +549,7 @@ namespace TGramFS.Services
                 return false;
             }
 
+            string? tempRestoreFile = null;
             try
             {
                 string trigger = isResumeOrStartup ? "при старте/пробуждении" : "по фоновому таймеру";
@@ -603,7 +604,7 @@ namespace TGramFS.Services
                 // Безопасно накатываем свежую копию из Telegram без лишних вопросов
                 AppLogger.Info("DatabaseBackup", $"[Синхронизация] Найдена свежая база от {senderMachine} (Message #{latestMsgId}, {backupInfo.Value.Size / 1024.0:F1} КБ от {backupInfo.Value.Date.ToLocalTime():yyyy-MM-dd HH:mm:ss}). Применение...");
 
-                string tempRestoreFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "backups", "restore_incoming.db");
+                tempRestoreFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "backups", "restore_incoming.db");
                 string backupsDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "backups");
                 Directory.CreateDirectory(backupsDir);
 
@@ -618,11 +619,6 @@ namespace TGramFS.Services
                 }
 
                 _dbManager.RestoreFromSnapshot(tempRestoreFile);
-
-                if (File.Exists(tempRestoreFile))
-                {
-                    try { File.Delete(tempRestoreFile); } catch { }
-                }
 
                 // Запоминаем Message ID примененного бэкапа
                 var currentCfg = _configManager.CurrentSettings;
@@ -657,6 +653,10 @@ namespace TGramFS.Services
             }
             finally
             {
+                if (!string.IsNullOrEmpty(tempRestoreFile) && File.Exists(tempRestoreFile))
+                {
+                    try { File.Delete(tempRestoreFile); } catch { }
+                }
                 _backupLock.Release();
             }
         }

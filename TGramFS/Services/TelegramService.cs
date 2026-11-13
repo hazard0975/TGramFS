@@ -3582,7 +3582,7 @@ namespace TGramFS.Services
             {
                 parts = _repository?.GetNodeParts(nodeId.Value);
             }
-            if ((parts == null || parts.Count <= 1) && messageId > 0)
+            else if (messageId > 0)
             {
                 parts = _repository?.GetNodePartsByMessageId(messageId);
             }

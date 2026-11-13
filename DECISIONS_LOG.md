@@ -3933,3 +3933,21 @@ _telegramService.UpdateSettings(_settings);
    - Валидные теги, прочитанные `ATL` из `ID3v2`, не совпадают с битым `ID3v1`-хвостом и остаются полностью нетронутыми; длительность, битрейт, обложка, год, жанр и номер трека также сохраняются от `ATL`.
 3. **Фильтрация `logs/bad_audio_tags.txt` только для реальных проблем**:
    - Удалена неиспользуемая проверка `HasCorruptedId3v1Tail` из `CheckForBadTags` и `ExtractFromStream` — хвост после `0x00`, уже игнорируемый парсером, больше не создаёт ложный шум в журнале; логируются только реальные оставшиеся аномалии в итоговых или до-`0x00` тегах (`HasSuspiciousRawText` и `HasSuspiciousNormalizedText`).
+
+---
+
+## 126. Оптимизация проверки `node_parts` в `DownloadFileAsync` и очистка временных файлов бэкапа при сбоях
+
+### Контекст и симптомы:
+1. При массовом параллельном чтении MP3-файлов в `WinFsp` на фоне нехватки места на диске зафиксированы сбои `SQLite Error 10: 'disk I/O error'` в `TelegramWinFspFileSystem.Read`.
+2. Выявлено, что в `TelegramService.DownloadFileAsync` при каждом чтении обычного (не составного) файла после `GetNodeParts(nodeId.Value)` (возвращающего `0` записей) условие `(parts == null || parts.Count <= 1)` выполнялось всегда и провоцировало второй тяжёлый запрос `GetNodePartsByMessageId(messageId)`.
+3. При сбое создания снимка `VACUUM INTO` (`DatabaseManager.CreateConsistentSnapshot`) или фоновой синхронизации (`DatabaseBackupService.CheckAndSyncFromTelegramAsync`) из-за нехватки места на диске временные недописанные `.db`-файлы могли оставаться в `backups/`.
+
+### Принятое решение:
+1. **Исключение лишнего fallback-запроса `GetNodePartsByMessageId` (`TelegramService.cs`)**:
+   - В `DownloadFileAsync` условие `if ((parts == null || parts.Count <= 1) && messageId > 0)` заменено на `else if (messageId > 0)`.
+   - Если `nodeId` передан (все вызовы из `WinFspServer` и `WebDavMiddleware`), достаточно одного запроса `GetNodeParts(nodeId)`; `GetNodePartsByMessageId` оставлен только для вызовов без `nodeId` и для `ForwardFileAsync`.
+   - Кэширование `node_parts` в ОЗУ сознательно отложено как избыточное для текущей задачи, чтобы не создавать риск рассинхронизации.
+2. **Гарантированная очистка временных файлов бэкапа при сбое (`DatabaseManager.cs`, `DatabaseBackupService.cs`)**:
+   - В `DatabaseManager.CreateConsistentSnapshot` блок `catch` удаляет недописанный `targetPath`, если `VACUUM INTO` завершился ошибкой.
+   - В `DatabaseBackupService.CheckAndSyncFromTelegramAsync` удаление временного `backups/restore_incoming.db` перенесено в блок `finally`.
