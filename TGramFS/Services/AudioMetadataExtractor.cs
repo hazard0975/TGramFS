@@ -12,6 +12,9 @@ namespace TGramFS.Services
     public static class AudioMetadataExtractor
     {
         public const int HeaderCacheSize = 262144; // 256 KB для надежного чтения ID3v2 тегов и обложки альбома (APIC)
+        // ВРЕМЕННЫЙ ФЛАГ ДЛЯ ТЕСТИРОВАНИЯ bad_audio_tags.txt:
+        // отключает автодекодирование legacy-кодировок (CP1251/UTF-8 в 0x00 и ID3v1) в NormalizeTagValue и DecodeLegacyBytes.
+        private static readonly bool TemporarilyDisableLegacyEncodingDecoder = true;
         private static readonly Encoding Cp1251Encoding;
         private static readonly Encoding StrictUtf8Encoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
 
@@ -156,6 +159,7 @@ namespace TGramFS.Services
                 readBytes = stream.Read(headerBuffer, 0, headerBuffer.Length);
 
                 bool hasCorruptedId3v1Tail = false;
+                byte[]? id3v1Tail = null;
                 if (stream.CanSeek && stream.Length >= 128 &&
                     (fileName.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase) || AudioMetadataExtractor.DetectAudioFormat(headerBuffer, readBytes) == ".mp3"))
                 {
@@ -170,6 +174,7 @@ namespace TGramFS.Services
                     }
                     if (tailRead == 128)
                     {
+                        id3v1Tail = tail;
                         hasCorruptedId3v1Tail = HasCorruptedId3v1Tail(tail, 0);
                     }
                 }
@@ -188,9 +193,15 @@ namespace TGramFS.Services
                     {
                         ParseId3v2Header(headerBuffer, readBytes, result, fileName);
                     }
-                    else
+
+                    if (id3v1Tail != null)
                     {
-                        // Если тегов нет, берем имя файла без расширения
+                        ParseId3v1Tail(id3v1Tail, 0, result);
+                    }
+
+                    // Если название не прочиталось ни из ID3v2, ни из ID3v1, берем имя файла
+                    if (string.IsNullOrEmpty(result.Title))
+                    {
                         InferFromFileName(fileName, result);
                     }
 
@@ -391,10 +402,45 @@ namespace TGramFS.Services
                 // При ошибке парсинга фреймов оставляем то, что успели распарсить
             }
 
-            // Если название не прочиталось из тегов, берем имя файла
+            // Откат на имя файла выполняется единым образом в ExtractFromStream после проверки ID3v2 и ID3v1
+        }
+
+        private static void ParseId3v1Tail(byte[] buffer, int offset, AudioMetadataResult result)
+        {
+            if (offset + 128 > buffer.Length) return;
+            if (buffer[offset] != (byte)'T' || buffer[offset + 1] != (byte)'A' || buffer[offset + 2] != (byte)'G')
+                return;
+
+            static string ReadId3v1Field(byte[] buf, int fieldOffset, int maxLen)
+            {
+                int actualLen = 0;
+                while (actualLen < maxLen && buf[fieldOffset + actualLen] != 0)
+                {
+                    actualLen++;
+                }
+                if (actualLen <= 0) return string.Empty;
+                return CleanTagString(DecodeLegacyBytes(buf, fieldOffset, actualLen));
+            }
+
             if (string.IsNullOrEmpty(result.Title))
             {
-                InferFromFileName(fileName, result);
+                string title = ReadId3v1Field(buffer, offset + 3, 30);
+                if (!string.IsNullOrEmpty(title)) result.Title = title;
+            }
+            if (string.IsNullOrEmpty(result.Artist))
+            {
+                string artist = ReadId3v1Field(buffer, offset + 33, 30);
+                if (!string.IsNullOrEmpty(artist)) result.Artist = artist;
+            }
+            if (string.IsNullOrEmpty(result.Album))
+            {
+                string album = ReadId3v1Field(buffer, offset + 63, 30);
+                if (!string.IsNullOrEmpty(album)) result.Album = album;
+            }
+            if (!result.Year.HasValue)
+            {
+                string yearText = ReadId3v1Field(buffer, offset + 93, 4);
+                if (int.TryParse(yearText, out int yr) && yr > 0) result.Year = yr;
             }
         }
 
@@ -445,6 +491,11 @@ namespace TGramFS.Services
             string cleaned = CleanTagString(value);
             if (string.IsNullOrEmpty(cleaned)) return null;
 
+            if (TemporarilyDisableLegacyEncodingDecoder)
+            {
+                return cleaned;
+            }
+
             bool hasHighLatin1 = false;
             for (int i = 0; i < cleaned.Length; i++)
             {
@@ -479,6 +530,11 @@ namespace TGramFS.Services
         private static string DecodeLegacyBytes(byte[] buffer, int offset, int length)
         {
             if (length <= 0) return string.Empty;
+
+            if (TemporarilyDisableLegacyEncodingDecoder)
+            {
+                return Encoding.Latin1.GetString(buffer, offset, length);
+            }
 
             bool hasNonAscii = false;
             for (int i = 0; i < length; i++)
@@ -597,10 +653,8 @@ namespace TGramFS.Services
                 return;
             }
 
-            // Если теги в файле отсутствуют, используем чистое имя файла без расширения
+            // Если название в тегах отсутствует, подставляем имя файла без расширения, не затирая уже найденного Artist
             result.Title = nameWithoutExt;
-            result.Artist = null;
-            result.Album = null;
         }
 
         public static string? FormatTagsSummary(AudioMetadataResult? audioMeta)

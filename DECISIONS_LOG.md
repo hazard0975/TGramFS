@@ -3891,3 +3891,27 @@ _telegramService.UpdateSettings(_settings);
 3. **Отдельный журнал проблемных треков `logs/bad_audio_tags.txt` (`AppLogger.LogBadAudioTag`)**:
    - По факту завершения отправки в Telegram (`WinFspServer` > 1 МБ и <= 1 МБ, `WebDavMiddleware`) при `HasBadTags == true` фиксируется строка с временем, виртуальным путём, физическим источником, размером, `TgMsgId` и тегами.
    - Следующим этапом после прогона фонотеки запланировано корневое исправление чтения `ID3v1` (строгая обрезка до первого `0x00`).
+
+---
+
+## 124. Исправление виртуальных путей в `WinFspServer.Cleanup`, восстановление источника для `<= 1 МБ` (`Ваня Рудик.mp3`) и временное отключение legacy-декодера для теста `bad_audio_tags.txt`
+
+### Контекст и симптомы:
+1. В журнале `logs/bad_audio_tags.txt` вместо реального виртуального пути файла (`'/Music/перенос/жв illusion.mp3'`) записывался корень `'/'`.
+2. При записи файла `Ваня Рудик.mp3` (`762,2 КБ <= 1 МБ`) по сценарию Проводника `Create -> Cleanup (0 байт) -> Open -> Write -> Cleanup` трек отправился как `Âàíÿ – Ваня Рудик` (`00:48`) с логом `аудио: 0 сек, теги: 'Ваня Рудик'`, хотя ранее (`ID: 504`) определялся как `Ваня – Рудик` (`00:49`).
+3. Для контрольной проверки попадания старых `Windows-1251`-тегов (`'02 - Трек  2.mp3'` -> `'Òðåê  8'`) в `logs/bad_audio_tags.txt` пользователь запросил временно отключить декодер `NormalizeTagValue` / `DecodeLegacyBytes` на период тестирования.
+
+### Первопричины:
+1. **Нулевой `fileName` в `WinFspServer.Cleanup`**: При обычном закрытии дескриптора (не удаление) WinFsp передаёт `fileName = null`. Вызов `NormalizePath(null)` возвращал `"/"`, что ломало не только путь в `LogBadAudioTag`, но и удаление ключа из `_activeUploadNodes` и фиксацию завершения в `MarkSessionFileCompleted`.
+2. **Потеря `OriginalSourcePath` для `<= 1 МБ` после 0-байтной заглушки**: В `Open()` (`WinFspServer.cs`) `OriginalSourcePath` не восстанавливается; ветка потоковой записи `> 1 МБ` вызывала `TryFindSourceFile`, а ветка памяти `<= 1 МБ` в `Cleanup` — нет, откатываясь в `ExtractFromStream`.
+3. **Отсутствие чтения `ID3v1` в `ExtractFromStream` и затирание `Artist` в `InferFromFileName`**: Потоковый парсер читал только `ID3v2`, не читая `ID3v1` из хвоста доступного для `Seek` `MemoryStream`, и при отсутствии `Title` затирал `Artist = null`, из-за чего сервер Telegram сам вычитывал сырой `CP1251` из `.mp3` как `Latin1` (`Âàíÿ`).
+
+### Принятое решение:
+1. **Метод `ResolveCleanupVirtualPath` (`WinFspServer.cs`)**:
+   - В `Cleanup` и `CleanupDelete` виртуальный путь вычисляется через `_repository.GetNodeFullPath(node.ParentId)` + `node.Name` (с резервом на `ctx.VirtualPath` и `fileName`), а в `Rename` синхронизируется `ctx.VirtualPath`. Исправлены `LogBadAudioTag`, `_activeUploadNodes.TryRemove` и `MarkSessionFileCompleted`.
+2. **Поиск забронированного источника в ветке `<= 1 МБ` (`WinFspServer.Cleanup`)**:
+   - Если при `finalLength > 1` `ctx.OriginalSourcePath` пуст и это не `VirtualCopy`, вызывается `TryFindSourceFile(nodeName, cleanFilePath, ctx.CreatorProcessId, _repository, finalLength)`.
+3. **Поддержка `ID3v1` в `ExtractFromStream` (`ParseId3v1Tail`) и защита `Artist` в `InferFromFileName` (`AudioMetadataExtractor.cs`)**:
+   - При наличии хвоста `TAG` в seekable-потоке извлекаются недостающие поля `ID3v1` со строгой остановкой на первом `0x00`; `InferFromFileName` больше не затирает уже найденного `Artist`.
+4. **Временное отключение legacy-декодера (`TemporarilyDisableLegacyEncodingDecoder = true`)**:
+   - По прямому согласованию с пользователем для тестирования аудита `bad_audio_tags.txt` добавлен временный флаг, отключающий автоперекодировку в `NormalizeTagValue` и `DecodeLegacyBytes` с полным сохранением кода декодера для последующего обратного включения.

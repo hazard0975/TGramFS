@@ -1165,6 +1165,10 @@ namespace TGramFS.Services
                     _activeUploadNodes[newClean] = node;
                     node.Name = newName;
                     node.ParentId = targetParent.Id;
+                    if (fileDesc is FspNodeContext renameActiveCtx)
+                    {
+                        renameActiveCtx.VirtualPath = newClean;
+                    }
                     AppLogger.Info("WinFsp", $"Переименование активного файла в памяти: '{oldClean}' -> '{newClean}'");
                     return STATUS_SUCCESS;
                 }
@@ -1175,6 +1179,10 @@ namespace TGramFS.Services
                 _repository.MoveNode(node.Id, targetParent.Id, newName);
                 node.Name = newName;
                 node.ParentId = targetParent.Id;
+                if (fileDesc is FspNodeContext renameCtx)
+                {
+                    renameCtx.VirtualPath = newClean;
+                }
                 AppLogger.Info("WinFsp", $"Переименование/перемещение: '{oldClean}' -> '{newClean}'");
 
                 if (node.IsDir)
@@ -1236,7 +1244,7 @@ namespace TGramFS.Services
             {
                 if (node.Id <= 0)
                 {
-                    string cleanCancelPath = NormalizePath(fileName);
+                    string cleanCancelPath = ResolveCleanupVirtualPath(node, ctx, fileName);
                     _activeUploadNodes.TryRemove(cleanCancelPath, out _);
                     ReleaseSessionReservation(cleanCancelPath);
                     ctx.UploadCts?.Cancel();
@@ -1363,7 +1371,7 @@ namespace TGramFS.Services
                 string nodeName = node.Name;
                 DateTime targetUpdatedAt = node.UpdatedAt;
                 DateTime targetCreatedAt = node.CreatedAt;
-                string cleanFilePath = NormalizePath(fileName);
+                string cleanFilePath = ResolveCleanupVirtualPath(node, ctx, fileName);
 
                 try
                 {
@@ -1566,6 +1574,11 @@ namespace TGramFS.Services
                                 string ext = Path.GetExtension(nodeName);
                                 string nameNoExt = Path.GetFileNameWithoutExtension(nodeName);
                                 string fullPathWithVersion = $"{parentPath}/{nameNoExt}_v{nextVersion}{ext}";
+
+                                if (string.IsNullOrEmpty(ctx.OriginalSourcePath) && ctx.VirtualSourceNode == null)
+                                {
+                                    ctx.OriginalSourcePath = TryFindSourceFile(nodeName, cleanFilePath, ctx.CreatorProcessId, _repository, finalLength);
+                                }
 
                                 AudioMetadataResult? fspAudioMeta = null;
                                 VideoMetadataResult? fspVideoMeta = null;
@@ -1871,6 +1884,27 @@ namespace TGramFS.Services
             fileInfo.ChangeTime = (ulong)node.UpdatedAt.ToFileTimeUtc();
             fileInfo.IndexNumber = (ulong)node.Id;
             fileInfo.HardLinks = 1;
+        }
+
+        private string ResolveCleanupVirtualPath(Node node, FspNodeContext ctx, string? fileName)
+        {
+            if (node.ParentId.HasValue && !string.IsNullOrWhiteSpace(node.Name))
+            {
+                string parentPath = _repository.GetNodeFullPath(node.ParentId.Value);
+                return parentPath == "/" ? $"/{node.Name}" : $"{parentPath}/{node.Name}";
+            }
+
+            if (!string.IsNullOrWhiteSpace(ctx.VirtualPath))
+            {
+                return NormalizePath(ctx.VirtualPath);
+            }
+
+            if (!string.IsNullOrWhiteSpace(fileName))
+            {
+                return NormalizePath(fileName);
+            }
+
+            return "/";
         }
 
         private static string NormalizePath(string fileName)

@@ -1332,5 +1332,10 @@
       1. В `WinFspServer.cs` (`<= 1 МБ`) и `WebDavMiddleware.cs` добавлен вывод `, теги: '...'` через общий хелпер `AudioMetadataExtractor.FormatTagsSummary`.
       2. В `AudioMetadataExtractor` добавлена детекция аномальных тегов (`HasBadTags`: мусор после `0x00` в 30-байтовых полях `ID3v1`, управляющие байты, `\uFFFD`, артефакты `¤`/`¦`/`¬`/`¸`, остаточные `C0..FF`-кракозябры и случайный CJK).
       3. В `AppLogger` добавлен потокобезопасный `LogBadAudioTag(...)` с записью в `logs/bad_audio_tags.txt` (`[BAD TAGS] Виртуальный путь | Источник | Размер | TgMsgId | Теги`) по завершении отправки в Telegram.
-- [ ] **8.112. Корневое исправление чтения `ID3v1` (строгая обрезка по первому `0x00`) в `ExtractFromFile` и `ExtractFromStream`** *(после аудита фонотеки по `logs/bad_audio_tags.txt`)*.
-
+- [ ] **8.112. Корневое исправление чтения `ID3v1` (строгая обрезка по первому `0x00`) в `ExtractFromFile` и возврат автодекодера (`TemporarilyDisableLegacyEncodingDecoder = false`)** *(после завершения тестирования `logs/bad_audio_tags.txt`)*.
+- [x] **8.113. Исправление виртуальных путей в `WinFspServer.Cleanup`, поиск источника для `<= 1 МБ` (`Ваня Рудик.mp3`), чтение `ID3v1` в `ExtractFromStream` и временный режим тестирования декодера (`WinFspServer.cs`, `AudioMetadataExtractor.cs`)**:
+    - **Реализовано**:
+      1. **Надёжный виртуальный путь в `Cleanup` / `CleanupDelete` (`ResolveCleanupVirtualPath`)**: исключена подмена на `'/'` при `fileName == null`; починены пути в `logs/bad_audio_tags.txt`, корректное снятие блокировок в `_activeUploadNodes` и вызов `MarkSessionFileCompleted` (плюс синхронизация `ctx.VirtualPath` в `Rename`).
+      2. **Восстановление `OriginalSourcePath` в ветке `<= 1 МБ` (`WinFspServer.Cleanup`)**: вызов `TryFindSourceFile` при `finalLength > 1` устраняет потерю источника и метаданных после 0-байтных заглушек Explorer (`Create` -> `Cleanup (0 байт)` -> `Open` -> `Write` -> `Cleanup`).
+      3. **Потоковый парсинг `ID3v1` (`ParseId3v1Tail` в `ExtractFromStream`) и сохранение `Artist` в `InferFromFileName`**: поля `ID3v1` читаются до первого `0x00` из хвоста `MemoryStream`, если отсутствуют в `ID3v2`.
+      4. **Временный флаг тестирования `TemporarilyDisableLegacyEncodingDecoder = true`**: по запросу пользователя временно отключено автодекодирование `NormalizeTagValue` / `DecodeLegacyBytes` (с сохранением кода) для контрольной проверки срабатывания `bad_audio_tags.txt` на старых `CP1251`-треках.
