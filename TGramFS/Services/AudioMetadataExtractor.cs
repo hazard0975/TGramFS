@@ -12,9 +12,6 @@ namespace TGramFS.Services
     public static class AudioMetadataExtractor
     {
         public const int HeaderCacheSize = 262144; // 256 KB для надежного чтения ID3v2 тегов и обложки альбома (APIC)
-        // ВРЕМЕННЫЙ ФЛАГ ДЛЯ ТЕСТИРОВАНИЯ bad_audio_tags.txt:
-        // отключает автодекодирование legacy-кодировок (CP1251/UTF-8 в 0x00 и ID3v1) в NormalizeTagValue и DecodeLegacyBytes.
-        private static readonly bool TemporarilyDisableLegacyEncodingDecoder = true;
         private static readonly Encoding Cp1251Encoding;
         private static readonly Encoding StrictUtf8Encoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
 
@@ -96,6 +93,11 @@ namespace TGramFS.Services
                     rawArtist = track.Artist;
                     rawAlbum = track.Album;
 
+                    string effectiveFileName = !string.IsNullOrWhiteSpace(originalFileName) ? originalFileName : filePath;
+                    result.AudioFormat = Path.GetExtension(effectiveFileName)?.ToLowerInvariant();
+
+                    SanitizeCorruptedId3v1Fields(filePath, result.AudioFormat, ref rawTitle, ref rawArtist, ref rawAlbum);
+
                     result.Title = NormalizeTagValue(rawTitle);
                     result.Artist = NormalizeTagValue(rawArtist);
                     result.Album = NormalizeTagValue(rawAlbum);
@@ -104,8 +106,6 @@ namespace TGramFS.Services
                     result.TrackNumber = track.TrackNumber > 0 ? track.TrackNumber : null;
                     result.DurationSeconds = track.Duration > 0 ? track.Duration : null;
                     result.Bitrate = track.Bitrate > 0 ? track.Bitrate : null;
-                    string effectiveFileName = !string.IsNullOrWhiteSpace(originalFileName) ? originalFileName : filePath;
-                    result.AudioFormat = Path.GetExtension(effectiveFileName)?.ToLowerInvariant();
 
                     // Если ATL подставил имя локального файла вместо реального тега ID3
                     string fileNoExt = Path.GetFileNameWithoutExtension(filePath);
@@ -125,7 +125,7 @@ namespace TGramFS.Services
                         }
                     }
 
-                    result.HasBadTags = CheckForBadTags(filePath, effectiveFileName, rawTitle, rawArtist, rawAlbum, result);
+                    result.HasBadTags = CheckForBadTags(effectiveFileName, rawTitle, rawArtist, rawAlbum, result);
                 }
             }
             catch (Exception ex)
@@ -158,7 +158,6 @@ namespace TGramFS.Services
                 long originalPos = stream.CanSeek ? stream.Position : 0;
                 readBytes = stream.Read(headerBuffer, 0, headerBuffer.Length);
 
-                bool hasCorruptedId3v1Tail = false;
                 byte[]? id3v1Tail = null;
                 if (stream.CanSeek && stream.Length >= 128 &&
                     (fileName.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase) || AudioMetadataExtractor.DetectAudioFormat(headerBuffer, readBytes) == ".mp3"))
@@ -175,7 +174,6 @@ namespace TGramFS.Services
                     if (tailRead == 128)
                     {
                         id3v1Tail = tail;
-                        hasCorruptedId3v1Tail = HasCorruptedId3v1Tail(tail, 0);
                     }
                 }
 
@@ -205,8 +203,7 @@ namespace TGramFS.Services
                         InferFromFileName(fileName, result);
                     }
 
-                    result.HasBadTags = hasCorruptedId3v1Tail ||
-                                        HasSuspiciousNormalizedText(result.Title, fileName) ||
+                    result.HasBadTags = HasSuspiciousNormalizedText(result.Title, fileName) ||
                                         HasSuspiciousNormalizedText(result.Artist, fileName) ||
                                         HasSuspiciousNormalizedText(result.Album, fileName);
                 }
@@ -491,11 +488,6 @@ namespace TGramFS.Services
             string cleaned = CleanTagString(value);
             if (string.IsNullOrEmpty(cleaned)) return null;
 
-            if (TemporarilyDisableLegacyEncodingDecoder)
-            {
-                return cleaned;
-            }
-
             bool hasHighLatin1 = false;
             for (int i = 0; i < cleaned.Length; i++)
             {
@@ -530,11 +522,6 @@ namespace TGramFS.Services
         private static string DecodeLegacyBytes(byte[] buffer, int offset, int length)
         {
             if (length <= 0) return string.Empty;
-
-            if (TemporarilyDisableLegacyEncodingDecoder)
-            {
-                return Encoding.Latin1.GetString(buffer, offset, length);
-            }
 
             bool hasNonAscii = false;
             for (int i = 0; i < length; i++)
@@ -666,8 +653,111 @@ namespace TGramFS.Services
                 : audioMeta.Title;
         }
 
-        private static bool CheckForBadTags(
+        /// <summary>
+        /// Исправляет баг ATL.NET 6.1.0 в парсере ID3v1: ATL удаляет байты 0x00 вместо остановки чтения
+        /// на первом NUL-терминаторе и склеивает мусор памяти в Title/Artist/Album.
+        /// Для каждого поля сверяет сырую строку ATL со склеенным ID3v1-срезом и перечитывает строго до первого 0x00,
+        /// не затрагивая валидные теги, прочитанные из ID3v2.
+        /// </summary>
+        private static void SanitizeCorruptedId3v1Fields(
             string filePath,
+            string? audioFormat,
+            ref string? rawTitle,
+            ref string? rawArtist,
+            ref string? rawAlbum)
+        {
+            if (audioFormat != ".mp3" && !filePath.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase))
+                return;
+
+            if (string.IsNullOrEmpty(rawTitle) && string.IsNullOrEmpty(rawArtist) && string.IsNullOrEmpty(rawAlbum))
+                return;
+
+            try
+            {
+                using var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                if (fs.Length < 128) return;
+
+                byte[] tail = new byte[128];
+                fs.Seek(-128, SeekOrigin.End);
+                int totalRead = 0;
+                while (totalRead < 128)
+                {
+                    int r = fs.Read(tail, totalRead, 128 - totalRead);
+                    if (r <= 0) break;
+                    totalRead += r;
+                }
+
+                if (totalRead != 128 || tail[0] != (byte)'T' || tail[1] != (byte)'A' || tail[2] != (byte)'G')
+                    return;
+
+                rawTitle = SanitizeSingleId3v1Field(tail, 3, 30, rawTitle);
+                rawArtist = SanitizeSingleId3v1Field(tail, 33, 30, rawArtist);
+                rawAlbum = SanitizeSingleId3v1Field(tail, 63, 30, rawAlbum);
+            }
+            catch { }
+        }
+
+        private static string? SanitizeSingleId3v1Field(byte[] tail, int fieldOffset, int maxLen, string? rawAtlValue)
+        {
+            if (string.IsNullOrEmpty(rawAtlValue))
+                return rawAtlValue;
+
+            int firstZero = -1;
+            for (int i = 0; i < maxLen; i++)
+            {
+                if (tail[fieldOffset + i] == 0)
+                {
+                    firstZero = i;
+                    break;
+                }
+            }
+
+            if (firstZero < 0)
+                return rawAtlValue;
+
+            bool hasGarbageAfterZero = false;
+            for (int j = firstZero + 1; j < maxLen; j++)
+            {
+                byte b = tail[fieldOffset + j];
+                if (b != 0 && b != 0x20)
+                {
+                    hasGarbageAfterZero = true;
+                    break;
+                }
+            }
+
+            if (!hasGarbageAfterZero)
+                return rawAtlValue;
+
+            string buggyId3v1 = BuildBuggyId3v1Latin1(tail, fieldOffset, maxLen);
+            if (string.Equals(rawAtlValue, buggyId3v1, StringComparison.Ordinal) ||
+                string.Equals(CleanTagString(rawAtlValue), CleanTagString(buggyId3v1), StringComparison.Ordinal))
+            {
+                return firstZero > 0
+                    ? Encoding.Latin1.GetString(tail, fieldOffset, firstZero)
+                    : null;
+            }
+
+            return rawAtlValue;
+        }
+
+        private static string BuildBuggyId3v1Latin1(byte[] buffer, int fieldOffset, int maxLen)
+        {
+            var bytes = new byte[maxLen];
+            int count = 0;
+            for (int i = 0; i < maxLen; i++)
+            {
+                byte b = buffer[fieldOffset + i];
+                if (b != 0)
+                {
+                    bytes[count++] = b;
+                }
+            }
+
+            return count == 0 ? string.Empty : Encoding.Latin1.GetString(bytes, 0, count);
+        }
+
+        private static bool CheckForBadTags(
             string effectiveFileName,
             string? rawTitle,
             string? rawArtist,
@@ -683,68 +773,8 @@ namespace TGramFS.Services
                     HasSuspiciousNormalizedText(result.Artist, effectiveFileName) ||
                     HasSuspiciousNormalizedText(result.Album, effectiveFileName))
                     return true;
-
-                if (result.AudioFormat == ".mp3")
-                {
-                    using var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-                    if (fs.Length >= 128)
-                    {
-                        byte[] tail = new byte[128];
-                        fs.Seek(-128, SeekOrigin.End);
-                        int totalRead = 0;
-                        while (totalRead < 128)
-                        {
-                            int r = fs.Read(tail, totalRead, 128 - totalRead);
-                            if (r <= 0) break;
-                            totalRead += r;
-                        }
-                        if (totalRead == 128 && HasCorruptedId3v1Tail(tail, 0))
-                            return true;
-                    }
-                }
             }
             catch { }
-
-            return false;
-        }
-
-        private static bool HasCorruptedId3v1Tail(byte[] buffer, int offset)
-        {
-            if (offset + 128 > buffer.Length) return false;
-            if (buffer[offset] != (byte)'T' || buffer[offset + 1] != (byte)'A' || buffer[offset + 2] != (byte)'G')
-                return false;
-
-            // Поля ID3v1: Title [3..32], Artist [33..62], Album [63..92] (по 30 байт)
-            int[] fieldOffsets = { 3, 33, 63 };
-            foreach (int fOff in fieldOffsets)
-            {
-                int firstZero = -1;
-                for (int i = 0; i < 30; i++)
-                {
-                    byte b = buffer[offset + fOff + i];
-                    if (b == 0)
-                    {
-                        firstZero = i;
-                        break;
-                    }
-                    if (b < 0x20)
-                    {
-                        // Управляющие байты до первого NUL
-                        return true;
-                    }
-                }
-
-                if (firstZero >= 0)
-                {
-                    for (int j = firstZero + 1; j < 30; j++)
-                    {
-                        byte b = buffer[offset + fOff + j];
-                        // Ненулевой/непробельный мусор памяти после терминатора 0x00 (причина кракозябр в ATL.NET)
-                        if (b != 0 && b != 0x20)
-                            return true;
-                    }
-                }
-            }
 
             return false;
         }
