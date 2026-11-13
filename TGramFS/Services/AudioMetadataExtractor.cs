@@ -12,6 +12,21 @@ namespace TGramFS.Services
     public static class AudioMetadataExtractor
     {
         public const int HeaderCacheSize = 262144; // 256 KB для надежного чтения ID3v2 тегов и обложки альбома (APIC)
+        private static readonly Encoding Cp1251Encoding;
+        private static readonly Encoding StrictUtf8Encoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
+
+        static AudioMetadataExtractor()
+        {
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+            Cp1251Encoding = Encoding.GetEncoding(1251);
+            try
+            {
+                // Сохраняем байты тегов без явной кодировки (ID3v1 и др.) 1-в-1 без потерь,
+                // чтобы затем точно распознать UTF-8 / Windows-1251 / ISO-8859-1.
+                ATL.Settings.DefaultTextEncoding = Encoding.Latin1;
+            }
+            catch { }
+        }
 
         public static bool IsAudioFile(string fileName)
         {
@@ -71,10 +86,12 @@ namespace TGramFS.Services
                 if (File.Exists(filePath))
                 {
                     var track = new ATL.Track(filePath);
-                    result.Title = !string.IsNullOrWhiteSpace(track.Title) ? track.Title.Trim() : null;
-                    result.Artist = !string.IsNullOrWhiteSpace(track.Artist) ? track.Artist.Trim() : null;
-                    result.Album = !string.IsNullOrWhiteSpace(track.Album) ? track.Album.Trim() : null;
+                    result.Title = NormalizeTagValue(track.Title);
+                    result.Artist = NormalizeTagValue(track.Artist);
+                    result.Album = NormalizeTagValue(track.Album);
+                    result.Genre = NormalizeTagValue(track.Genre);
                     result.Year = track.Year > 0 ? track.Year : null;
+                    result.TrackNumber = track.TrackNumber > 0 ? track.TrackNumber : null;
                     result.DurationSeconds = track.Duration > 0 ? track.Duration : null;
                     result.Bitrate = track.Bitrate > 0 ? track.Bitrate : null;
                     string effectiveFileName = !string.IsNullOrWhiteSpace(originalFileName) ? originalFileName : filePath;
@@ -82,8 +99,8 @@ namespace TGramFS.Services
 
                     // Если ATL подставил имя локального файла вместо реального тега ID3
                     string fileNoExt = Path.GetFileNameWithoutExtension(filePath);
-                    if (!string.IsNullOrEmpty(result.Title) && 
-                        (result.Title.Equals(fileNoExt, StringComparison.OrdinalIgnoreCase) || 
+                    if (!string.IsNullOrEmpty(result.Title) &&
+                        (result.Title.Equals(fileNoExt, StringComparison.OrdinalIgnoreCase) ||
                          result.Title.Equals(Path.GetFileName(filePath), StringComparison.OrdinalIgnoreCase)))
                     {
                         result.Title = null;
@@ -106,8 +123,8 @@ namespace TGramFS.Services
 
             if (string.IsNullOrEmpty(result.Title))
             {
-                string nameForInference = !string.IsNullOrWhiteSpace(originalFileName) 
-                    ? originalFileName 
+                string nameForInference = !string.IsNullOrWhiteSpace(originalFileName)
+                    ? originalFileName
                     : Path.GetFileName(filePath);
                 InferFromFileName(nameForInference, result);
             }
@@ -128,7 +145,7 @@ namespace TGramFS.Services
             {
                 long originalPos = stream.CanSeek ? stream.Position : 0;
                 readBytes = stream.Read(headerBuffer, 0, headerBuffer.Length);
-                
+
                 if (stream.CanSeek)
                 {
                     stream.Position = originalPos; // Возвращаем позицию потока для дальнейшей записи в TG
@@ -167,7 +184,8 @@ namespace TGramFS.Services
 
             try
             {
-                int version = buffer[3]; // 3 = ID3v2.3, 4 = ID3v2.4
+                int version = buffer[3]; // 2 = ID3v2.2, 3 = ID3v2.3, 4 = ID3v2.4
+                byte headerFlags = buffer[5];
                 int tagSize = ((buffer[6] & 0x7F) << 21) |
                               ((buffer[7] & 0x7F) << 14) |
                               ((buffer[8] & 0x7F) << 7) |
@@ -176,65 +194,102 @@ namespace TGramFS.Services
                 int maxPos = Math.Min(length, 10 + tagSize);
                 int pos = 10;
 
-                while (pos + 10 <= maxPos)
+                // Пропуск Extended Header в ID3v2.3 / ID3v2.4 (флаг 0x40)
+                if (version >= 3 && (headerFlags & 0x40) != 0 && pos + 4 <= maxPos)
                 {
-                    // Проверяем 4-байтный идентификатор фрейма
+                    int extSize = version == 4
+                        ? ((buffer[pos] & 0x7F) << 21) | ((buffer[pos + 1] & 0x7F) << 14) | ((buffer[pos + 2] & 0x7F) << 7) | (buffer[pos + 3] & 0x7F)
+                        : (buffer[pos] << 24) | (buffer[pos + 1] << 16) | (buffer[pos + 2] << 8) | buffer[pos + 3];
+
+                    if (version == 3)
+                    {
+                        pos += 4 + extSize;
+                    }
+                    else if (version == 4 && extSize >= 4)
+                    {
+                        pos += extSize;
+                    }
+                }
+
+                string? albumArtistFallback = null;
+                int frameHeaderSize = version == 2 ? 6 : 10;
+
+                while (pos + frameHeaderSize <= maxPos)
+                {
                     if (buffer[pos] == 0) break; // Заполнитель нулями в конце тега
 
-                    string frameId = Encoding.ASCII.GetString(buffer, pos, 4);
+                    string frameId;
                     int frameSize;
-                    if (version == 4)
+
+                    if (version == 2)
                     {
-                        frameSize = ((buffer[pos + 4] & 0x7F) << 21) |
-                                    ((buffer[pos + 5] & 0x7F) << 14) |
-                                    ((buffer[pos + 6] & 0x7F) << 7) |
-                                    (buffer[pos + 7] & 0x7F);
+                        frameId = Encoding.ASCII.GetString(buffer, pos, 3);
+                        frameSize = (buffer[pos + 3] << 16) |
+                                    (buffer[pos + 4] << 8) |
+                                    buffer[pos + 5];
                     }
                     else
                     {
-                        frameSize = (buffer[pos + 4] << 24) |
-                                    (buffer[pos + 5] << 16) |
-                                    (buffer[pos + 6] << 8) |
-                                    buffer[pos + 7];
+                        frameId = Encoding.ASCII.GetString(buffer, pos, 4);
+                        if (version == 4)
+                        {
+                            frameSize = ((buffer[pos + 4] & 0x7F) << 21) |
+                                        ((buffer[pos + 5] & 0x7F) << 14) |
+                                        ((buffer[pos + 6] & 0x7F) << 7) |
+                                        (buffer[pos + 7] & 0x7F);
+                        }
+                        else
+                        {
+                            frameSize = (buffer[pos + 4] << 24) |
+                                        (buffer[pos + 5] << 16) |
+                                        (buffer[pos + 6] << 8) |
+                                        buffer[pos + 7];
+                        }
                     }
 
-                    if (frameSize <= 0 || pos + 10 + frameSize > maxPos)
+                    if (frameSize <= 0 || pos + frameHeaderSize + frameSize > maxPos)
                     {
                         break;
                     }
 
-                    int dataOffset = pos + 10;
-                    if (frameId == "APIC" && result.AlbumCover == null && frameSize > 10)
+                    int dataOffset = pos + frameHeaderSize;
+                    if ((frameId == "APIC" || frameId == "PIC") && result.AlbumCover == null && frameSize > 10)
                     {
                         try
                         {
                             byte apicEncoding = buffer[dataOffset];
                             int p = dataOffset + 1;
-                            while (p < dataOffset + frameSize && buffer[p] != 0) p++;
+                            if (frameId == "PIC")
+                            {
+                                // ID3v2.2: 3-байтовый формат изображения ("JPG", "PNG")
+                                p += 3;
+                            }
+                            else
+                            {
+                                while (p < dataOffset + frameSize && buffer[p] != 0) p++;
+                                if (p < dataOffset + frameSize) p++; // пропускаем 0 байт mime типа
+                            }
+
                             if (p < dataOffset + frameSize)
                             {
-                                p++; // пропускаем 0 байт mime типа
-                                if (p < dataOffset + frameSize)
+                                p++; // пропускаем байт типа картинки (0x03 front cover и т.д.)
+                                if (apicEncoding == 1 || apicEncoding == 2)
                                 {
-                                    p++; // пропускаем байт типа картинки (0x03 front cover и т.д.)
-                                    if (apicEncoding == 1 || apicEncoding == 2)
-                                    {
-                                        while (p + 1 < dataOffset + frameSize && !(buffer[p] == 0 && buffer[p + 1] == 0)) p += 2;
-                                        p += 2;
-                                    }
-                                    else
-                                    {
-                                        while (p < dataOffset + frameSize && buffer[p] != 0) p++;
-                                        p++;
-                                    }
+                                    while (p + 1 < dataOffset + frameSize && !(buffer[p] == 0 && buffer[p + 1] == 0)) p += 2;
+                                    p += 2;
+                                }
+                                else
+                                {
+                                    while (p < dataOffset + frameSize && buffer[p] != 0) p++;
+                                    p++;
+                                }
 
-                                    int imgLen = (dataOffset + frameSize) - p;
-                                    if (imgLen > 100 && p + imgLen <= length)
-                                    {
-                                        byte[] cover = new byte[imgLen];
-                                        Buffer.BlockCopy(buffer, p, cover, 0, imgLen);
-                                        result.AlbumCover = cover;
-                                    }
+                                int imgLen = (dataOffset + frameSize) - p;
+                                if (imgLen > 100 && p + imgLen <= length)
+                                {
+                                    byte[] cover = new byte[imgLen];
+                                    Buffer.BlockCopy(buffer, p, cover, 0, imgLen);
+                                    result.AlbumCover = cover;
                                 }
                             }
                         }
@@ -250,28 +305,39 @@ namespace TGramFS.Services
                             switch (frameId)
                             {
                                 case "TIT2":
+                                case "TT2":
                                     result.Title = textVal;
                                     break;
                                 case "TPE1":
+                                case "TP1":
                                     result.Artist = textVal;
                                     break;
+                                case "TPE2":
+                                case "TP2":
+                                    albumArtistFallback ??= textVal;
+                                    break;
                                 case "TALB":
+                                case "TAL":
                                     result.Album = textVal;
                                     break;
                                 case "TYER":
                                 case "TDRC":
+                                case "TYE":
                                     if (int.TryParse(textVal.Length >= 4 ? textVal.Substring(0, 4) : textVal, out int yr))
                                         result.Year = yr;
                                     break;
                                 case "TRCK":
+                                case "TRK":
                                     var trackPart = textVal.Split('/')[0];
                                     if (int.TryParse(trackPart, out int trk))
                                         result.TrackNumber = trk;
                                     break;
                                 case "TCON":
+                                case "TCO":
                                     result.Genre = textVal;
                                     break;
                                 case "TLEN":
+                                case "TLE":
                                     if (int.TryParse(textVal, out int ms) && ms > 0)
                                         result.DurationSeconds = ms / 1000;
                                     break;
@@ -279,7 +345,12 @@ namespace TGramFS.Services
                         }
                     }
 
-                    pos += 10 + frameSize;
+                    pos += frameHeaderSize + frameSize;
+                }
+
+                if (string.IsNullOrWhiteSpace(result.Artist) && !string.IsNullOrWhiteSpace(albumArtistFallback))
+                {
+                    result.Artist = albumArtistFallback;
                 }
             }
             catch
@@ -296,27 +367,35 @@ namespace TGramFS.Services
 
         private static string DecodeId3Text(byte[] buffer, int offset, int length, byte encodingByte)
         {
+            if (length <= 0 || offset < 0 || offset + length > buffer.Length)
+                return string.Empty;
+
             try
             {
-                Encoding enc;
+                string raw;
                 switch (encodingByte)
                 {
                     case 1:
-                        enc = Encoding.Unicode; // UTF-16 with BOM
+                        // UTF-16 с BOM (проверяем явный порядок байт: FE FF = BigEndian, FF FE = LittleEndian)
+                        if (length >= 2 && buffer[offset] == 0xFE && buffer[offset + 1] == 0xFF)
+                            raw = Encoding.BigEndianUnicode.GetString(buffer, offset + 2, length - 2);
+                        else if (length >= 2 && buffer[offset] == 0xFF && buffer[offset + 1] == 0xFE)
+                            raw = Encoding.Unicode.GetString(buffer, offset + 2, length - 2);
+                        else
+                            raw = Encoding.Unicode.GetString(buffer, offset, length);
                         break;
                     case 2:
-                        enc = Encoding.BigEndianUnicode; // UTF-16BE
+                        raw = Encoding.BigEndianUnicode.GetString(buffer, offset, length);
                         break;
                     case 3:
-                        enc = Encoding.UTF8;
+                        raw = Encoding.UTF8.GetString(buffer, offset, length);
                         break;
                     default:
-                        enc = Encoding.Latin1; // ISO-8859-1
+                        raw = DecodeLegacyBytes(buffer, offset, length);
                         break;
                 }
 
-                string str = enc.GetString(buffer, offset, length);
-                return str.Trim('\0', ' ', '\r', '\n');
+                return CleanTagString(raw);
             }
             catch
             {
@@ -324,10 +403,158 @@ namespace TGramFS.Services
             }
         }
 
+        /// <summary>
+        /// Восстанавливает корректную кодировку для строк, прочитанных ATL.NET как ISO-8859-1 (байты 0x00..0xFF).
+        /// Не затрагивает строки, которые уже содержат символы вне диапазона Latin1 (например, корректный UTF-8/UTF-16).
+        /// </summary>
+        private static string? NormalizeTagValue(string? value)
+        {
+            string cleaned = CleanTagString(value);
+            if (string.IsNullOrEmpty(cleaned)) return null;
+
+            bool hasHighLatin1 = false;
+            for (int i = 0; i < cleaned.Length; i++)
+            {
+                char ch = cleaned[i];
+                if (ch > '\u00FF')
+                {
+                    // Уже декодировано в полноценный Unicode (кириллица, иероглифы и т.п.)
+                    return cleaned;
+                }
+                if (ch >= '\u0080')
+                {
+                    hasHighLatin1 = true;
+                }
+            }
+
+            if (!hasHighLatin1)
+            {
+                return cleaned;
+            }
+
+            byte[] rawBytes = Encoding.Latin1.GetBytes(cleaned);
+            string repaired = CleanTagString(DecodeLegacyBytes(rawBytes, 0, rawBytes.Length));
+            return string.IsNullOrEmpty(repaired) ? null : repaired;
+        }
+
+        /// <summary>
+        /// Декодирует legacy-байты ID3 (флаг 0x00 / ID3v1):
+        /// 1) Проверяет, не записан ли внутри валидный многобайтный UTF-8;
+        /// 2) Отличает Windows-1251 от реальной западноевропейской диакритики ISO-8859-1 (Tiësto, Café, Mötley Crüe);
+        /// 3) При отсутствии признаков CP1251 сохраняет ISO-8859-1 (Latin1).
+        /// </summary>
+        private static string DecodeLegacyBytes(byte[] buffer, int offset, int length)
+        {
+            if (length <= 0) return string.Empty;
+
+            bool hasNonAscii = false;
+            for (int i = 0; i < length; i++)
+            {
+                if (buffer[offset + i] >= 0x80)
+                {
+                    hasNonAscii = true;
+                    break;
+                }
+            }
+
+            if (!hasNonAscii)
+            {
+                return Encoding.ASCII.GetString(buffer, offset, length);
+            }
+
+            // 1. Проверка ошибочно помеченного как 0x00 валидного UTF-8
+            try
+            {
+                return StrictUtf8Encoding.GetString(buffer, offset, length);
+            }
+            catch (DecoderFallbackException)
+            {
+                // Не UTF-8 — переходим к различению Windows-1251 и ISO-8859-1
+            }
+
+            if (LooksLikeWindows1251(buffer, offset, length))
+            {
+                return Cp1251Encoding.GetString(buffer, offset, length);
+            }
+
+            return Encoding.Latin1.GetString(buffer, offset, length);
+        }
+
+        private static bool LooksLikeWindows1251(byte[] buffer, int offset, int length)
+        {
+            int consecutiveCyrillic = 0;
+            bool hasC1Printable = false;
+            bool hasStandaloneCyrillicToken = false;
+
+            int tokenCyrillicCount = 0;
+            bool tokenHasAsciiLetter = false;
+
+            for (int i = 0; i <= length; i++)
+            {
+                byte b = i < length ? buffer[offset + i] : (byte)0;
+                bool isSeparator = i == length || b == 0 || b <= 0x20 ||
+                                   (b >= 0x21 && b <= 0x2F) ||
+                                   (b >= 0x3A && b <= 0x40) ||
+                                   (b >= 0x5B && b <= 0x60) ||
+                                   (b >= 0x7B && b <= 0x7F);
+
+                if (isSeparator)
+                {
+                    if (tokenCyrillicCount > 0 && !tokenHasAsciiLetter)
+                    {
+                        hasStandaloneCyrillicToken = true;
+                    }
+                    consecutiveCyrillic = 0;
+                    tokenCyrillicCount = 0;
+                    tokenHasAsciiLetter = false;
+                    continue;
+                }
+
+                if ((b >= (byte)'A' && b <= (byte)'Z') || (b >= (byte)'a' && b <= (byte)'z'))
+                {
+                    tokenHasAsciiLetter = true;
+                    consecutiveCyrillic = 0;
+                }
+                else if (b >= 0xC0 || b == 0xA8 || b == 0xB8)
+                {
+                    consecutiveCyrillic++;
+                    tokenCyrillicCount++;
+                    if (consecutiveCyrillic >= 2)
+                    {
+                        return true;
+                    }
+                }
+                else if (b >= 0x80 && b <= 0x9F)
+                {
+                    // В ISO-8859-1 диапазон 0x80..0x9F — непечатаемые управляющие символы (C1),
+                    // тогда как в Windows-1251 там тире (–, —), кавычки, многоточие и кириллица.
+                    hasC1Printable = true;
+                    consecutiveCyrillic = 0;
+                }
+                else
+                {
+                    consecutiveCyrillic = 0;
+                }
+            }
+
+            return hasStandaloneCyrillicToken || hasC1Printable;
+        }
+
+        private static string CleanTagString(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return string.Empty;
+            if (value.IndexOf('\0') >= 0)
+            {
+                var parts = value.Split('\0', StringSplitOptions.RemoveEmptyEntries);
+                value = parts.Length > 0 ? string.Join(", ", parts) : string.Empty;
+            }
+            return value.Trim('\0', ' ', '\r', '\n', '\t');
+        }
+
         private static void InferFromFileName(string fileName, AudioMetadataResult result)
         {
             string nameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
-            if (string.IsNullOrEmpty(nameWithoutExt) || 
+            if (string.IsNullOrEmpty(nameWithoutExt) ||
                 nameWithoutExt.StartsWith("allw", StringComparison.OrdinalIgnoreCase) ||
                 nameWithoutExt.StartsWith("sync", StringComparison.OrdinalIgnoreCase) ||
                 fileName.EndsWith(".tmp", StringComparison.OrdinalIgnoreCase) ||

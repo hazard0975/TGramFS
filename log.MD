@@ -1,50 +1,57 @@
 
-[2026-11-13 02:43:42.336] [INFO ] [WinFsp] Открыт каталог: '/Music/копирование' (ID 149)
-[2026-11-13 02:43:42.358] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 1
-[2026-11-13 02:43:42.555] [INFO ] [WinFsp] Создан новый каталог: '/Music/копирование/all files' (ID 259)
-[2026-11-13 02:43:42.658] [INFO ] [WinFsp] Обновлены системные даты для 'all files' (ID 259): Изменен: 2025-05-01 23:31:02.019, Создан: 2026-11-13 00:43:42.000
-[2026-11-13 02:43:42.663] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' (виртуальный путь: '/Music/копирование/all files/06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3')...
-[2026-11-13 02:43:42.663] [INFO ] [WinFsp] [Источник] Предыдущая сессия копирования завершена по таймауту бездействия (20 сек).
-[2026-11-13 02:43:42.664] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\folder\For test tg downloads\all files\06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' существует и доступен для чтения (размер: 7,71 МБ (8 082 073 байт)).
-[2026-11-13 02:43:42.665] [INFO ] [WinFsp] [Источник] Найдено прямое совпадение в буфере обмена Windows (Локальный файл): 'D:\folder\For test tg downloads\all files\06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3'
-[2026-11-13 02:43:42.666] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/копирование/all files/06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' (alloc: 8085504), источник: 'D:\folder\For test tg downloads\all files\06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3'
-[2026-11-13 02:43:42.667] [INFO ] [WinFsp] [Write] Начинаем извлечение метаданных из оригинального файла: 'D:\folder\For test tg downloads\all files\06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3'
-[2026-11-13 02:43:42.669] [INFO ] [WinFsp] Запуск прямой потоковой передачи '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' (7,71 МБ (8 082 073 байт)) в Telegram, канал: 4432518768, аудио: 201 сек, обложка: ДА...
-[2026-11-13 02:43:42.670] [INFO ] [TelegramService] Прямая потоковая передача файла '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' (8082073 байт) в Telegram...
-[2026-11-13 02:43:42.783] [INFO ] [TrayProgressOverlay] Показ окна прогресса [Upload] для 06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3 (524288/8082073)
-[2026-11-13 02:43:42.929] [INFO ] [WinFsp] Обновлены системные даты для '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' (ID -37): Изменен: 2016-08-13 20:33:01.836, Создан: 2026-11-13 00:43:42.666
-[2026-11-13 02:43:43.433] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'копирование' (/Music/копирование) (ID 149), элементов: 1
-[2026-11-13 02:43:43.668] [INFO ] [TelegramService] Файл '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /Music/копирование/all files/06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb)_v1.mp3
+[2026-11-13 17:44:18.850] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Music' (/Music) (ID 5), элементов: 6
+[2026-11-13 17:44:18.859] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для '01 - Трек  1.mp3' (виртуальный путь: '/Music/Новая папка/01 - Трек  1.mp3')...
+[2026-11-13 17:44:18.859] [INFO ] [WinFsp] [Источник] Предыдущая сессия копирования завершена по таймауту бездействия (20 сек).
+[2026-11-13 17:44:18.859] [INFO ] [WinFsp] [Handles DragDrop] Сканирование хэндлов для 1 процессов (PID: 11888, вызывающий процесс: explorer (PID: 11888))...
+[2026-11-13 17:44:18.890] [INFO ] [WinFsp] [Handles DragDrop] В системе обнаружено 111836 дескрипторов ядра (File Type Index: 36).
+[2026-11-13 17:44:18.900] [INFO ] [WinFsp] [Handles DragDrop] Обнаружен открытый файл в процессе PID 11888: 'D:\Music\2004-2005\01 - Трек  1.mp3'
+[2026-11-13 17:44:18.901] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\Music\2004-2005\01 - Трек  1.mp3' существует и доступен для чтения (размер: 14,72 МБ (15 440 161 байт)).
+[2026-11-13 17:44:18.901] [INFO ] [WinFsp] [Handles DragDrop] Привязана папка-источник 'D:\Music\2004-2005' для виртуального каталога '/Music/Новая папка'
+[2026-11-13 17:44:18.902] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/Новая папка/01 - Трек  1.mp3' (alloc: 15441920), источник: 'D:\Music\2004-2005\01 - Трек  1.mp3'
+[2026-11-13 17:44:19.051] [INFO ] [WinFsp] [Write] Начинаем извлечение метаданных из оригинального файла: 'D:\Music\2004-2005\01 - Трек  1.mp3'
+[2026-11-13 17:44:19.082] [INFO ] [WinFsp] Запуск прямой потоковой передачи '01 - Трек  1.mp3' (14,72 МБ (15 440 161 байт)) в Telegram, канал: 4432518768, аудио: 386 сек, обложка: НЕТ...
+[2026-11-13 17:44:19.083] [INFO ] [TelegramService] Прямая потоковая передача файла '01 - Трек  1.mp3' (15440161 байт) в Telegram...
+[2026-11-13 17:44:19.375] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 1
+[2026-11-13 17:44:19.403] [INFO ] [TrayProgressOverlay] Показ окна прогресса [Upload] для 01 - Трек  1.mp3 (524288/15440161)
+[2026-11-13 17:44:20.214] [INFO ] [WinFsp] Обновлены системные даты для '01 - Трек  1.mp3' (ID -180): Изменен: 2005-06-06 19:14:22.000, Создан: 2026-11-13 15:44:18.902
+[2026-11-13 17:44:21.872] [INFO ] [TelegramService] Файл '01 - Трек  1.mp3' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /Music/Новая папка/01 - Трек  1_v1.mp3
 #latest')...
-[2026-11-13 02:43:44.674] [INFO ] [TelegramService] Файл '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' успешно сохранен в Telegram. Message ID: 272
-[2026-11-13 02:43:44.674] [INFO ] [TrayContext] Событие OnUploadCompleted для '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' получено из TelegramService.
-[2026-11-13 02:43:44.674] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3'. Запуск _completionTimer...
-[2026-11-13 02:43:44.904] [INFO ] [WinFsp] Файл '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' успешно сохранен в Telegram (Msg ID: 272, дата изменения: 2016-08-13 20:33:01). Загрузка на лету (Zero-Temp) завершена.
-[2026-11-13 02:43:44.908] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4' (виртуальный путь: '/Music/копирование/all files/Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4')...
-[2026-11-13 02:43:44.908] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\folder\For test tg downloads\all files\Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4' существует и доступен для чтения (размер: 11,14 МБ (11 679 333 байт)).
-[2026-11-13 02:43:44.910] [INFO ] [WinFsp] [Источник] Найдено совпадение в активной сессии (осталось файлов в очереди: 16/18): 'D:\folder\For test tg downloads\all files\Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4'
-[2026-11-13 02:43:44.910] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/копирование/all files/Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4' (alloc: 11681792), источник: 'D:\folder\For test tg downloads\all files\Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4'
-....
-[2026-11-13 02:44:10.672] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для 'Новый текстовый документ.txt'. Запуск _completionTimer...
-[2026-11-13 02:44:10.885] [INFO ] [WinFsp] Файл 'Новый текстовый документ.txt' успешно сохранен в Telegram (Msg ID: 283, дата изменения: 2025-05-01 22:45:04).
-[2026-11-13 02:44:11.020] [INFO ] [WinFsp] Создан новый каталог: '/Music/копирование/all files - копия' (ID 269)
-[2026-11-13 02:44:11.145] [INFO ] [WinFsp] Обновлены системные даты для 'all files - копия' (ID 269): Изменен: 2026-11-12 22:45:23.203, Создан: 2026-11-13 00:44:10.000
-[2026-11-13 02:44:11.149] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' (виртуальный путь: '/Music/копирование/all files - копия/06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3')...
-[2026-11-13 02:44:11.150] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\folder\For test tg downloads\all files - копия\06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' существует и доступен для чтения (размер: 7,71 МБ (8 082 073 байт)).
-[2026-11-13 02:44:11.150] [INFO ] [WinFsp] [Источник] Найдено совпадение в активной сессии (осталось файлов в очереди: 8/18): 'D:\folder\For test tg downloads\all files - копия\06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3'
-[2026-11-13 02:44:11.151] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/копирование/all files - копия/06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' (alloc: 8085504), источник: 'D:\folder\For test tg downloads\all files - копия\06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3'
-[2026-11-13 02:44:11.152] [INFO ] [WinFsp] [Write] Начинаем извлечение метаданных из оригинального файла: 'D:\folder\For test tg downloads\all files - копия\06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3'
-[2026-11-13 02:44:11.156] [INFO ] [WinFsp] Запуск прямой потоковой передачи '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' (7,71 МБ (8 082 073 байт)) в Telegram, канал: 4432518768, аудио: 201 сек, обложка: ДА...
-[2026-11-13 02:44:11.156] [INFO ] [TelegramService] Прямая потоковая передача файла '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' (8082073 байт) в Telegram...
-[2026-11-13 02:44:11.320] [INFO ] [TrayProgressOverlay] Остановлен активный _completionTimer для файла 06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3
-[2026-11-13 02:44:11.595] [INFO ] [WinFsp] Обновлены системные даты для '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' (ID -46): Изменен: 2016-08-13 20:33:01.836, Создан: 2026-11-13 00:44:11.151
-[2026-11-13 02:44:12.123] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 1
-[2026-11-13 02:44:12.589] [INFO ] [TelegramService] Файл '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /Music/копирование/all files - копия/06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb)_v1.mp3
+[2026-11-13 17:44:22.589] [INFO ] [TelegramService] Файл '01 - Трек  1.mp3' успешно сохранен в Telegram. Message ID: 490
+[2026-11-13 17:44:22.589] [INFO ] [TrayContext] Событие OnUploadCompleted для '01 - Трек  1.mp3' получено из TelegramService.
+[2026-11-13 17:44:22.589] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для '01 - Трек  1.mp3'. Запуск _completionTimer...
+[2026-11-13 17:44:22.786] [INFO ] [WinFsp] Файл '01 - Трек  1.mp3' успешно сохранен в Telegram (Msg ID: 490, дата изменения: 2005-06-06 19:14:22). Загрузка на лету (Zero-Temp) завершена.
+[2026-11-13 17:44:22.790] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для '02 - Трек  2.mp3' (виртуальный путь: '/Music/Новая папка/02 - Трек  2.mp3')...
+[2026-11-13 17:44:22.790] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\Music\2004-2005\02 - Трек  2.mp3' существует и доступен для чтения (размер: 14,12 МБ (14 802 277 байт)).
+[2026-11-13 17:44:22.791] [INFO ] [WinFsp] [Источник] Найдено совпадение в активной сессии для папки '/Music/Новая папка': 'D:\Music\2004-2005\02 - Трек  2.mp3'
+[2026-11-13 17:44:22.791] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/Новая папка/02 - Трек  2.mp3' (alloc: 14802944), источник: 'D:\Music\2004-2005\02 - Трек  2.mp3'
+[2026-11-13 17:44:22.817] [INFO ] [WinFsp] [Write] Начинаем извлечение метаданных из оригинального файла: 'D:\Music\2004-2005\02 - Трек  2.mp3'
+[2026-11-13 17:44:22.846] [INFO ] [WinFsp] Запуск прямой потоковой передачи '02 - Трек  2.mp3' (14,12 МБ (14 802 277 байт)) в Telegram, канал: 4432518768, аудио: 370 сек, обложка: НЕТ...
+[2026-11-13 17:44:22.847] [INFO ] [TelegramService] Прямая потоковая передача файла '02 - Трек  2.mp3' (14802277 байт) в Telegram...
+[2026-11-13 17:44:23.021] [INFO ] [TrayProgressOverlay] Остановлен активный _completionTimer для файла 02 - Трек  2.mp3
+[2026-11-13 17:44:24.596] [INFO ] [WinFsp] Обновлены системные даты для '02 - Трек  2.mp3' (ID -181): Изменен: 2005-06-06 19:18:28.000, Создан: 2026-11-13 15:44:22.791
+[2026-11-13 17:44:25.610] [INFO ] [TelegramService] Файл '02 - Трек  2.mp3' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /Music/Новая папка/02 - Трек  2_v1.mp3
 #latest')...
-[2026-11-13 02:44:13.490] [INFO ] [TelegramService] Файл '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' успешно сохранен в Telegram. Message ID: 284
-[2026-11-13 02:44:13.490] [INFO ] [TrayContext] Событие OnUploadCompleted для '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' получено из TelegramService.
-[2026-11-13 02:44:13.490] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3'. Запуск _completionTimer...
-[2026-11-13 02:44:13.694] [INFO ] [WinFsp] Файл '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' успешно сохранен в Telegram (Msg ID: 284, дата изменения: 2016-08-13 20:33:01). Загрузка на лету (Zero-Temp) завершена.
-[2026-11-13 02:44:13.698] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4' (виртуальный путь: '/Music/копирование/all files - копия/Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4')...
-[2026-11-13 02:44:13.699] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\folder\For test tg downloads\all files - копия\Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4' существует и доступен для чтения (размер: 11,14 МБ (11 679 333 байт)).
-[2026-11-13 02:44:13.699] [INFO ] [WinFsp] [Источник] Найдено совпадение в активной сессии (осталось файлов в очереди: 7/18): 'D:\folder\For test tg downloads\all files - копия\Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4'
+[2026-11-13 17:44:25.767] [INFO ] [TelegramService] Файл '02 - Трек  2.mp3' успешно сохранен в Telegram. Message ID: 491
+[2026-11-13 17:44:25.767] [INFO ] [TrayContext] Событие OnUploadCompleted для '02 - Трек  2.mp3' получено из TelegramService.
+[2026-11-13 17:44:25.767] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для '02 - Трек  2.mp3'. Запуск _completionTimer...
+[2026-11-13 17:44:25.965] [INFO ] [WinFsp] Файл '02 - Трек  2.mp3' успешно сохранен в Telegram (Msg ID: 491, дата изменения: 2005-06-06 19:18:28). Загрузка на лету (Zero-Temp) завершена.
+[2026-11-13 17:44:25.969] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для '06. Track 6.mp3' (виртуальный путь: '/Music/Новая папка/06. Track 6.mp3')...
+[2026-11-13 17:44:25.969] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\Music\2004-2005\06. Track 6.mp3' существует и доступен для чтения (размер: 5,18 МБ (5 428 041 байт)).
+[2026-11-13 17:44:25.969] [INFO ] [WinFsp] [Источник] Найдено совпадение в активной сессии для папки '/Music/Новая папка': 'D:\Music\2004-2005\06. Track 6.mp3'
+[2026-11-13 17:44:25.970] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/Новая папка/06. Track 6.mp3' (alloc: 5431296), источник: 'D:\Music\2004-2005\06. Track 6.mp3'
+[2026-11-13 17:44:25.993] [INFO ] [WinFsp] [Write] Начинаем извлечение метаданных из оригинального файла: 'D:\Music\2004-2005\06. Track 6.mp3'
+[2026-11-13 17:44:26.002] [INFO ] [WinFsp] Запуск прямой потоковой передачи '06. Track 6.mp3' (5,18 МБ (5 428 041 байт)) в Telegram, канал: 4432518768, аудио: 339 сек, обложка: НЕТ...
+[2026-11-13 17:44:26.003] [INFO ] [TelegramService] Прямая потоковая передача файла '06. Track 6.mp3' (5428041 байт) в Telegram...
+[2026-11-13 17:44:26.069] [INFO ] [WinFsp] Обновлены системные даты для '06. Track 6.mp3' (ID -182): Изменен: 2004-02-10 22:24:12.000, Создан: 2026-11-13 15:44:25.970
+[2026-11-13 17:44:26.180] [INFO ] [TrayProgressOverlay] Остановлен активный _completionTimer для файла 06. Track 6.mp3
+[2026-11-13 17:44:27.681] [INFO ] [TelegramService] Файл '06. Track 6.mp3' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /Music/Новая папка/06. Track 6_v1.mp3
+#latest')...
+[2026-11-13 17:44:28.696] [INFO ] [TelegramService] Файл '06. Track 6.mp3' успешно сохранен в Telegram. Message ID: 492
+[2026-11-13 17:44:28.696] [INFO ] [TrayContext] Событие OnUploadCompleted для '06. Track 6.mp3' получено из TelegramService.
+[2026-11-13 17:44:28.696] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для '06. Track 6.mp3'. Запуск _completionTimer...
+[2026-11-13 17:44:28.906] [INFO ] [WinFsp] Файл '06. Track 6.mp3' успешно сохранен в Telegram (Msg ID: 492, дата изменения: 2004-02-10 22:24:12). Загрузка на лету (Zero-Temp) завершена.
+[2026-11-13 17:44:29.199] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Music' (/Music) (ID 5), элементов: 6
+[2026-11-13 17:44:29.707] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 1
+[2026-11-13 17:44:30.096] [INFO ] [TrayProgressOverlay] _completionTimer Tick! _isTransferring=False, _isCompleted=True, Visible=True
+[2026-11-13 17:44:30.100] [INFO ] [TrayProgressOverlay] Оверлей успешно скрыт по завершению таймаута.
+[2026-11-13 17:44:30.438] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Music' (/Music) (ID 5), элементов: 6

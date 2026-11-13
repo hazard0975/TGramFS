@@ -928,10 +928,13 @@ namespace TGramFS.Services
                         }
 
                         long? targetChannelId = _repository.GetEffectiveChannelId(node.ParentId);
+                        string? audioTagsSummary = audioMeta != null && (!string.IsNullOrEmpty(audioMeta.Artist) || !string.IsNullOrEmpty(audioMeta.Title))
+                            ? (!string.IsNullOrEmpty(audioMeta.Artist) ? $"{audioMeta.Artist} - {audioMeta.Title}" : audioMeta.Title)
+                            : null;
                         AppLogger.Info("WinFsp", $"Запуск прямой потоковой передачи '{nodeName}' ({AppLogger.FormatSizeDetailed(targetTotalSize)}) в Telegram" + 
                             (targetChannelId != null ? $", канал: {targetChannelId}" : "") +
                             (videoMeta != null ? $", видео: {videoMeta.Width}x{videoMeta.Height}, {videoMeta.DurationSeconds} сек, обложка: {(videoMeta.Thumbnail != null ? "ДА" : "НЕТ")}" : "") +
-                            (audioMeta != null ? $", аудио: {audioMeta.DurationSeconds} сек, обложка: {(audioMeta.AlbumCover != null ? "ДА" : "НЕТ")}" : "") + "...");
+                            (audioMeta != null ? $", аудио: {audioMeta.DurationSeconds} сек, обложка: {(audioMeta.AlbumCover != null ? "ДА" : "НЕТ")}" + (!string.IsNullOrEmpty(audioTagsSummary) ? $", теги: '{audioTagsSummary}'" : "") : "") + "...");
                         ctx.UploadTask = Task.Run(() => _telegramService.UploadFileAsync(
                             ctx.PipeStream,
                             nodeName,

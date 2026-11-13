@@ -1320,3 +1320,10 @@
       1. Внедрён трекинг отработанного `ClipboardSequenceNumber` (`_consumedClipboardSeq`) и флаги `IsFromClipboard` / `IsVirtualClipboard` / `VirtualRemainingCount` в `CopySession`.
       2. Для уже отработанного (или не-файлового) буфера `ResolveFileSource` отдаёт приоритет `CollectOpenFileHandles` (`[Handles DragDrop]`) с переключением сессии на Drag-and-Drop.
       3. Сохранён резервный Шаг 4 для повторного `Ctrl+V` без нового `Ctrl+C` и добавлено явное разделение меток в логе (`[Источник: Буфер обмена]`, `[Источник: Повторный буфер обмена]`, `[Handles DragDrop]`).
+- [x] **8.110. Автоопределение кодировки legacy ID3-тегов (`UTF-8` / `Windows-1251` / `ISO-8859-1`) и поддержка `ID3v2.2` (`AudioMetadataExtractor.cs`, `WinFspServer.cs`)**:
+    - **Проблема**: Старые MP3-файлы с тегами в `Windows-1251` (помеченными байтом `0x00` как `ISO-8859-1` или в `ID3v1`) загружались в Telegram с кракозябрами `Òðåê  1` / `Òðåê  8` в карточке аудиоплеера (как через `ATL.Track` в `ExtractFromFile`, так и через потоковый парсер `ExtractFromStream` / WebDAV).
+    - **Реализовано**:
+      1. В `AudioMetadataExtractor` задан `ATL.Settings.DefaultTextEncoding = Encoding.Latin1` (без потерь сырых байт) и добавлен `NormalizeTagValue` + `DecodeLegacyBytes` (`UTF-8` -> эвристика `LooksLikeWindows1251` -> `Latin1`), исправляющий кириллицу в обоих путях чтения и сохраняющий западноевропейскую диакритику (`Tiësto`, `Café`, `Mötley Crüe`).
+      2. В `ParseId3v2Header` добавлена поддержка `ID3v2.2`, пропуск `Extended Header`, fallback на `TPE2`/`TP2`, разбор `UTF-16` BOM и очистка `\0`-разделителей.
+      3. В `WinFspServer.cs` добавлен компактный вывод `теги: '...'` в существующую строку старта передачи.
+
