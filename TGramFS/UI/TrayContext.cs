@@ -60,7 +60,13 @@ namespace TGramFS.UI
                 Text = "TGramFS — Telegram Virtual Drive",
                 Visible = true
             };
-            _notifyIcon.DoubleClick += (s, e) => OpenDriveInExplorer();
+            _notifyIcon.MouseDoubleClick += (s, e) =>
+            {
+                if (e.Button == MouseButtons.Left)
+                {
+                    OpenDriveInExplorer();
+                }
+            };
 
             CheckDriveMounting();
             BuildContextMenu();
