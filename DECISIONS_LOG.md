@@ -3802,3 +3802,23 @@ _telegramService.UpdateSettings(_settings);
    - В `ResolveFileSource`, `CollectOpenFileHandles` и `CheckCandidate` передаётся `expectedSize` (`allocationSize` в `Create`/`Overwrite`, `targetTotalSize` в `Write`) с допуском кластерного округления Windows (до `64 КБ`), отсекающий ложные совпадения при разном размере одноименных файлов и корректно пропускающий `allocationSize == 0`.
 6. **Сохранность `Virtual Copy`**:
    - Вся логика серверного форвардинга `ForwardFileAsync` и `MatchVirtualCandidate` (`Step 2.1` и `Step 3.2`) сохранена без изменений.
+
+---
+
+## 120. Бронь источника в `CopySession` на время 0-байтных заглушек Explorer (`ReservedVirtualToPhysical`) и перенос `VerifyReadable` за пределы цикла скоринга
+
+### Контекст и симптомы:
+При копировании через `Ctrl+C` → `Ctrl+V` двух папок с одноименными файлами (`all files` и `all files - копия`):
+1. В случае, когда Проводник Windows сразу после `Create` закрывал первый файл как 0-байтный (`Cleanup` с `0 байт`), а через `12 мс` открывал его через `Open` и начинал реальную запись (`Write`), на этапе `Write` `ctx.OriginalSourcePath` оказывался пустым (`Open` создаёт новый `FspNodeContext`). Поскольку `Create` уже удалил `all files\06_david_guetta...mp3` из `PendingFiles`, а `0`-байтный `Cleanup` не помечал файл завершённым, `Write` ошибочно забирал одноимённый файл из соседней папки `all files - копия`, сдвигая очередь и перезаписывая привязку `VirtualDirToPhysicalDir`. Далее при переходе ко второй папке поиск не находил её первый файл и заново перечитывал буфер обмена на все 18 файлов.
+2. При наличии одноименных файлов в `PendingFiles` метод `FindAndConsume` вызывал `VerifyReadable(candidate)` прямо внутри цикла скоринга для каждого промежуточного кандидата с `score > bestScore`, что приводило к лишнему открытию файлов на диске и двойным строкам `[Источник] НАЙДЕНО СОВПАДЕНИЕ!` в логе.
+
+### Принятое решение:
+1. **Вынос `VerifyReadable` за пределы цикла (`CopySession.FindAndConsume`, `WinFspServer.cs`)**:
+   - Цикл перебора `PendingFiles` сначала только вычисляет наилучший индекс `bestIndex` по совпадению сегментов пути (`ScoreCandidatePathMatch`) и размеру (`DoesFileSizeMatch`).
+   - Проверка чтения и запись в лог (`VerifyReadable`) выполняется строго **один раз** после завершения цикла для победившего кандидата.
+2. **Резервирование источника (`ReservedVirtualToPhysical`)**:
+   - При выборе кандидата из `PendingFiles`, `VirtualDirToPhysicalDir` или `CollectOpenFileHandles` связь `cleanVirtualPath -> physicalFilePath` сохраняется в словаре `ReservedVirtualToPhysical`.
+   - Если Explorer закрывает пустой 0-байтный хендл (`Cleanup` при `finalLength == 0` не вызывает `MarkSessionFileCompleted`), бронь сохраняется, и повторное открытие на `Write` мгновенно получает свой же зарезервированный исходник без кражи файла из соседней папки и без пересборки очереди `PendingFiles`.
+   - При реальном завершении передачи (`MarkSessionFileCompleted`), повторной записи того же пути (`UnmarkConsumed`) или отмене файла (`CleanupDelete` для `node.Id <= 0` через `ReleaseSessionReservation`) бронь корректно снимается.
+   - При смене буфера обмена на не-файловые данные (текст) сохранён повторный опрос активной сессии для незавершённых путей.
+

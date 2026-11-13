@@ -1,297 +1,50 @@
 
-[2026-11-13 01:12:09.185] [INFO ] [WinFsp] Открыт каталог: '/Music/копирование' (ID 149)
-[2026-11-13 01:12:09.205] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Music' (/Music) (ID 5), элементов: 2
-[2026-11-13 01:12:09.530] [INFO ] [WinFsp] Создан новый каталог: '/Music/копирование/all files - копия' (ID 150)
-[2026-11-13 01:12:09.712] [INFO ] [WinFsp] Обновлены системные даты для 'all files - копия' (ID 150): Изменен: 2026-11-12 22:45:23.203, Создан: 2026-11-12 23:12:09.000
-[2026-11-13 01:12:09.719] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' (виртуальный путь: '/Music/копирование/all files - копия/06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3')...
-[2026-11-13 01:12:09.719] [INFO ] [WinFsp] [Источник] Предыдущая сессия копирования завершена по таймауту бездействия (20 сек).
-[2026-11-13 01:12:09.722] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\folder\For test tg downloads\all files - копия\06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' существует и доступен для чтения (размер: 7,71 МБ (8 082 073 байт)).
-[2026-11-13 01:12:09.722] [INFO ] [WinFsp] [Источник] Найдено прямое совпадение в буфере обмена Windows (Локальный файл): 'D:\folder\For test tg downloads\all files - копия\06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3'
-[2026-11-13 01:12:09.722] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/копирование/all files - копия/06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' (alloc: 8085504), источник: 'D:\folder\For test tg downloads\all files - копия\06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3'
-[2026-11-13 01:12:09.724] [INFO ] [WinFsp] [Write] Начинаем извлечение метаданных из оригинального файла: 'D:\folder\For test tg downloads\all files - копия\06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3'
-[2026-11-13 01:12:09.725] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'копирование' (/Music/копирование) (ID 149), элементов: 1
-[2026-11-13 01:12:09.726] [INFO ] [WinFsp] Запуск прямой потоковой передачи '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' (7,71 МБ (8 082 073 байт)) в Telegram, канал: 4432518768, аудио: 201 сек, обложка: ДА...
-[2026-11-13 01:12:09.727] [INFO ] [TelegramService] Прямая потоковая передача файла '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' (8082073 байт) в Telegram...
-[2026-11-13 01:12:09.883] [INFO ] [TrayProgressOverlay] Показ окна прогресса [Upload] для 06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3 (524288/8082073)
-[2026-11-13 01:12:09.986] [INFO ] [WinFsp] Обновлены системные даты для '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' (ID -20): Изменен: 2016-08-13 20:33:01.836, Создан: 2026-11-12 23:12:09.722
-[2026-11-13 01:12:10.426] [INFO ] [TelegramService] Файл '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /Music/копирование/all files - копия/06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb)_v1.mp3
+[2026-11-13 02:43:42.336] [INFO ] [WinFsp] Открыт каталог: '/Music/копирование' (ID 149)
+[2026-11-13 02:43:42.358] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 1
+[2026-11-13 02:43:42.555] [INFO ] [WinFsp] Создан новый каталог: '/Music/копирование/all files' (ID 259)
+[2026-11-13 02:43:42.658] [INFO ] [WinFsp] Обновлены системные даты для 'all files' (ID 259): Изменен: 2025-05-01 23:31:02.019, Создан: 2026-11-13 00:43:42.000
+[2026-11-13 02:43:42.663] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' (виртуальный путь: '/Music/копирование/all files/06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3')...
+[2026-11-13 02:43:42.663] [INFO ] [WinFsp] [Источник] Предыдущая сессия копирования завершена по таймауту бездействия (20 сек).
+[2026-11-13 02:43:42.664] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\folder\For test tg downloads\all files\06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' существует и доступен для чтения (размер: 7,71 МБ (8 082 073 байт)).
+[2026-11-13 02:43:42.665] [INFO ] [WinFsp] [Источник] Найдено прямое совпадение в буфере обмена Windows (Локальный файл): 'D:\folder\For test tg downloads\all files\06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3'
+[2026-11-13 02:43:42.666] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/копирование/all files/06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' (alloc: 8085504), источник: 'D:\folder\For test tg downloads\all files\06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3'
+[2026-11-13 02:43:42.667] [INFO ] [WinFsp] [Write] Начинаем извлечение метаданных из оригинального файла: 'D:\folder\For test tg downloads\all files\06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3'
+[2026-11-13 02:43:42.669] [INFO ] [WinFsp] Запуск прямой потоковой передачи '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' (7,71 МБ (8 082 073 байт)) в Telegram, канал: 4432518768, аудио: 201 сек, обложка: ДА...
+[2026-11-13 02:43:42.670] [INFO ] [TelegramService] Прямая потоковая передача файла '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' (8082073 байт) в Telegram...
+[2026-11-13 02:43:42.783] [INFO ] [TrayProgressOverlay] Показ окна прогресса [Upload] для 06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3 (524288/8082073)
+[2026-11-13 02:43:42.929] [INFO ] [WinFsp] Обновлены системные даты для '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' (ID -37): Изменен: 2016-08-13 20:33:01.836, Создан: 2026-11-13 00:43:42.666
+[2026-11-13 02:43:43.433] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'копирование' (/Music/копирование) (ID 149), элементов: 1
+[2026-11-13 02:43:43.668] [INFO ] [TelegramService] Файл '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /Music/копирование/all files/06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb)_v1.mp3
 #latest')...
-[2026-11-13 01:12:10.540] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 1
-[2026-11-13 01:12:11.316] [INFO ] [TelegramService] Файл '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' успешно сохранен в Telegram. Message ID: 147
-[2026-11-13 01:12:11.316] [INFO ] [TrayContext] Событие OnUploadCompleted для '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' получено из TelegramService.
-[2026-11-13 01:12:11.316] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3'. Запуск _completionTimer...
-[2026-11-13 01:12:11.535] [INFO ] [WinFsp] Файл '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' успешно сохранен в Telegram (Msg ID: 147, дата изменения: 2016-08-13 20:33:01). Загрузка на лету (Zero-Temp) завершена.
-[2026-11-13 01:12:11.540] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4' (виртуальный путь: '/Music/копирование/all files - копия/Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4')...
-[2026-11-13 01:12:11.540] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\folder\For test tg downloads\all files - копия\Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4' существует и доступен для чтения (размер: 11,14 МБ (11 679 333 байт)).
-[2026-11-13 01:12:11.540] [INFO ] [WinFsp] [Источник] Найдено совпадение в активной сессии (осталось файлов в очереди: 16/18): 'D:\folder\For test tg downloads\all files - копия\Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4'
-[2026-11-13 01:12:11.540] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/копирование/all files - копия/Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4' (alloc: 11681792), источник: 'D:\folder\For test tg downloads\all files - копия\Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4'
-[2026-11-13 01:12:11.542] [INFO ] [WinFsp] [Write] Начинаем извлечение метаданных из оригинального файла: 'D:\folder\For test tg downloads\all files - копия\Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4'
-[2026-11-13 01:12:11.611] [INFO ] [VideoMetadataExtractor] Успешно сгенерирован стоп-кадр через Windows Shell (K-Lite/Icaros) для 'Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4' (6014 байт, 320x131)
-[2026-11-13 01:12:11.613] [INFO ] [WinFsp] Запуск прямой потоковой передачи 'Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4' (11,14 МБ (11 679 333 байт)) в Telegram, канал: 4432518768, видео: 640x262, 177 сек, обложка: ДА...
-[2026-11-13 01:12:11.614] [INFO ] [TelegramService] Прямая потоковая передача файла 'Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4' (11679333 байт) в Telegram...
-[2026-11-13 01:12:11.778] [INFO ] [TrayProgressOverlay] Остановлен активный _completionTimer для файла Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4
-[2026-11-13 01:12:12.254] [INFO ] [WinFsp] Обновлены системные даты для 'Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4' (ID -21): Изменен: 2020-11-07 21:43:54.523, Создан: 2026-11-12 23:12:11.540
-[2026-11-13 01:12:12.785] [INFO ] [TelegramService] Файл 'Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /Music/копирование/all files - копия/Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb]_v1.mp4
+[2026-11-13 02:43:44.674] [INFO ] [TelegramService] Файл '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' успешно сохранен в Telegram. Message ID: 272
+[2026-11-13 02:43:44.674] [INFO ] [TrayContext] Событие OnUploadCompleted для '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' получено из TelegramService.
+[2026-11-13 02:43:44.674] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3'. Запуск _completionTimer...
+[2026-11-13 02:43:44.904] [INFO ] [WinFsp] Файл '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' успешно сохранен в Telegram (Msg ID: 272, дата изменения: 2016-08-13 20:33:01). Загрузка на лету (Zero-Temp) завершена.
+[2026-11-13 02:43:44.908] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4' (виртуальный путь: '/Music/копирование/all files/Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4')...
+[2026-11-13 02:43:44.908] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\folder\For test tg downloads\all files\Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4' существует и доступен для чтения (размер: 11,14 МБ (11 679 333 байт)).
+[2026-11-13 02:43:44.910] [INFO ] [WinFsp] [Источник] Найдено совпадение в активной сессии (осталось файлов в очереди: 16/18): 'D:\folder\For test tg downloads\all files\Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4'
+[2026-11-13 02:43:44.910] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/копирование/all files/Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4' (alloc: 11681792), источник: 'D:\folder\For test tg downloads\all files\Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4'
+....
+[2026-11-13 02:44:10.672] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для 'Новый текстовый документ.txt'. Запуск _completionTimer...
+[2026-11-13 02:44:10.885] [INFO ] [WinFsp] Файл 'Новый текстовый документ.txt' успешно сохранен в Telegram (Msg ID: 283, дата изменения: 2025-05-01 22:45:04).
+[2026-11-13 02:44:11.020] [INFO ] [WinFsp] Создан новый каталог: '/Music/копирование/all files - копия' (ID 269)
+[2026-11-13 02:44:11.145] [INFO ] [WinFsp] Обновлены системные даты для 'all files - копия' (ID 269): Изменен: 2026-11-12 22:45:23.203, Создан: 2026-11-13 00:44:10.000
+[2026-11-13 02:44:11.149] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' (виртуальный путь: '/Music/копирование/all files - копия/06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3')...
+[2026-11-13 02:44:11.150] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\folder\For test tg downloads\all files - копия\06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' существует и доступен для чтения (размер: 7,71 МБ (8 082 073 байт)).
+[2026-11-13 02:44:11.150] [INFO ] [WinFsp] [Источник] Найдено совпадение в активной сессии (осталось файлов в очереди: 8/18): 'D:\folder\For test tg downloads\all files - копия\06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3'
+[2026-11-13 02:44:11.151] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/копирование/all files - копия/06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' (alloc: 8085504), источник: 'D:\folder\For test tg downloads\all files - копия\06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3'
+[2026-11-13 02:44:11.152] [INFO ] [WinFsp] [Write] Начинаем извлечение метаданных из оригинального файла: 'D:\folder\For test tg downloads\all files - копия\06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3'
+[2026-11-13 02:44:11.156] [INFO ] [WinFsp] Запуск прямой потоковой передачи '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' (7,71 МБ (8 082 073 байт)) в Telegram, канал: 4432518768, аудио: 201 сек, обложка: ДА...
+[2026-11-13 02:44:11.156] [INFO ] [TelegramService] Прямая потоковая передача файла '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' (8082073 байт) в Telegram...
+[2026-11-13 02:44:11.320] [INFO ] [TrayProgressOverlay] Остановлен активный _completionTimer для файла 06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3
+[2026-11-13 02:44:11.595] [INFO ] [WinFsp] Обновлены системные даты для '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' (ID -46): Изменен: 2016-08-13 20:33:01.836, Создан: 2026-11-13 00:44:11.151
+[2026-11-13 02:44:12.123] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 1
+[2026-11-13 02:44:12.589] [INFO ] [TelegramService] Файл '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /Music/копирование/all files - копия/06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb)_v1.mp3
 #latest')...
-[2026-11-13 01:12:13.044] [INFO ] [TelegramService] Файл 'Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4' успешно сохранен в Telegram. Message ID: 148
-[2026-11-13 01:12:13.045] [INFO ] [TrayContext] Событие OnUploadCompleted для 'Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4' получено из TelegramService.
-[2026-11-13 01:12:13.045] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для 'Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4'. Запуск _completionTimer...
-[2026-11-13 01:12:13.222] [INFO ] [WinFsp] Файл 'Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4' успешно сохранен в Telegram (Msg ID: 148, дата изменения: 2020-11-07 21:43:54). Загрузка на лету (Zero-Temp) завершена.
-[2026-11-13 01:12:13.226] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'DSC_0270 (6 mb).JPG' (виртуальный путь: '/Music/копирование/all files - копия/DSC_0270 (6 mb).JPG')...
-[2026-11-13 01:12:13.226] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\folder\For test tg downloads\all files - копия\DSC_0270 (6 mb).JPG' существует и доступен для чтения (размер: 5,91 МБ (6 195 435 байт)).
-[2026-11-13 01:12:13.226] [INFO ] [WinFsp] [Источник] Найдено совпадение в активной сессии (осталось файлов в очереди: 15/18): 'D:\folder\For test tg downloads\all files - копия\DSC_0270 (6 mb).JPG'
-[2026-11-13 01:12:13.227] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/копирование/all files - копия/DSC_0270 (6 mb).JPG' (alloc: 6197248), источник: 'D:\folder\For test tg downloads\all files - копия\DSC_0270 (6 mb).JPG'
-[2026-11-13 01:12:13.228] [INFO ] [WinFsp] [Write] Начинаем извлечение метаданных из оригинального файла: 'D:\folder\For test tg downloads\all files - копия\DSC_0270 (6 mb).JPG'
-[2026-11-13 01:12:13.228] [INFO ] [WinFsp] Запуск прямой потоковой передачи 'DSC_0270 (6 mb).JPG' (5,91 МБ (6 195 435 байт)) в Telegram, канал: 4432518768...
-[2026-11-13 01:12:13.717] [INFO ] [TelegramService] Прямая потоковая передача файла 'DSC_0270 (6 mb).JPG' (6195435 байт) в Telegram...
-[2026-11-13 01:12:13.789] [INFO ] [WinFsp] Обновлены системные даты для 'DSC_0270 (6 mb).JPG' (ID -22): Изменен: 2023-07-26 12:27:41.000, Создан: 2026-11-12 23:12:13.227
-[2026-11-13 01:12:13.891] [INFO ] [TrayProgressOverlay] Остановлен активный _completionTimer для файла DSC_0270 (6 mb).JPG
-[2026-11-13 01:12:14.866] [INFO ] [TelegramService] Файл 'DSC_0270 (6 mb).JPG' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /Music/копирование/all files - копия/DSC_0270 (6 mb)_v1.JPG
-#latest')...
-[2026-11-13 01:12:15.145] [INFO ] [TelegramService] Фото-превью для галереи успешно опубликовано в Telegram (Message ID: 149, имя: 'DSC_0270 (6 mb)_preview.jpg').
-[2026-11-13 01:12:15.515] [INFO ] [TelegramService] Файл 'DSC_0270 (6 mb).JPG' успешно сохранен в Telegram. Message ID: 150, Preview ID: 149
-[2026-11-13 01:12:15.515] [INFO ] [TrayContext] Событие OnUploadCompleted для 'DSC_0270 (6 mb).JPG' получено из TelegramService.
-[2026-11-13 01:12:15.515] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для 'DSC_0270 (6 mb).JPG'. Запуск _completionTimer...
-[2026-11-13 01:12:15.765] [INFO ] [WinFsp] Файл 'DSC_0270 (6 mb).JPG' успешно сохранен в Telegram (Msg ID: 150, Preview ID: 149, дата изменения: 2023-07-26 12:27:41). Загрузка на лету (Zero-Temp) завершена.
-[2026-11-13 01:12:15.769] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Eclipse - Let The Rhythm Move You [SGYH7HVU8uE].mp4' (виртуальный путь: '/Music/копирование/all files - копия/Eclipse - Let The Rhythm Move You [SGYH7HVU8uE].mp4')...
-[2026-11-13 01:12:15.769] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\folder\For test tg downloads\all files - копия\Eclipse - Let The Rhythm Move You [SGYH7HVU8uE].mp4' существует и доступен для чтения (размер: 10,55 МБ (11 066 822 байт)).
-[2026-11-13 01:12:15.769] [INFO ] [WinFsp] [Источник] Найдено совпадение в активной сессии (осталось файлов в очереди: 14/18): 'D:\folder\For test tg downloads\all files - копия\Eclipse - Let The Rhythm Move You [SGYH7HVU8uE].mp4'
-[2026-11-13 01:12:15.769] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/копирование/all files - копия/Eclipse - Let The Rhythm Move You [SGYH7HVU8uE].mp4' (alloc: 11067392), источник: 'D:\folder\For test tg downloads\all files - копия\Eclipse - Let The Rhythm Move You [SGYH7HVU8uE].mp4'
-[2026-11-13 01:12:15.771] [INFO ] [WinFsp] [Write] Начинаем извлечение метаданных из оригинального файла: 'D:\folder\For test tg downloads\all files - копия\Eclipse - Let The Rhythm Move You [SGYH7HVU8uE].mp4'
-[2026-11-13 01:12:15.825] [INFO ] [VideoMetadataExtractor] Успешно сгенерирован стоп-кадр через Windows Shell (K-Lite/Icaros) для 'Eclipse - Let The Rhythm Move You [SGYH7HVU8uE].mp4' (11020 байт, 320x240)
-[2026-11-13 01:12:15.828] [INFO ] [WinFsp] Запуск прямой потоковой передачи 'Eclipse - Let The Rhythm Move You [SGYH7HVU8uE].mp4' (10,55 МБ (11 066 822 байт)) в Telegram, канал: 4432518768, видео: 320x240, 237 сек, обложка: ДА...
-[2026-11-13 01:12:15.829] [INFO ] [TelegramService] Прямая потоковая передача файла 'Eclipse - Let The Rhythm Move You [SGYH7HVU8uE].mp4' (11066822 байт) в Telegram...
-[2026-11-13 01:12:15.979] [INFO ] [TrayProgressOverlay] Остановлен активный _completionTimer для файла Eclipse - Let The Rhythm Move You [SGYH7HVU8uE].mp4
-[2026-11-13 01:12:16.671] [INFO ] [WinFsp] Обновлены системные даты для 'Eclipse - Let The Rhythm Move You [SGYH7HVU8uE].mp4' (ID -23): Изменен: 2020-02-09 21:16:07.193, Создан: 2026-11-12 23:12:15.769
-[2026-11-13 01:12:17.592] [INFO ] [TelegramService] Файл 'Eclipse - Let The Rhythm Move You [SGYH7HVU8uE].mp4' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /Music/копирование/all files - копия/Eclipse - Let The Rhythm Move You [SGYH7HVU8uE]_v1.mp4
-#latest')...
-[2026-11-13 01:12:17.837] [INFO ] [TelegramService] Файл 'Eclipse - Let The Rhythm Move You [SGYH7HVU8uE].mp4' успешно сохранен в Telegram. Message ID: 151
-[2026-11-13 01:12:17.837] [INFO ] [TrayContext] Событие OnUploadCompleted для 'Eclipse - Let The Rhythm Move You [SGYH7HVU8uE].mp4' получено из TelegramService.
-[2026-11-13 01:12:17.837] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для 'Eclipse - Let The Rhythm Move You [SGYH7HVU8uE].mp4'. Запуск _completionTimer...
-[2026-11-13 01:12:18.050] [INFO ] [WinFsp] Файл 'Eclipse - Let The Rhythm Move You [SGYH7HVU8uE].mp4' успешно сохранен в Telegram (Msg ID: 151, дата изменения: 2020-02-09 21:16:07). Загрузка на лету (Zero-Temp) завершена.
-[2026-11-13 01:12:18.054] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'IMG_20201018_131246 (8 mb).jpg' (виртуальный путь: '/Music/копирование/all files - копия/IMG_20201018_131246 (8 mb).jpg')...
-[2026-11-13 01:12:18.054] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\folder\For test tg downloads\all files - копия\IMG_20201018_131246 (8 mb).jpg' существует и доступен для чтения (размер: 8,28 МБ (8 683 636 байт)).
-[2026-11-13 01:12:18.054] [INFO ] [WinFsp] [Источник] Найдено совпадение в активной сессии (осталось файлов в очереди: 13/18): 'D:\folder\For test tg downloads\all files - копия\IMG_20201018_131246 (8 mb).jpg'
-[2026-11-13 01:12:18.054] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/копирование/all files - копия/IMG_20201018_131246 (8 mb).jpg' (alloc: 8687616), источник: 'D:\folder\For test tg downloads\all files - копия\IMG_20201018_131246 (8 mb).jpg'
-[2026-11-13 01:12:18.056] [INFO ] [WinFsp] [Write] Начинаем извлечение метаданных из оригинального файла: 'D:\folder\For test tg downloads\all files - копия\IMG_20201018_131246 (8 mb).jpg'
-[2026-11-13 01:12:18.056] [INFO ] [WinFsp] Запуск прямой потоковой передачи 'IMG_20201018_131246 (8 mb).jpg' (8,28 МБ (8 683 636 байт)) в Telegram, канал: 4432518768...
-[2026-11-13 01:12:18.661] [INFO ] [TelegramService] Прямая потоковая передача файла 'IMG_20201018_131246 (8 mb).jpg' (8683636 байт) в Telegram...
-[2026-11-13 01:12:18.890] [INFO ] [TrayProgressOverlay] Остановлен активный _completionTimer для файла IMG_20201018_131246 (8 mb).jpg
-[2026-11-13 01:12:19.122] [INFO ] [WinFsp] Обновлены системные даты для 'IMG_20201018_131246 (8 mb).jpg' (ID -24): Изменен: 2020-12-25 21:22:39.930, Создан: 2026-11-12 23:12:18.054
-[2026-11-13 01:12:19.973] [INFO ] [TelegramService] Файл 'IMG_20201018_131246 (8 mb).jpg' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /Music/копирование/all files - копия/IMG_20201018_131246 (8 mb)_v1.jpg
-#latest')...
-[2026-11-13 01:12:20.259] [INFO ] [TelegramService] Фото-превью для галереи успешно опубликовано в Telegram (Message ID: 152, имя: 'IMG_20201018_131246 (8 mb)_preview.jpg').
-[2026-11-13 01:12:20.670] [INFO ] [TelegramService] Файл 'IMG_20201018_131246 (8 mb).jpg' успешно сохранен в Telegram. Message ID: 153, Preview ID: 152
-[2026-11-13 01:12:20.670] [INFO ] [TrayContext] Событие OnUploadCompleted для 'IMG_20201018_131246 (8 mb).jpg' получено из TelegramService.
-[2026-11-13 01:12:20.670] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для 'IMG_20201018_131246 (8 mb).jpg'. Запуск _completionTimer...
-[2026-11-13 01:12:20.890] [INFO ] [WinFsp] Файл 'IMG_20201018_131246 (8 mb).jpg' успешно сохранен в Telegram (Msg ID: 153, Preview ID: 152, дата изменения: 2020-12-25 21:22:39). Загрузка на лету (Zero-Temp) завершена.
-[2026-11-13 01:12:20.894] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'IMG_20201018_131419 (12 mb).jpg' (виртуальный путь: '/Music/копирование/all files - копия/IMG_20201018_131419 (12 mb).jpg')...
-[2026-11-13 01:12:20.894] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\folder\For test tg downloads\all files - копия\IMG_20201018_131419 (12 mb).jpg' существует и доступен для чтения (размер: 11,84 МБ (12 414 274 байт)).
-[2026-11-13 01:12:20.894] [INFO ] [WinFsp] [Источник] Найдено совпадение в активной сессии (осталось файлов в очереди: 12/18): 'D:\folder\For test tg downloads\all files - копия\IMG_20201018_131419 (12 mb).jpg'
-[2026-11-13 01:12:20.895] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/копирование/all files - копия/IMG_20201018_131419 (12 mb).jpg' (alloc: 12414976), источник: 'D:\folder\For test tg downloads\all files - копия\IMG_20201018_131419 (12 mb).jpg'
-[2026-11-13 01:12:20.896] [INFO ] [WinFsp] [Write] Начинаем извлечение метаданных из оригинального файла: 'D:\folder\For test tg downloads\all files - копия\IMG_20201018_131419 (12 mb).jpg'
-[2026-11-13 01:12:20.897] [INFO ] [WinFsp] Запуск прямой потоковой передачи 'IMG_20201018_131419 (12 mb).jpg' (11,84 МБ (12 414 274 байт)) в Telegram, канал: 4432518768...
-[2026-11-13 01:12:21.517] [INFO ] [TelegramService] Прямая потоковая передача файла 'IMG_20201018_131419 (12 mb).jpg' (12414274 байт) в Telegram...
-[2026-11-13 01:12:21.691] [INFO ] [TrayProgressOverlay] Остановлен активный _completionTimer для файла IMG_20201018_131419 (12 mb).jpg
-[2026-11-13 01:12:23.134] [INFO ] [WinFsp] Обновлены системные даты для 'IMG_20201018_131419 (12 mb).jpg' (ID -25): Изменен: 2020-12-25 21:19:06.228, Создан: 2026-11-12 23:12:20.894
-[2026-11-13 01:12:24.710] [INFO ] [TelegramService] Файл 'IMG_20201018_131419 (12 mb).jpg' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /Music/копирование/all files - копия/IMG_20201018_131419 (12 mb)_v1.jpg
-#latest')...
-[2026-11-13 01:12:25.160] [INFO ] [TelegramService] Фото-превью для галереи успешно опубликовано в Telegram (Message ID: 154, имя: 'IMG_20201018_131419 (12 mb)_preview.jpg').
-[2026-11-13 01:12:25.519] [INFO ] [TelegramService] К документу >10 МБ 'IMG_20201018_131419 (12 mb).jpg' успешно прикреплена миниатюра (thumb).
-[2026-11-13 01:12:25.738] [INFO ] [TelegramService] Файл 'IMG_20201018_131419 (12 mb).jpg' успешно сохранен в Telegram. Message ID: 155, Preview ID: 154
-[2026-11-13 01:12:25.738] [INFO ] [TrayContext] Событие OnUploadCompleted для 'IMG_20201018_131419 (12 mb).jpg' получено из TelegramService.
-[2026-11-13 01:12:25.738] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для 'IMG_20201018_131419 (12 mb).jpg'. Запуск _completionTimer...
-[2026-11-13 01:12:25.913] [INFO ] [WinFsp] Файл 'IMG_20201018_131419 (12 mb).jpg' успешно сохранен в Telegram (Msg ID: 155, Preview ID: 154, дата изменения: 2020-12-25 21:19:06). Загрузка на лету (Zero-Temp) завершена.
-[2026-11-13 01:12:25.917] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Richard X vs. Liberty X - Being Nobody (XTO0cdWwKcI).mp4' (виртуальный путь: '/Music/копирование/all files - копия/Richard X vs. Liberty X - Being Nobody (XTO0cdWwKcI).mp4')...
-[2026-11-13 01:12:25.918] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\folder\For test tg downloads\all files - копия\Richard X vs. Liberty X - Being Nobody (XTO0cdWwKcI).mp4' существует и доступен для чтения (размер: 6,37 МБ (6 683 355 байт)).
-[2026-11-13 01:12:25.918] [INFO ] [WinFsp] [Источник] Найдено совпадение в активной сессии (осталось файлов в очереди: 11/18): 'D:\folder\For test tg downloads\all files - копия\Richard X vs. Liberty X - Being Nobody (XTO0cdWwKcI).mp4'
-[2026-11-13 01:12:25.918] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/копирование/all files - копия/Richard X vs. Liberty X - Being Nobody (XTO0cdWwKcI).mp4' (alloc: 6684672), источник: 'D:\folder\For test tg downloads\all files - копия\Richard X vs. Liberty X - Being Nobody (XTO0cdWwKcI).mp4'
-[2026-11-13 01:12:25.919] [INFO ] [WinFsp] [Write] Начинаем извлечение метаданных из оригинального файла: 'D:\folder\For test tg downloads\all files - копия\Richard X vs. Liberty X - Being Nobody (XTO0cdWwKcI).mp4'
-[2026-11-13 01:12:25.954] [INFO ] [VideoMetadataExtractor] Успешно сгенерирован стоп-кадр через Windows Shell (K-Lite/Icaros) для 'Richard X vs. Liberty X - Being Nobody (XTO0cdWwKcI).mp4' (8193 байт, 320x239)
-[2026-11-13 01:12:25.956] [INFO ] [WinFsp] Запуск прямой потоковой передачи 'Richard X vs. Liberty X - Being Nobody (XTO0cdWwKcI).mp4' (6,37 МБ (6 683 355 байт)) в Telegram, канал: 4432518768, видео: 322x240, 216 сек, обложка: ДА...
-[2026-11-13 01:12:25.957] [INFO ] [TelegramService] Прямая потоковая передача файла 'Richard X vs. Liberty X - Being Nobody (XTO0cdWwKcI).mp4' (6683355 байт) в Telegram...
-[2026-11-13 01:12:26.130] [INFO ] [TrayProgressOverlay] Остановлен активный _completionTimer для файла Richard X vs. Liberty X - Being Nobody (XTO0cdWwKcI).mp4
-[2026-11-13 01:12:26.131] [INFO ] [WinFsp] Обновлены системные даты для 'Richard X vs. Liberty X - Being Nobody (XTO0cdWwKcI).mp4' (ID -26): Изменен: 2022-02-15 23:46:28.362, Создан: 2026-11-12 23:12:25.918
-[2026-11-13 01:12:27.365] [INFO ] [TelegramService] Файл 'Richard X vs. Liberty X - Being Nobody (XTO0cdWwKcI).mp4' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /Music/копирование/all files - копия/Richard X vs. Liberty X - Being Nobody (XTO0cdWwKcI)_v1.mp4
-#latest')...
-[2026-11-13 01:12:27.707] [INFO ] [TelegramService] Файл 'Richard X vs. Liberty X - Being Nobody (XTO0cdWwKcI).mp4' успешно сохранен в Telegram. Message ID: 156
-[2026-11-13 01:12:27.707] [INFO ] [TrayContext] Событие OnUploadCompleted для 'Richard X vs. Liberty X - Being Nobody (XTO0cdWwKcI).mp4' получено из TelegramService.
-[2026-11-13 01:12:27.707] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для 'Richard X vs. Liberty X - Being Nobody (XTO0cdWwKcI).mp4'. Запуск _completionTimer...
-[2026-11-13 01:12:27.929] [INFO ] [WinFsp] Файл 'Richard X vs. Liberty X - Being Nobody (XTO0cdWwKcI).mp4' успешно сохранен в Telegram (Msg ID: 156, дата изменения: 2022-02-15 23:46:28). Загрузка на лету (Zero-Temp) завершена.
-[2026-11-13 01:12:27.933] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для '[FDM] Ben Delay feat. Alexandra Prince - The Boy Is Mine (Original Extended Remix) [320 kbps] [13 mb).mp3' (виртуальный путь: '/Music/копирование/all files - копия/[FDM] Ben Delay feat. Alexandra Prince - The Boy Is Mine (Original Extended Remix) [320 kbps] [13 mb).mp3')...
-[2026-11-13 01:12:27.933] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\folder\For test tg downloads\all files - копия\[FDM] Ben Delay feat. Alexandra Prince - The Boy Is Mine (Original Extended Remix) [320 kbps] [13 mb).mp3' существует и доступен для чтения (размер: 13,22 МБ (13 865 469 байт)).
-[2026-11-13 01:12:27.933] [INFO ] [WinFsp] [Источник] Найдено совпадение в активной сессии (осталось файлов в очереди: 10/18): 'D:\folder\For test tg downloads\all files - копия\[FDM] Ben Delay feat. Alexandra Prince - The Boy Is Mine (Original Extended Remix) [320 kbps] [13 mb).mp3'
-[2026-11-13 01:12:27.934] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/копирование/all files - копия/[FDM] Ben Delay feat. Alexandra Prince - The Boy Is Mine (Original Extended Remix) [320 kbps] [13 mb).mp3' (alloc: 13869056), источник: 'D:\folder\For test tg downloads\all files - копия\[FDM] Ben Delay feat. Alexandra Prince - The Boy Is Mine (Original Extended Remix) [320 kbps] [13 mb).mp3'
-[2026-11-13 01:12:27.936] [INFO ] [WinFsp] [Write] Начинаем извлечение метаданных из оригинального файла: 'D:\folder\For test tg downloads\all files - копия\[FDM] Ben Delay feat. Alexandra Prince - The Boy Is Mine (Original Extended Remix) [320 kbps] [13 mb).mp3'
-[2026-11-13 01:12:27.939] [INFO ] [WinFsp] Запуск прямой потоковой передачи '[FDM] Ben Delay feat. Alexandra Prince - The Boy Is Mine (Original Extended Remix) [320 kbps] [13 mb).mp3' (13,22 МБ (13 865 469 байт)) в Telegram, канал: 4432518768, аудио: 345 сек, обложка: ДА...
-[2026-11-13 01:12:27.941] [INFO ] [TelegramService] Прямая потоковая передача файла '[FDM] Ben Delay feat. Alexandra Prince - The Boy Is Mine (Original Extended Remix) [320 kbps] [13 mb).mp3' (13865469 байт) в Telegram...
-[2026-11-13 01:12:28.217] [INFO ] [TrayProgressOverlay] Остановлен активный _completionTimer для файла [FDM] Ben Delay feat. Alexandra Prince - The Boy Is Mine (Original Extended Remix) [320 kbps] [13 mb).mp3
-[2026-11-13 01:12:30.711] [INFO ] [WinFsp] Обновлены системные даты для '[FDM] Ben Delay feat. Alexandra Prince - The Boy Is Mine (Original Extended Remix) [320 kbps] [13 mb).mp3' (ID -27): Изменен: 2016-08-11 20:30:36.748, Создан: 2026-11-12 23:12:27.934
-[2026-11-13 01:12:32.342] [INFO ] [TelegramService] Файл '[FDM] Ben Delay feat. Alexandra Prince - The Boy Is Mine (Original Extended Remix) [320 kbps] [13 mb).mp3' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /Music/копирование/all files - копия/[FDM] Ben Delay feat. Alexandra Prince - The Boy Is Mine (Original Extended Remix) [320 kbps] [13 mb)_v1.mp3
-#latest')...
-[2026-11-13 01:12:32.612] [INFO ] [TelegramService] Файл '[FDM] Ben Delay feat. Alexandra Prince - The Boy Is Mine (Original Extended Remix) [320 kbps] [13 mb).mp3' успешно сохранен в Telegram. Message ID: 157
-[2026-11-13 01:12:32.612] [INFO ] [TrayContext] Событие OnUploadCompleted для '[FDM] Ben Delay feat. Alexandra Prince - The Boy Is Mine (Original Extended Remix) [320 kbps] [13 mb).mp3' получено из TelegramService.
-[2026-11-13 01:12:32.612] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для '[FDM] Ben Delay feat. Alexandra Prince - The Boy Is Mine (Original Extended Remix) [320 kbps] [13 mb).mp3'. Запуск _completionTimer...
-[2026-11-13 01:12:32.832] [INFO ] [WinFsp] Файл '[FDM] Ben Delay feat. Alexandra Prince - The Boy Is Mine (Original Extended Remix) [320 kbps] [13 mb).mp3' успешно сохранен в Telegram (Msg ID: 157, дата изменения: 2016-08-11 20:30:36). Загрузка на лету (Zero-Temp) завершена.
-[2026-11-13 01:12:32.836] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Новый текстовый документ.txt' (виртуальный путь: '/Music/копирование/all files - копия/Новый текстовый документ.txt')...
-[2026-11-13 01:12:32.836] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\folder\For test tg downloads\all files - копия\Новый текстовый документ.txt' существует и доступен для чтения (размер: 8 байт).
-[2026-11-13 01:12:32.836] [INFO ] [WinFsp] [Источник] Найдено совпадение в активной сессии (осталось файлов в очереди: 9/18): 'D:\folder\For test tg downloads\all files - копия\Новый текстовый документ.txt'
-[2026-11-13 01:12:32.837] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/копирование/all files - копия/Новый текстовый документ.txt' (alloc: 0), источник: 'D:\folder\For test tg downloads\all files - копия\Новый текстовый документ.txt'
-[2026-11-13 01:12:32.837] [INFO ] [WinFsp] Обновлены системные даты для 'Новый текстовый документ.txt' (ID -28): Изменен: 2025-05-01 22:45:04.474, Создан: 2026-11-12 23:12:32.837
-[2026-11-13 01:12:32.839] [INFO ] [WinFsp] Отправка файла 'Новый текстовый документ.txt' (8 байт) из памяти в Telegram (Zero-Temp), канал: 4432518768...
-[2026-11-13 01:12:32.839] [INFO ] [TelegramService] Прямая потоковая передача файла 'Новый текстовый документ.txt' (8 байт) в Telegram...
-[2026-11-13 01:12:32.887] [INFO ] [TelegramService] Файл 'Новый текстовый документ.txt' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /Music/копирование/all files - копия/Новый текстовый документ_v1.txt
-#latest')...
-[2026-11-13 01:12:32.887] [INFO ] [TrayProgressOverlay] Остановлен активный _completionTimer для файла Новый текстовый документ.txt
-[2026-11-13 01:12:33.124] [INFO ] [TelegramService] Файл 'Новый текстовый документ.txt' успешно сохранен в Telegram. Message ID: 158
-[2026-11-13 01:12:33.124] [INFO ] [TrayContext] Событие OnUploadCompleted для 'Новый текстовый документ.txt' получено из TelegramService.
-[2026-11-13 01:12:33.124] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для 'Новый текстовый документ.txt'. Запуск _completionTimer...
-[2026-11-13 01:12:33.335] [INFO ] [WinFsp] Файл 'Новый текстовый документ.txt' успешно сохранен в Telegram (Msg ID: 158, дата изменения: 2025-05-01 22:45:04).
-[2026-11-13 01:12:33.492] [INFO ] [WinFsp] Создан новый каталог: '/Music/копирование/all files' (ID 160)
-[2026-11-13 01:12:33.639] [INFO ] [WinFsp] Обновлены системные даты для 'all files' (ID 160): Изменен: 2025-05-01 23:31:02.019, Создан: 2026-11-12 23:12:33.000
-[2026-11-13 01:12:33.645] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' (виртуальный путь: '/Music/копирование/all files/06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3')...
-[2026-11-13 01:12:33.645] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\folder\For test tg downloads\all files\06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' существует и доступен для чтения (размер: 7,71 МБ (8 082 073 байт)).
-[2026-11-13 01:12:33.645] [INFO ] [WinFsp] [Источник] Найдено совпадение в активной сессии (осталось файлов в очереди: 8/18): 'D:\folder\For test tg downloads\all files\06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3'
-[2026-11-13 01:12:33.646] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/копирование/all files/06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' (alloc: 8085504), источник: 'D:\folder\For test tg downloads\all files\06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3'
-[2026-11-13 01:12:33.647] [INFO ] [WinFsp] [Write] Начинаем извлечение метаданных из оригинального файла: 'D:\folder\For test tg downloads\all files\06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3'
-[2026-11-13 01:12:33.651] [INFO ] [WinFsp] Запуск прямой потоковой передачи '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' (7,71 МБ (8 082 073 байт)) в Telegram, канал: 4432518768, аудио: 201 сек, обложка: ДА...
-[2026-11-13 01:12:33.652] [INFO ] [TelegramService] Прямая потоковая передача файла '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' (8082073 байт) в Telegram...
-[2026-11-13 01:12:33.917] [INFO ] [TrayProgressOverlay] Остановлен активный _completionTimer для файла 06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3
-[2026-11-13 01:12:34.152] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'копирование' (/Music/копирование) (ID 149), элементов: 2
-[2026-11-13 01:12:34.228] [INFO ] [WinFsp] Обновлены системные даты для '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' (ID -29): Изменен: 2016-08-13 20:33:01.836, Создан: 2026-11-12 23:12:33.646
-[2026-11-13 01:12:35.405] [INFO ] [TelegramService] Файл '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /Music/копирование/all files/06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb)_v1.mp3
-#latest')...
-[2026-11-13 01:12:36.398] [INFO ] [TelegramService] Файл '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' успешно сохранен в Telegram. Message ID: 159
-[2026-11-13 01:12:36.398] [INFO ] [TrayContext] Событие OnUploadCompleted для '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' получено из TelegramService.
-[2026-11-13 01:12:36.398] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3'. Запуск _completionTimer...
-[2026-11-13 01:12:36.669] [INFO ] [WinFsp] Файл '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' успешно сохранен в Telegram (Msg ID: 159, дата изменения: 2016-08-13 20:33:01). Загрузка на лету (Zero-Temp) завершена.
-[2026-11-13 01:12:36.673] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4' (виртуальный путь: '/Music/копирование/all files/Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4')...
-[2026-11-13 01:12:36.673] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\folder\For test tg downloads\all files\Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4' существует и доступен для чтения (размер: 11,14 МБ (11 679 333 байт)).
-[2026-11-13 01:12:36.673] [INFO ] [WinFsp] [Источник] Найдено совпадение в активной сессии (осталось файлов в очереди: 7/18): 'D:\folder\For test tg downloads\all files\Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4'
-[2026-11-13 01:12:36.673] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/копирование/all files/Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4' (alloc: 11681792), источник: 'D:\folder\For test tg downloads\all files\Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4'
-[2026-11-13 01:12:36.675] [INFO ] [WinFsp] [Write] Начинаем извлечение метаданных из оригинального файла: 'D:\folder\For test tg downloads\all files\Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4'
-[2026-11-13 01:12:36.711] [INFO ] [VideoMetadataExtractor] Успешно сгенерирован стоп-кадр через Windows Shell (K-Lite/Icaros) для 'Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4' (6014 байт, 320x131)
-[2026-11-13 01:12:36.715] [INFO ] [WinFsp] Запуск прямой потоковой передачи 'Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4' (11,14 МБ (11 679 333 байт)) в Telegram, канал: 4432518768, видео: 640x262, 177 сек, обложка: ДА...
-[2026-11-13 01:12:36.716] [INFO ] [TelegramService] Прямая потоковая передача файла 'Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4' (11679333 байт) в Telegram...
-[2026-11-13 01:12:36.973] [INFO ] [TrayProgressOverlay] Остановлен активный _completionTimer для файла Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4
-[2026-11-13 01:12:37.797] [INFO ] [WinFsp] Обновлены системные даты для 'Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4' (ID -30): Изменен: 2020-11-07 21:43:54.523, Создан: 2026-11-12 23:12:36.673
-[2026-11-13 01:12:38.783] [INFO ] [TelegramService] Файл 'Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /Music/копирование/all files/Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb]_v1.mp4
-#latest')...
-[2026-11-13 01:12:39.021] [INFO ] [TelegramService] Файл 'Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4' успешно сохранен в Telegram. Message ID: 160
-[2026-11-13 01:12:39.021] [INFO ] [TrayContext] Событие OnUploadCompleted для 'Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4' получено из TelegramService.
-[2026-11-13 01:12:39.021] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для 'Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4'. Запуск _completionTimer...
-[2026-11-13 01:12:39.260] [INFO ] [WinFsp] Файл 'Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4' успешно сохранен в Telegram (Msg ID: 160, дата изменения: 2020-11-07 21:43:54). Загрузка на лету (Zero-Temp) завершена.
-[2026-11-13 01:12:39.264] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'DSC_0270 (6 mb).JPG' (виртуальный путь: '/Music/копирование/all files/DSC_0270 (6 mb).JPG')...
-[2026-11-13 01:12:39.264] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\folder\For test tg downloads\all files\DSC_0270 (6 mb).JPG' существует и доступен для чтения (размер: 5,91 МБ (6 195 435 байт)).
-[2026-11-13 01:12:39.264] [INFO ] [WinFsp] [Источник] Найдено совпадение в активной сессии (осталось файлов в очереди: 6/18): 'D:\folder\For test tg downloads\all files\DSC_0270 (6 mb).JPG'
-[2026-11-13 01:12:39.264] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/копирование/all files/DSC_0270 (6 mb).JPG' (alloc: 6197248), источник: 'D:\folder\For test tg downloads\all files\DSC_0270 (6 mb).JPG'
-[2026-11-13 01:12:39.266] [INFO ] [WinFsp] [Write] Начинаем извлечение метаданных из оригинального файла: 'D:\folder\For test tg downloads\all files\DSC_0270 (6 mb).JPG'
-[2026-11-13 01:12:39.266] [INFO ] [WinFsp] Запуск прямой потоковой передачи 'DSC_0270 (6 mb).JPG' (5,91 МБ (6 195 435 байт)) в Telegram, канал: 4432518768...
-[2026-11-13 01:12:39.783] [INFO ] [TelegramService] Прямая потоковая передача файла 'DSC_0270 (6 mb).JPG' (6195435 байт) в Telegram...
-[2026-11-13 01:12:39.840] [INFO ] [WinFsp] Обновлены системные даты для 'DSC_0270 (6 mb).JPG' (ID -31): Изменен: 2023-07-26 12:27:41.000, Создан: 2026-11-12 23:12:39.264
-[2026-11-13 01:12:39.921] [INFO ] [TrayProgressOverlay] Остановлен активный _completionTimer для файла DSC_0270 (6 mb).JPG
-[2026-11-13 01:12:40.613] [INFO ] [TelegramService] Файл 'DSC_0270 (6 mb).JPG' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /Music/копирование/all files/DSC_0270 (6 mb)_v1.JPG
-#latest')...
-[2026-11-13 01:12:40.856] [INFO ] [TelegramService] Фото-превью для галереи успешно опубликовано в Telegram (Message ID: 161, имя: 'DSC_0270 (6 mb)_preview.jpg').
-[2026-11-13 01:12:41.282] [INFO ] [TelegramService] Файл 'DSC_0270 (6 mb).JPG' успешно сохранен в Telegram. Message ID: 162, Preview ID: 161
-[2026-11-13 01:12:41.282] [INFO ] [TrayContext] Событие OnUploadCompleted для 'DSC_0270 (6 mb).JPG' получено из TelegramService.
-[2026-11-13 01:12:41.283] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для 'DSC_0270 (6 mb).JPG'. Запуск _completionTimer...
-[2026-11-13 01:12:41.509] [INFO ] [WinFsp] Файл 'DSC_0270 (6 mb).JPG' успешно сохранен в Telegram (Msg ID: 162, Preview ID: 161, дата изменения: 2023-07-26 12:27:41). Загрузка на лету (Zero-Temp) завершена.
-[2026-11-13 01:12:41.513] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Eclipse - Let The Rhythm Move You [SGYH7HVU8uE].mp4' (виртуальный путь: '/Music/копирование/all files/Eclipse - Let The Rhythm Move You [SGYH7HVU8uE].mp4')...
-[2026-11-13 01:12:41.513] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\folder\For test tg downloads\all files\Eclipse - Let The Rhythm Move You [SGYH7HVU8uE].mp4' существует и доступен для чтения (размер: 10,55 МБ (11 066 822 байт)).
-[2026-11-13 01:12:41.513] [INFO ] [WinFsp] [Источник] Найдено совпадение в активной сессии (осталось файлов в очереди: 5/18): 'D:\folder\For test tg downloads\all files\Eclipse - Let The Rhythm Move You [SGYH7HVU8uE].mp4'
-[2026-11-13 01:12:41.513] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/копирование/all files/Eclipse - Let The Rhythm Move You [SGYH7HVU8uE].mp4' (alloc: 11067392), источник: 'D:\folder\For test tg downloads\all files\Eclipse - Let The Rhythm Move You [SGYH7HVU8uE].mp4'
-[2026-11-13 01:12:41.515] [INFO ] [WinFsp] [Write] Начинаем извлечение метаданных из оригинального файла: 'D:\folder\For test tg downloads\all files\Eclipse - Let The Rhythm Move You [SGYH7HVU8uE].mp4'
-[2026-11-13 01:12:41.578] [INFO ] [VideoMetadataExtractor] Успешно сгенерирован стоп-кадр через Windows Shell (K-Lite/Icaros) для 'Eclipse - Let The Rhythm Move You [SGYH7HVU8uE].mp4' (11020 байт, 320x240)
-[2026-11-13 01:12:41.582] [INFO ] [WinFsp] Запуск прямой потоковой передачи 'Eclipse - Let The Rhythm Move You [SGYH7HVU8uE].mp4' (10,55 МБ (11 066 822 байт)) в Telegram, канал: 4432518768, видео: 320x240, 237 сек, обложка: ДА...
-[2026-11-13 01:12:41.582] [INFO ] [TelegramService] Прямая потоковая передача файла 'Eclipse - Let The Rhythm Move You [SGYH7HVU8uE].mp4' (11066822 байт) в Telegram...
-[2026-11-13 01:12:41.785] [INFO ] [TrayProgressOverlay] Остановлен активный _completionTimer для файла Eclipse - Let The Rhythm Move You [SGYH7HVU8uE].mp4
-[2026-11-13 01:12:42.667] [INFO ] [WinFsp] Обновлены системные даты для 'Eclipse - Let The Rhythm Move You [SGYH7HVU8uE].mp4' (ID -32): Изменен: 2020-02-09 21:16:07.193, Создан: 2026-11-12 23:12:41.513
-[2026-11-13 01:12:43.891] [INFO ] [TelegramService] Файл 'Eclipse - Let The Rhythm Move You [SGYH7HVU8uE].mp4' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /Music/копирование/all files/Eclipse - Let The Rhythm Move You [SGYH7HVU8uE]_v1.mp4
-#latest')...
-[2026-11-13 01:12:44.152] [INFO ] [TelegramService] Файл 'Eclipse - Let The Rhythm Move You [SGYH7HVU8uE].mp4' успешно сохранен в Telegram. Message ID: 163
-[2026-11-13 01:12:44.152] [INFO ] [TrayContext] Событие OnUploadCompleted для 'Eclipse - Let The Rhythm Move You [SGYH7HVU8uE].mp4' получено из TelegramService.
-[2026-11-13 01:12:44.152] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для 'Eclipse - Let The Rhythm Move You [SGYH7HVU8uE].mp4'. Запуск _completionTimer...
-[2026-11-13 01:12:44.372] [INFO ] [WinFsp] Файл 'Eclipse - Let The Rhythm Move You [SGYH7HVU8uE].mp4' успешно сохранен в Telegram (Msg ID: 163, дата изменения: 2020-02-09 21:16:07). Загрузка на лету (Zero-Temp) завершена.
-[2026-11-13 01:12:44.375] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'IMG_20201018_131246 (8 mb).jpg' (виртуальный путь: '/Music/копирование/all files/IMG_20201018_131246 (8 mb).jpg')...
-[2026-11-13 01:12:44.376] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\folder\For test tg downloads\all files\IMG_20201018_131246 (8 mb).jpg' существует и доступен для чтения (размер: 8,28 МБ (8 683 636 байт)).
-[2026-11-13 01:12:44.376] [INFO ] [WinFsp] [Источник] Найдено совпадение в активной сессии (осталось файлов в очереди: 4/18): 'D:\folder\For test tg downloads\all files\IMG_20201018_131246 (8 mb).jpg'
-[2026-11-13 01:12:44.376] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/копирование/all files/IMG_20201018_131246 (8 mb).jpg' (alloc: 8687616), источник: 'D:\folder\For test tg downloads\all files\IMG_20201018_131246 (8 mb).jpg'
-[2026-11-13 01:12:44.378] [INFO ] [WinFsp] [Write] Начинаем извлечение метаданных из оригинального файла: 'D:\folder\For test tg downloads\all files\IMG_20201018_131246 (8 mb).jpg'
-[2026-11-13 01:12:44.378] [INFO ] [WinFsp] Запуск прямой потоковой передачи 'IMG_20201018_131246 (8 mb).jpg' (8,28 МБ (8 683 636 байт)) в Telegram, канал: 4432518768...
-[2026-11-13 01:12:44.999] [INFO ] [TelegramService] Прямая потоковая передача файла 'IMG_20201018_131246 (8 mb).jpg' (8683636 байт) в Telegram...
-[2026-11-13 01:12:45.325] [INFO ] [TrayProgressOverlay] Остановлен активный _completionTimer для файла IMG_20201018_131246 (8 mb).jpg
-[2026-11-13 01:12:46.040] [INFO ] [WinFsp] Обновлены системные даты для 'IMG_20201018_131246 (8 mb).jpg' (ID -33): Изменен: 2020-12-25 21:22:39.930, Создан: 2026-11-12 23:12:44.376
-[2026-11-13 01:12:47.999] [INFO ] [TelegramService] Файл 'IMG_20201018_131246 (8 mb).jpg' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /Music/копирование/all files/IMG_20201018_131246 (8 mb)_v1.jpg
-#latest')...
-[2026-11-13 01:12:48.426] [INFO ] [TelegramService] Фото-превью для галереи успешно опубликовано в Telegram (Message ID: 164, имя: 'IMG_20201018_131246 (8 mb)_preview.jpg').
-[2026-11-13 01:12:48.867] [INFO ] [TelegramService] Файл 'IMG_20201018_131246 (8 mb).jpg' успешно сохранен в Telegram. Message ID: 165, Preview ID: 164
-[2026-11-13 01:12:48.867] [INFO ] [TrayContext] Событие OnUploadCompleted для 'IMG_20201018_131246 (8 mb).jpg' получено из TelegramService.
-[2026-11-13 01:12:48.867] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для 'IMG_20201018_131246 (8 mb).jpg'. Запуск _completionTimer...
-[2026-11-13 01:12:49.095] [INFO ] [WinFsp] Файл 'IMG_20201018_131246 (8 mb).jpg' успешно сохранен в Telegram (Msg ID: 165, Preview ID: 164, дата изменения: 2020-12-25 21:22:39). Загрузка на лету (Zero-Temp) завершена.
-[2026-11-13 01:12:49.099] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'IMG_20201018_131419 (12 mb).jpg' (виртуальный путь: '/Music/копирование/all files/IMG_20201018_131419 (12 mb).jpg')...
-[2026-11-13 01:12:49.099] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\folder\For test tg downloads\all files\IMG_20201018_131419 (12 mb).jpg' существует и доступен для чтения (размер: 11,84 МБ (12 414 274 байт)).
-[2026-11-13 01:12:49.099] [INFO ] [WinFsp] [Источник] Найдено совпадение в активной сессии (осталось файлов в очереди: 3/18): 'D:\folder\For test tg downloads\all files\IMG_20201018_131419 (12 mb).jpg'
-[2026-11-13 01:12:49.099] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/копирование/all files/IMG_20201018_131419 (12 mb).jpg' (alloc: 12414976), источник: 'D:\folder\For test tg downloads\all files\IMG_20201018_131419 (12 mb).jpg'
-[2026-11-13 01:12:49.101] [INFO ] [WinFsp] [Write] Начинаем извлечение метаданных из оригинального файла: 'D:\folder\For test tg downloads\all files\IMG_20201018_131419 (12 mb).jpg'
-[2026-11-13 01:12:49.101] [INFO ] [WinFsp] Запуск прямой потоковой передачи 'IMG_20201018_131419 (12 mb).jpg' (11,84 МБ (12 414 274 байт)) в Telegram, канал: 4432518768...
-[2026-11-13 01:12:49.739] [INFO ] [TelegramService] Прямая потоковая передача файла 'IMG_20201018_131419 (12 mb).jpg' (12414274 байт) в Telegram...
-[2026-11-13 01:12:49.935] [INFO ] [TrayProgressOverlay] Остановлен активный _completionTimer для файла IMG_20201018_131419 (12 mb).jpg
-[2026-11-13 01:12:51.147] [INFO ] [WinFsp] Обновлены системные даты для 'IMG_20201018_131419 (12 mb).jpg' (ID -34): Изменен: 2020-12-25 21:19:06.228, Создан: 2026-11-12 23:12:49.099
-[2026-11-13 01:12:52.492] [INFO ] [TelegramService] Файл 'IMG_20201018_131419 (12 mb).jpg' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /Music/копирование/all files/IMG_20201018_131419 (12 mb)_v1.jpg
-#latest')...
-[2026-11-13 01:12:52.886] [INFO ] [TelegramService] Фото-превью для галереи успешно опубликовано в Telegram (Message ID: 166, имя: 'IMG_20201018_131419 (12 mb)_preview.jpg').
-[2026-11-13 01:12:53.243] [INFO ] [TelegramService] К документу >10 МБ 'IMG_20201018_131419 (12 mb).jpg' успешно прикреплена миниатюра (thumb).
-[2026-11-13 01:12:53.478] [INFO ] [TelegramService] Файл 'IMG_20201018_131419 (12 mb).jpg' успешно сохранен в Telegram. Message ID: 167, Preview ID: 166
-[2026-11-13 01:12:53.478] [INFO ] [TrayContext] Событие OnUploadCompleted для 'IMG_20201018_131419 (12 mb).jpg' получено из TelegramService.
-[2026-11-13 01:12:53.478] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для 'IMG_20201018_131419 (12 mb).jpg'. Запуск _completionTimer...
-[2026-11-13 01:12:53.704] [INFO ] [WinFsp] Файл 'IMG_20201018_131419 (12 mb).jpg' успешно сохранен в Telegram (Msg ID: 167, Preview ID: 166, дата изменения: 2020-12-25 21:19:06). Загрузка на лету (Zero-Temp) завершена.
-[2026-11-13 01:12:53.708] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Richard X vs. Liberty X - Being Nobody (XTO0cdWwKcI).mp4' (виртуальный путь: '/Music/копирование/all files/Richard X vs. Liberty X - Being Nobody (XTO0cdWwKcI).mp4')...
-[2026-11-13 01:12:53.708] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\folder\For test tg downloads\all files\Richard X vs. Liberty X - Being Nobody (XTO0cdWwKcI).mp4' существует и доступен для чтения (размер: 6,37 МБ (6 683 355 байт)).
-[2026-11-13 01:12:53.708] [INFO ] [WinFsp] [Источник] Найдено совпадение в активной сессии (осталось файлов в очереди: 2/18): 'D:\folder\For test tg downloads\all files\Richard X vs. Liberty X - Being Nobody (XTO0cdWwKcI).mp4'
-[2026-11-13 01:12:53.709] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/копирование/all files/Richard X vs. Liberty X - Being Nobody (XTO0cdWwKcI).mp4' (alloc: 6684672), источник: 'D:\folder\For test tg downloads\all files\Richard X vs. Liberty X - Being Nobody (XTO0cdWwKcI).mp4'
-[2026-11-13 01:12:53.710] [INFO ] [WinFsp] [Write] Начинаем извлечение метаданных из оригинального файла: 'D:\folder\For test tg downloads\all files\Richard X vs. Liberty X - Being Nobody (XTO0cdWwKcI).mp4'
-[2026-11-13 01:12:53.748] [INFO ] [VideoMetadataExtractor] Успешно сгенерирован стоп-кадр через Windows Shell (K-Lite/Icaros) для 'Richard X vs. Liberty X - Being Nobody (XTO0cdWwKcI).mp4' (8193 байт, 320x239)
-[2026-11-13 01:12:53.752] [INFO ] [WinFsp] Запуск прямой потоковой передачи 'Richard X vs. Liberty X - Being Nobody (XTO0cdWwKcI).mp4' (6,37 МБ (6 683 355 байт)) в Telegram, канал: 4432518768, видео: 322x240, 216 сек, обложка: ДА...
-[2026-11-13 01:12:53.753] [INFO ] [TelegramService] Прямая потоковая передача файла 'Richard X vs. Liberty X - Being Nobody (XTO0cdWwKcI).mp4' (6683355 байт) в Telegram...
-[2026-11-13 01:12:53.925] [INFO ] [TrayProgressOverlay] Остановлен активный _completionTimer для файла Richard X vs. Liberty X - Being Nobody (XTO0cdWwKcI).mp4
-[2026-11-13 01:12:53.926] [INFO ] [WinFsp] Обновлены системные даты для 'Richard X vs. Liberty X - Being Nobody (XTO0cdWwKcI).mp4' (ID -35): Изменен: 2022-02-15 23:46:28.362, Создан: 2026-11-12 23:12:53.709
-[2026-11-13 01:12:55.000] [INFO ] [TelegramService] Файл 'Richard X vs. Liberty X - Being Nobody (XTO0cdWwKcI).mp4' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /Music/копирование/all files/Richard X vs. Liberty X - Being Nobody (XTO0cdWwKcI)_v1.mp4
-#latest')...
-[2026-11-13 01:12:55.416] [INFO ] [TelegramService] Файл 'Richard X vs. Liberty X - Being Nobody (XTO0cdWwKcI).mp4' успешно сохранен в Telegram. Message ID: 168
-[2026-11-13 01:12:55.416] [INFO ] [TrayContext] Событие OnUploadCompleted для 'Richard X vs. Liberty X - Being Nobody (XTO0cdWwKcI).mp4' получено из TelegramService.
-[2026-11-13 01:12:55.416] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для 'Richard X vs. Liberty X - Being Nobody (XTO0cdWwKcI).mp4'. Запуск _completionTimer...
-[2026-11-13 01:12:55.633] [INFO ] [WinFsp] Файл 'Richard X vs. Liberty X - Being Nobody (XTO0cdWwKcI).mp4' успешно сохранен в Telegram (Msg ID: 168, дата изменения: 2022-02-15 23:46:28). Загрузка на лету (Zero-Temp) завершена.
-[2026-11-13 01:12:55.646] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для '[FDM] Ben Delay feat. Alexandra Prince - The Boy Is Mine (Original Extended Remix) [320 kbps] [13 mb).mp3' (виртуальный путь: '/Music/копирование/all files/[FDM] Ben Delay feat. Alexandra Prince - The Boy Is Mine (Original Extended Remix) [320 kbps] [13 mb).mp3')...
-[2026-11-13 01:12:55.646] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\folder\For test tg downloads\all files\[FDM] Ben Delay feat. Alexandra Prince - The Boy Is Mine (Original Extended Remix) [320 kbps] [13 mb).mp3' существует и доступен для чтения (размер: 13,22 МБ (13 865 469 байт)).
-[2026-11-13 01:12:55.646] [INFO ] [WinFsp] [Источник] Найдено совпадение в активной сессии (осталось файлов в очереди: 1/18): 'D:\folder\For test tg downloads\all files\[FDM] Ben Delay feat. Alexandra Prince - The Boy Is Mine (Original Extended Remix) [320 kbps] [13 mb).mp3'
-[2026-11-13 01:12:55.646] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/копирование/all files/[FDM] Ben Delay feat. Alexandra Prince - The Boy Is Mine (Original Extended Remix) [320 kbps] [13 mb).mp3' (alloc: 13869056), источник: 'D:\folder\For test tg downloads\all files\[FDM] Ben Delay feat. Alexandra Prince - The Boy Is Mine (Original Extended Remix) [320 kbps] [13 mb).mp3'
-[2026-11-13 01:12:55.648] [INFO ] [WinFsp] [Write] Начинаем извлечение метаданных из оригинального файла: 'D:\folder\For test tg downloads\all files\[FDM] Ben Delay feat. Alexandra Prince - The Boy Is Mine (Original Extended Remix) [320 kbps] [13 mb).mp3'
-[2026-11-13 01:12:55.651] [INFO ] [WinFsp] Запуск прямой потоковой передачи '[FDM] Ben Delay feat. Alexandra Prince - The Boy Is Mine (Original Extended Remix) [320 kbps] [13 mb).mp3' (13,22 МБ (13 865 469 байт)) в Telegram, канал: 4432518768, аудио: 345 сек, обложка: ДА...
-[2026-11-13 01:12:55.652] [INFO ] [TelegramService] Прямая потоковая передача файла '[FDM] Ben Delay feat. Alexandra Prince - The Boy Is Mine (Original Extended Remix) [320 kbps] [13 mb).mp3' (13865469 байт) в Telegram...
-[2026-11-13 01:12:55.797] [INFO ] [TrayProgressOverlay] Остановлен активный _completionTimer для файла [FDM] Ben Delay feat. Alexandra Prince - The Boy Is Mine (Original Extended Remix) [320 kbps] [13 mb).mp3
-[2026-11-13 01:12:57.197] [INFO ] [WinFsp] Обновлены системные даты для '[FDM] Ben Delay feat. Alexandra Prince - The Boy Is Mine (Original Extended Remix) [320 kbps] [13 mb).mp3' (ID -36): Изменен: 2016-08-11 20:30:36.748, Создан: 2026-11-12 23:12:55.646
-[2026-11-13 01:12:58.200] [INFO ] [TelegramService] Файл '[FDM] Ben Delay feat. Alexandra Prince - The Boy Is Mine (Original Extended Remix) [320 kbps] [13 mb).mp3' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /Music/копирование/all files/[FDM] Ben Delay feat. Alexandra Prince - The Boy Is Mine (Original Extended Remix) [320 kbps] [13 mb)_v1.mp3
-#latest')...
-[2026-11-13 01:12:58.456] [INFO ] [TelegramService] Файл '[FDM] Ben Delay feat. Alexandra Prince - The Boy Is Mine (Original Extended Remix) [320 kbps] [13 mb).mp3' успешно сохранен в Telegram. Message ID: 169
-[2026-11-13 01:12:58.456] [INFO ] [TrayContext] Событие OnUploadCompleted для '[FDM] Ben Delay feat. Alexandra Prince - The Boy Is Mine (Original Extended Remix) [320 kbps] [13 mb).mp3' получено из TelegramService.
-[2026-11-13 01:12:58.456] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для '[FDM] Ben Delay feat. Alexandra Prince - The Boy Is Mine (Original Extended Remix) [320 kbps] [13 mb).mp3'. Запуск _completionTimer...
-[2026-11-13 01:12:58.674] [INFO ] [WinFsp] Файл '[FDM] Ben Delay feat. Alexandra Prince - The Boy Is Mine (Original Extended Remix) [320 kbps] [13 mb).mp3' успешно сохранен в Telegram (Msg ID: 169, дата изменения: 2016-08-11 20:30:36). Загрузка на лету (Zero-Temp) завершена.
-[2026-11-13 01:12:58.678] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Новый текстовый документ.txt' (виртуальный путь: '/Music/копирование/all files/Новый текстовый документ.txt')...
-[2026-11-13 01:12:58.678] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\folder\For test tg downloads\all files\Новый текстовый документ.txt' существует и доступен для чтения (размер: 8 байт).
-[2026-11-13 01:12:58.678] [INFO ] [WinFsp] [Источник] Найдено совпадение в активной сессии: 'D:\folder\For test tg downloads\all files\Новый текстовый документ.txt'
-[2026-11-13 01:12:58.678] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/копирование/all files/Новый текстовый документ.txt' (alloc: 0), источник: 'D:\folder\For test tg downloads\all files\Новый текстовый документ.txt'
-[2026-11-13 01:12:58.679] [INFO ] [WinFsp] Обновлены системные даты для 'Новый текстовый документ.txt' (ID -37): Изменен: 2025-05-01 22:45:04.474, Создан: 2026-11-12 23:12:58.678
-[2026-11-13 01:12:58.680] [INFO ] [WinFsp] Отправка файла 'Новый текстовый документ.txt' (8 байт) из памяти в Telegram (Zero-Temp), канал: 4432518768...
-[2026-11-13 01:12:58.681] [INFO ] [TelegramService] Прямая потоковая передача файла 'Новый текстовый документ.txt' (8 байт) в Telegram...
-[2026-11-13 01:12:58.741] [INFO ] [TelegramService] Файл 'Новый текстовый документ.txt' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /Music/копирование/all files/Новый текстовый документ_v1.txt
-#latest')...
-[2026-11-13 01:12:58.741] [INFO ] [TrayProgressOverlay] Остановлен активный _completionTimer для файла Новый текстовый документ.txt
-[2026-11-13 01:12:58.961] [INFO ] [TelegramService] Файл 'Новый текстовый документ.txt' успешно сохранен в Telegram. Message ID: 170
-[2026-11-13 01:12:58.961] [INFO ] [TrayContext] Событие OnUploadCompleted для 'Новый текстовый документ.txt' получено из TelegramService.
-[2026-11-13 01:12:58.961] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для 'Новый текстовый документ.txt'. Запуск _completionTimer...
-[2026-11-13 01:12:59.176] [INFO ] [WinFsp] Файл 'Новый текстовый документ.txt' успешно сохранен в Telegram (Msg ID: 170, дата изменения: 2025-05-01 22:45:04).
-[2026-11-13 01:12:59.368] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Music' (/Music) (ID 5), элементов: 2
-[2026-11-13 01:13:00.359] [INFO ] [TrayProgressOverlay] _completionTimer Tick! _isTransferring=False, _isCompleted=True, Visible=True
-[2026-11-13 01:13:00.363] [INFO ] [TrayProgressOverlay] Оверлей успешно скрыт по завершению таймаута.
-[2026-11-13 01:13:01.178] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'копирование' (/Music/копирование) (ID 149), элементов: 2
+[2026-11-13 02:44:13.490] [INFO ] [TelegramService] Файл '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' успешно сохранен в Telegram. Message ID: 284
+[2026-11-13 02:44:13.490] [INFO ] [TrayContext] Событие OnUploadCompleted для '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' получено из TelegramService.
+[2026-11-13 02:44:13.490] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3'. Запуск _completionTimer...
+[2026-11-13 02:44:13.694] [INFO ] [WinFsp] Файл '06_david_guetta_play_hard_feat_ne_yo_and_akon_ (7mb).mp3' успешно сохранен в Telegram (Msg ID: 284, дата изменения: 2016-08-13 20:33:01). Загрузка на лету (Zero-Temp) завершена.
+[2026-11-13 02:44:13.698] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4' (виртуальный путь: '/Music/копирование/all files - копия/Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4')...
+[2026-11-13 02:44:13.699] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\folder\For test tg downloads\all files - копия\Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4' существует и доступен для чтения (размер: 11,14 МБ (11 679 333 байт)).
+[2026-11-13 02:44:13.699] [INFO ] [WinFsp] [Источник] Найдено совпадение в активной сессии (осталось файлов в очереди: 7/18): 'D:\folder\For test tg downloads\all files - копия\Chicane feat. Natasha Bedingfield - Bruised Water (Michael Woods Edit) [11 mb].mp4'

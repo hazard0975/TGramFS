@@ -1236,6 +1236,7 @@ namespace TGramFS.Services
                 {
                     string cleanCancelPath = NormalizePath(fileName);
                     _activeUploadNodes.TryRemove(cleanCancelPath, out _);
+                    ReleaseSessionReservation(cleanCancelPath);
                     ctx.UploadCts?.Cancel();
                     try { ctx.PipeStream?.Abort(); } catch { }
                     try { ctx.PipeStream?.Dispose(); } catch { }
@@ -1940,6 +1941,7 @@ namespace TGramFS.Services
         {
             public List<string> PendingFiles { get; } = new List<string>();
             public Dictionary<string, string> VirtualDirToPhysicalDir { get; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            public Dictionary<string, string> ReservedVirtualToPhysical { get; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             public HashSet<string> ConsumedVirtualFiles { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             public uint ClipboardSequenceNumber { get; set; }
             public int InitialCount { get; set; }
@@ -1952,11 +1954,29 @@ namespace TGramFS.Services
                 return ConsumedVirtualFiles.Contains(NormalizePath(virtualPath));
             }
 
+            public void ReserveVirtualFile(string? virtualPath, string? physicalFilePath)
+            {
+                if (!string.IsNullOrWhiteSpace(virtualPath) && !string.IsNullOrWhiteSpace(physicalFilePath))
+                {
+                    ReservedVirtualToPhysical[NormalizePath(virtualPath)] = physicalFilePath;
+                }
+            }
+
+            public void ReleaseReservation(string? virtualPath)
+            {
+                if (!string.IsNullOrWhiteSpace(virtualPath))
+                {
+                    ReservedVirtualToPhysical.Remove(NormalizePath(virtualPath));
+                }
+            }
+
             public void MarkConsumed(string? virtualPath)
             {
                 if (!string.IsNullOrWhiteSpace(virtualPath))
                 {
-                    ConsumedVirtualFiles.Add(NormalizePath(virtualPath));
+                    string norm = NormalizePath(virtualPath);
+                    ConsumedVirtualFiles.Add(norm);
+                    ReservedVirtualToPhysical.Remove(norm);
                 }
                 LastActivityUtc = DateTime.UtcNow;
             }
@@ -1965,7 +1985,9 @@ namespace TGramFS.Services
             {
                 if (!string.IsNullOrWhiteSpace(virtualPath))
                 {
-                    ConsumedVirtualFiles.Remove(NormalizePath(virtualPath));
+                    string norm = NormalizePath(virtualPath);
+                    ConsumedVirtualFiles.Remove(norm);
+                    ReservedVirtualToPhysical.Remove(norm);
                 }
             }
 
@@ -1989,11 +2011,35 @@ namespace TGramFS.Services
                     return null;
                 }
 
-                // 1. Сначала проверяем явную очередь файлов (например, Ctrl+C / CF_HDROP),
-                // выбирая лучший вариант по совпадению сегментов пути и размеру файла
+                // 0. Проверяем активную бронь для этого виртуального пути (защита от 0-байтных заглушек Explorer:
+                // Create -> 0-byte Cleanup -> Open -> Write повторно использует свой же зарезервированный источник,
+                // не воруя одноименный файл из соседней папки и не сдвигая очередь PendingFiles)
+                if (!string.IsNullOrWhiteSpace(relativeVirtualPath))
+                {
+                    string normVirtualPath = NormalizePath(relativeVirtualPath);
+                    if (ReservedVirtualToPhysical.TryGetValue(normVirtualPath, out string? reservedPath))
+                    {
+                        if (!IsCandidateOnMountedDrive(reservedPath) &&
+                            File.Exists(reservedPath) &&
+                            DoesFileSizeMatch(reservedPath, expectedSize))
+                        {
+                            string? verifiedReserved = VerifyReadable(reservedPath);
+                            if (verifiedReserved != null)
+                            {
+                                LastActivityUtc = DateTime.UtcNow;
+                                return verifiedReserved;
+                            }
+                        }
+                        ReservedVirtualToPhysical.Remove(normVirtualPath);
+                    }
+                }
+
+                // 1. Проверяем явную очередь файлов (например, Ctrl+C / CF_HDROP),
+                // выбирая лучший вариант по совпадению сегментов пути и размеру файла.
+                // VerifyReadable вызывается строго один раз после цикла для победившего кандидата.
                 int bestIndex = -1;
                 int bestScore = -1;
-                string? bestMatch = null;
+                string? bestCandidate = null;
 
                 for (int i = 0; i < PendingFiles.Count; i++)
                 {
@@ -2011,22 +2057,23 @@ namespace TGramFS.Services
                     int score = ScoreCandidatePathMatch(candidate, relativeVirtualPath);
                     if (score > bestScore)
                     {
-                        string? verified = VerifyReadable(candidate);
-                        if (verified != null)
-                        {
-                            bestScore = score;
-                            bestIndex = i;
-                            bestMatch = verified;
-                        }
+                        bestScore = score;
+                        bestIndex = i;
+                        bestCandidate = candidate;
                     }
                 }
 
-                if (bestIndex >= 0 && bestMatch != null)
+                if (bestIndex >= 0 && bestCandidate != null)
                 {
-                    PendingFiles.RemoveAt(bestIndex);
-                    MapVirtualDirectory(relativeVirtualPath, bestMatch);
-                    LastActivityUtc = DateTime.UtcNow;
-                    return bestMatch;
+                    string? verified = VerifyReadable(bestCandidate);
+                    if (verified != null)
+                    {
+                        PendingFiles.RemoveAt(bestIndex);
+                        ReserveVirtualFile(relativeVirtualPath, verified);
+                        MapVirtualDirectory(relativeVirtualPath, verified);
+                        LastActivityUtc = DateTime.UtcNow;
+                        return verified;
+                    }
                 }
 
                 // 2. Если файл не из очереди Ctrl+C — проверяем физическую папку-источник,
@@ -2044,6 +2091,7 @@ namespace TGramFS.Services
                                 string? verified = VerifyReadable(directCandidate);
                                 if (verified != null)
                                 {
+                                    ReserveVirtualFile(relativeVirtualPath, verified);
                                     LastActivityUtc = DateTime.UtcNow;
                                     return verified;
                                 }
@@ -2087,6 +2135,14 @@ namespace TGramFS.Services
             lock (_sessionLock)
             {
                 _activeSession?.MarkConsumed(virtualPath);
+            }
+        }
+
+        private static void ReleaseSessionReservation(string? virtualPath)
+        {
+            lock (_sessionLock)
+            {
+                _activeSession?.ReleaseReservation(virtualPath);
             }
         }
 
@@ -2276,6 +2332,23 @@ namespace TGramFS.Services
                             // Буфер изменился не на файлы (например, текст), фиксируем sequence, чтобы не переоткрывать Clipboard на каждый файл
                             _activeSession.ClipboardSequenceNumber = currentClipSeq;
                         }
+
+                        if (_activeSession != null && !_activeSession.IsVirtualFileConsumed(cleanVirtualPath))
+                        {
+                            string? fallbackMatch = _activeSession.FindAndConsume(targetFileName, cleanVirtualPath, expectedSize);
+                            if (fallbackMatch != null)
+                            {
+                                if (_activeSession.InitialCount > 0 && _activeSession.PendingFiles.Count > 0)
+                                {
+                                    AppLogger.Info("WinFsp", $"[Источник] Найдено совпадение в активной сессии (осталось файлов в очереди: {_activeSession.PendingFiles.Count}/{_activeSession.InitialCount}): '{fallbackMatch}'");
+                                }
+                                else
+                                {
+                                    AppLogger.Info("WinFsp", $"[Источник] Найдено совпадение в активной сессии для папки '{GetParentPath(cleanVirtualPath ?? "/")}': '{fallbackMatch}'");
+                                }
+                                return (null, fallbackMatch);
+                            }
+                        }
                     }
                 }
             }
@@ -2317,6 +2390,7 @@ namespace TGramFS.Services
                         }
 
                         _activeSession.UnmarkConsumed(cleanVirtualPath);
+                        _activeSession.ReserveVirtualFile(cleanVirtualPath, matchedPhysical);
                         _activeSession.MapVirtualDirectory(cleanVirtualPath, matchedPhysical);
                         _activeSession.LastActivityUtc = DateTime.UtcNow;
 
