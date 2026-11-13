@@ -1936,6 +1936,7 @@ namespace TGramFS.Services
 
         private static readonly object _sessionLock = new object();
         private static CopySession? _activeSession = null;
+        private static uint _consumedClipboardSeq = 0;
 
         private class CopySession
         {
@@ -1945,6 +1946,9 @@ namespace TGramFS.Services
             public HashSet<string> ConsumedVirtualFiles { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             public uint ClipboardSequenceNumber { get; set; }
             public int InitialCount { get; set; }
+            public bool IsFromClipboard { get; set; }
+            public bool IsVirtualClipboard { get; set; }
+            public int VirtualRemainingCount { get; set; }
             public DateTime LastActivityUtc { get; set; } = DateTime.UtcNow;
 
             public bool IsVirtualFileConsumed(string? virtualPath)
@@ -1975,7 +1979,10 @@ namespace TGramFS.Services
                 if (!string.IsNullOrWhiteSpace(virtualPath))
                 {
                     string norm = NormalizePath(virtualPath);
-                    ConsumedVirtualFiles.Add(norm);
+                    if (ConsumedVirtualFiles.Add(norm) && IsVirtualClipboard && VirtualRemainingCount > 0)
+                    {
+                        VirtualRemainingCount--;
+                    }
                     ReservedVirtualToPhysical.Remove(norm);
                 }
                 LastActivityUtc = DateTime.UtcNow;
@@ -2134,7 +2141,19 @@ namespace TGramFS.Services
         {
             lock (_sessionLock)
             {
-                _activeSession?.MarkConsumed(virtualPath);
+                if (_activeSession != null)
+                {
+                    _activeSession.MarkConsumed(virtualPath);
+                    if (_activeSession.IsFromClipboard && _activeSession.ClipboardSequenceNumber != 0)
+                    {
+                        bool physicalDone = !_activeSession.IsVirtualClipboard && _activeSession.PendingFiles.Count == 0;
+                        bool virtualDone = _activeSession.IsVirtualClipboard && _activeSession.VirtualRemainingCount <= 0;
+                        if (physicalDone || virtualDone)
+                        {
+                            _consumedClipboardSeq = _activeSession.ClipboardSequenceNumber;
+                        }
+                    }
+                }
             }
         }
 
@@ -2150,7 +2169,8 @@ namespace TGramFS.Services
         {
             var session = new CopySession
             {
-                ClipboardSequenceNumber = clipboardSequence
+                ClipboardSequenceNumber = clipboardSequence,
+                IsFromClipboard = clipboardSequence != 0
             };
             var addedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             bool hasExplicitFiles = rawCandidates.Exists(c => File.Exists(c));
@@ -2224,8 +2244,11 @@ namespace TGramFS.Services
 
             AppLogger.Info("WinFsp", $"[Источник] Поиск оригинального файла для '{targetFileName}' (виртуальный путь: '{cleanVirtualPath ?? relativeVirtualPath}')...");
 
-            bool shouldCheckClipboardFirst = false;
+            bool hasNewClipboardSequence = false;
             bool isRepeatInSameSession = false;
+            bool hasActiveClipboardSessionForCurrentSeq = false;
+            bool hasActiveVirtualClipboardBatch = false;
+            bool isSessionMissing = false;
 
             lock (_sessionLock)
             {
@@ -2233,15 +2256,24 @@ namespace TGramFS.Services
                 {
                     if (_activeSession.IsExpired(TimeSpan.FromSeconds(20)))
                     {
+                        if (_activeSession.IsFromClipboard && _activeSession.ClipboardSequenceNumber != 0)
+                        {
+                            _consumedClipboardSeq = _activeSession.ClipboardSequenceNumber;
+                        }
                         AppLogger.Info("WinFsp", $"[Источник] Предыдущая сессия копирования завершена по таймауту бездействия (20 сек).");
                         _activeSession = null;
+                        isSessionMissing = true;
                     }
                     else
                     {
                         if (currentClipSeq != 0 && currentClipSeq != _activeSession.ClipboardSequenceNumber)
                         {
                             // Буфер обмена изменился с момента инициализации текущей сессии -> новый Ctrl+C имеет приоритет
-                            shouldCheckClipboardFirst = true;
+                            if (_activeSession.IsFromClipboard && _activeSession.ClipboardSequenceNumber != 0)
+                            {
+                                _consumedClipboardSeq = _activeSession.ClipboardSequenceNumber;
+                            }
+                            hasNewClipboardSequence = true;
                         }
                         else if (_activeSession.IsVirtualFileConsumed(cleanVirtualPath))
                         {
@@ -2249,8 +2281,17 @@ namespace TGramFS.Services
                             isRepeatInSameSession = true;
                             AppLogger.Info("WinFsp", $"[Источник] Повторная запись '{cleanVirtualPath}' в рамках текущей сессии — пропускаем кэш папки и обновляем источник.");
                         }
+                        else if (_activeSession.IsVirtualClipboard)
+                        {
+                            hasActiveVirtualClipboardBatch = _activeSession.VirtualRemainingCount > 0;
+                        }
                         else
                         {
+                            if (_activeSession.IsFromClipboard && _activeSession.ClipboardSequenceNumber == currentClipSeq)
+                            {
+                                hasActiveClipboardSessionForCurrentSeq = true;
+                            }
+
                             string? match = _activeSession.FindAndConsume(targetFileName, cleanVirtualPath, expectedSize);
                             if (match != null)
                             {
@@ -2269,154 +2310,240 @@ namespace TGramFS.Services
                 }
                 else
                 {
-                    shouldCheckClipboardFirst = true;
+                    isSessionMissing = true;
                 }
             }
 
-            // Шаг 2: Проверяем системный буфер обмена Windows (Ctrl+C / Ctrl+V, CF_HDROP),
-            // если сессии ещё нет, буфер обновился или кэш сессии не дал точного совпадения.
-            if (shouldCheckClipboardFirst || !isRepeatInSameSession)
+            bool isClipboardAlreadyConsumed = currentClipSeq != 0 && currentClipSeq == _consumedClipboardSeq;
+            bool shouldCheckFreshClipboardFirst = !isRepeatInSameSession &&
+                !isClipboardAlreadyConsumed &&
+                !hasActiveClipboardSessionForCurrentSeq &&
+                (isSessionMissing || hasNewClipboardSequence || hasActiveVirtualClipboardBatch);
+
+            // Шаг 2: Проверяем свежий системный буфер обмена Windows (Ctrl+C / Ctrl+V, CF_HDROP),
+            // только если текущий ClipboardSequenceNumber ещё не отработан предыдущей операцией.
+            if (shouldCheckFreshClipboardFirst)
             {
-                var clipboardCandidates = CollectClipboardCandidates(includeMountedDrive: true);
-                if (clipboardCandidates.Count > 0)
+                var (clipVirtual, clipOriginal, _) = TryMatchFromClipboard(
+                    targetFileName,
+                    cleanVirtualPath,
+                    expectedSize,
+                    currentClipSeq,
+                    repository,
+                    isRetryFallback: false);
+                if (clipVirtual != null || clipOriginal != null)
                 {
-                    // 2.1 Проверяем виртуальные кандидаты в буфере обмена (диск Z:)
-                    if (repository != null)
-                    {
-                        foreach (var clip in clipboardCandidates)
-                        {
-                            if (IsCandidateOnMountedDrive(clip))
-                            {
-                                var vMatch = MatchVirtualCandidate(clip, targetFileName, cleanVirtualPath ?? "", repository);
-                                if (vMatch != null)
-                                {
-                                    lock (_sessionLock)
-                                    {
-                                        // Новая виртуальная копия из буфера обмена сбрасывает устаревшую физическую сессию
-                                        if (shouldCheckClipboardFirst)
-                                        {
-                                            _activeSession = null;
-                                        }
-                                    }
-                                    AppLogger.Info("WinFsp", $"[Источник] Найдено прямое совпадение в буфере обмена Windows (Виртуальная копия): '{clip}'");
-                                    return (vMatch, null);
-                                }
-                            }
-                        }
-                    }
-
-                    // 2.2 Проверяем физические кандидаты в буфере обмена (диски D:, C: и др.)
-                    var physicalClip = clipboardCandidates.Where(c => !IsCandidateOnMountedDrive(c)).ToList();
-                    if (physicalClip.Count > 0)
-                    {
-                        var clipSession = CreateCopySession(physicalClip, currentClipSeq);
-                        string? match = clipSession.FindAndConsume(targetFileName, cleanVirtualPath, expectedSize);
-                        if (match != null)
-                        {
-                            lock (_sessionLock)
-                            {
-                                _activeSession = clipSession;
-                            }
-                            AppLogger.Info("WinFsp", $"[Источник] Найдено прямое совпадение в буфере обмена Windows (Локальный файл): '{match}'");
-                            return (null, match);
-                        }
-                    }
-                }
-
-                if (shouldCheckClipboardFirst)
-                {
-                    lock (_sessionLock)
-                    {
-                        if (_activeSession != null && currentClipSeq != 0)
-                        {
-                            // Буфер изменился не на файлы (например, текст), фиксируем sequence, чтобы не переоткрывать Clipboard на каждый файл
-                            _activeSession.ClipboardSequenceNumber = currentClipSeq;
-                        }
-
-                        if (_activeSession != null && !_activeSession.IsVirtualFileConsumed(cleanVirtualPath))
-                        {
-                            string? fallbackMatch = _activeSession.FindAndConsume(targetFileName, cleanVirtualPath, expectedSize);
-                            if (fallbackMatch != null)
-                            {
-                                if (_activeSession.InitialCount > 0 && _activeSession.PendingFiles.Count > 0)
-                                {
-                                    AppLogger.Info("WinFsp", $"[Источник] Найдено совпадение в активной сессии (осталось файлов в очереди: {_activeSession.PendingFiles.Count}/{_activeSession.InitialCount}): '{fallbackMatch}'");
-                                }
-                                else
-                                {
-                                    AppLogger.Info("WinFsp", $"[Источник] Найдено совпадение в активной сессии для папки '{GetParentPath(cleanVirtualPath ?? "/")}': '{fallbackMatch}'");
-                                }
-                                return (null, fallbackMatch);
-                            }
-                        }
-                    }
+                    return (clipVirtual, clipOriginal);
                 }
             }
 
-            // Шаг 3: Если в кэше виртуальной папки и буфере обмена совпадений нет (Drag-and-Drop, смена папки или бэкапер),
-            // опрашиваем открытые файловые дескрипторы (Handles) процесса callerPid через ядро Windows
+            // Шаг 3: Опрашиваем открытые файловые дескрипторы (Handles) процесса callerPid через ядро Windows.
+            // При уже отработанном буфере обмена (например, перенос мышкой после Ctrl+C -> Ctrl+V) этот шаг
+            // выполняется ДО повторного обращения к старому буферу обмена.
             var handleCandidates = CollectOpenFileHandles(targetFileName, includeMountedDrive: true, callerPid: callerPid, targetVirtualPath: cleanVirtualPath, expectedSize: expectedSize);
-            if (handleCandidates.Count == 0)
+            if (handleCandidates.Count > 0)
             {
-                return (null, null);
-            }
-
-            // Шаг 3.1: Для дескрипторов Drag-and-Drop / бэкаперов: приоритет у физических файлов
-            var physicalCandidates = handleCandidates.Where(c => !IsCandidateOnMountedDrive(c)).ToList();
-            if (physicalCandidates.Count > 0)
-            {
-                string? matchedPhysical = null;
-                foreach (var phys in physicalCandidates)
+                // Шаг 3.1: Для дескрипторов Drag-and-Drop / бэкаперов: приоритет у физических файлов
+                var physicalCandidates = handleCandidates.Where(c => !IsCandidateOnMountedDrive(c)).ToList();
+                if (physicalCandidates.Count > 0)
                 {
-                    matchedPhysical = CheckCandidate(phys, targetFileName, cleanVirtualPath, expectedSize);
+                    string? matchedPhysical = null;
+                    foreach (var phys in physicalCandidates)
+                    {
+                        matchedPhysical = CheckCandidate(phys, targetFileName, cleanVirtualPath, expectedSize);
+                        if (matchedPhysical != null)
+                            break;
+                    }
+
                     if (matchedPhysical != null)
-                        break;
+                    {
+                        lock (_sessionLock)
+                        {
+                            if (_activeSession != null && _activeSession.IsFromClipboard && _activeSession.ClipboardSequenceNumber != 0)
+                            {
+                                _consumedClipboardSeq = _activeSession.ClipboardSequenceNumber;
+                            }
+
+                            if (_activeSession == null ||
+                                _activeSession.IsExpired(TimeSpan.FromSeconds(20)) ||
+                                _activeSession.IsFromClipboard)
+                            {
+                                _activeSession = new CopySession
+                                {
+                                    ClipboardSequenceNumber = currentClipSeq,
+                                    IsFromClipboard = false
+                                };
+                            }
+                            else if (currentClipSeq != 0)
+                            {
+                                _activeSession.ClipboardSequenceNumber = currentClipSeq;
+                            }
+
+                            _activeSession.UnmarkConsumed(cleanVirtualPath);
+                            _activeSession.ReserveVirtualFile(cleanVirtualPath, matchedPhysical);
+                            _activeSession.MapVirtualDirectory(cleanVirtualPath, matchedPhysical);
+                            _activeSession.LastActivityUtc = DateTime.UtcNow;
+
+                            AppLogger.Info("WinFsp", $"[Handles DragDrop] Привязана папка-источник '{Path.GetDirectoryName(matchedPhysical)}' для виртуального каталога '{GetParentPath(cleanVirtualPath ?? "/")}'");
+                        }
+                        return (null, matchedPhysical);
+                    }
                 }
 
-                if (matchedPhysical != null)
+                // Шаг 3.2: ТОЛЬКО если среди дескрипторов физический файл не найден, проверяем виртуальный файл на диске Z:
+                if (repository != null)
                 {
-                    lock (_sessionLock)
+                    foreach (var cand in handleCandidates)
                     {
-                        if (_activeSession == null || _activeSession.IsExpired(TimeSpan.FromSeconds(20)))
+                        if (IsCandidateOnMountedDrive(cand))
                         {
-                            _activeSession = new CopySession
+                            var vMatch = MatchVirtualCandidate(cand, targetFileName, cleanVirtualPath ?? "", repository);
+                            if (vMatch != null)
                             {
-                                ClipboardSequenceNumber = currentClipSeq
-                            };
+                                return (vMatch, null);
+                            }
                         }
-                        else if (currentClipSeq != 0)
-                        {
-                            _activeSession.ClipboardSequenceNumber = currentClipSeq;
-                        }
-
-                        _activeSession.UnmarkConsumed(cleanVirtualPath);
-                        _activeSession.ReserveVirtualFile(cleanVirtualPath, matchedPhysical);
-                        _activeSession.MapVirtualDirectory(cleanVirtualPath, matchedPhysical);
-                        _activeSession.LastActivityUtc = DateTime.UtcNow;
-
-                        AppLogger.Info("WinFsp", $"[Источник] Привязана папка-источник '{Path.GetDirectoryName(matchedPhysical)}' для виртуального каталога '{GetParentPath(cleanVirtualPath ?? "/")}'");
                     }
-                    return (null, matchedPhysical);
                 }
             }
 
-            // Шаг 3.2: ТОЛЬКО если среди дескрипторов физический файл не найден, проверяем виртуальный файл на диске Z:
-            if (repository != null)
+            // Шаг 4: Резервный fallback на уже использованный ранее буфер обмена (на случай повторного Ctrl+V
+            // того же буфера для мелких файлов, чьи дескрипторы уже закрылись к моменту Create).
+            if (!shouldCheckFreshClipboardFirst && !isRepeatInSameSession)
             {
-                foreach (var cand in handleCandidates)
+                var (retryVirtual, retryOriginal, _) = TryMatchFromClipboard(
+                    targetFileName,
+                    cleanVirtualPath,
+                    expectedSize,
+                    currentClipSeq,
+                    repository,
+                    isRetryFallback: true);
+                if (retryVirtual != null || retryOriginal != null)
                 {
-                    if (IsCandidateOnMountedDrive(cand))
-                    {
-                        var vMatch = MatchVirtualCandidate(cand, targetFileName, cleanVirtualPath ?? "", repository);
-                        if (vMatch != null)
-                        {
-                            return (vMatch, null);
-                        }
-                    }
+                    return (retryVirtual, retryOriginal);
                 }
             }
 
             return (null, null);
+        }
+
+        private static (Node? VirtualSource, string? OriginalSource, bool HasFileCandidates) TryMatchFromClipboard(
+            string targetFileName,
+            string? cleanVirtualPath,
+            long expectedSize,
+            uint currentClipSeq,
+            NodeRepository? repository,
+            bool isRetryFallback)
+        {
+            var clipboardCandidates = CollectClipboardCandidates(includeMountedDrive: true);
+            if (clipboardCandidates.Count > 0)
+            {
+                string logTag = isRetryFallback ? "Источник: Повторный буфер обмена" : "Источник: Буфер обмена";
+
+                // 2.1 Проверяем виртуальные кандидаты в буфере обмена (диск Z:)
+                if (repository != null)
+                {
+                    foreach (var clip in clipboardCandidates)
+                    {
+                        if (IsCandidateOnMountedDrive(clip))
+                        {
+                            var vMatch = MatchVirtualCandidate(clip, targetFileName, cleanVirtualPath ?? "", repository);
+                            if (vMatch != null)
+                            {
+                                int expectedVirtualFiles = 0;
+                                foreach (var vClip in clipboardCandidates)
+                                {
+                                    if (!IsCandidateOnMountedDrive(vClip)) continue;
+                                    string? vp = GetVirtualPathFromMountedPath(vClip);
+                                    if (string.IsNullOrEmpty(vp)) continue;
+                                    var vNode = repository.GetNodeByPath(vp);
+                                    if (vNode == null) continue;
+                                    expectedVirtualFiles += vNode.IsDir
+                                        ? repository.GetSubtreeNodes(vNode.Id).Count(n => !n.IsDir)
+                                        : 1;
+                                }
+
+                                lock (_sessionLock)
+                                {
+                                    if (_activeSession == null ||
+                                        !_activeSession.IsVirtualClipboard ||
+                                        _activeSession.ClipboardSequenceNumber != currentClipSeq ||
+                                        (isRetryFallback && _activeSession.VirtualRemainingCount <= 0))
+                                    {
+                                        _activeSession = new CopySession
+                                        {
+                                            ClipboardSequenceNumber = currentClipSeq,
+                                            IsFromClipboard = currentClipSeq != 0,
+                                            IsVirtualClipboard = true,
+                                            VirtualRemainingCount = Math.Max(1, expectedVirtualFiles),
+                                            LastActivityUtc = DateTime.UtcNow
+                                        };
+                                    }
+                                    else
+                                    {
+                                        _activeSession.LastActivityUtc = DateTime.UtcNow;
+                                    }
+                                }
+                                AppLogger.Info("WinFsp", $"[{logTag}] Найдено прямое совпадение в буфере обмена Windows (Виртуальная копия): '{clip}'");
+                                return (vMatch, null, true);
+                            }
+                        }
+                    }
+                }
+
+                // 2.2 Проверяем физические кандидаты в буфере обмена (диски D:, C: и др.)
+                var physicalClip = clipboardCandidates.Where(c => !IsCandidateOnMountedDrive(c)).ToList();
+                if (physicalClip.Count > 0)
+                {
+                    var clipSession = CreateCopySession(physicalClip, currentClipSeq);
+                    string? match = clipSession.FindAndConsume(targetFileName, cleanVirtualPath, expectedSize);
+                    if (match != null)
+                    {
+                        lock (_sessionLock)
+                        {
+                            _activeSession = clipSession;
+                        }
+                        AppLogger.Info("WinFsp", $"[{logTag}] Найдено прямое совпадение в буфере обмена Windows (Локальный файл): '{match}'");
+                        return (null, match, true);
+                    }
+                }
+
+                return (null, null, true);
+            }
+
+            // Если в буфере обмена нет файлов (например, текст или картинка) — фиксируем sequence,
+            // чтобы не переоткрывать Clipboard на каждый файл, и пробуем добрать из текущей активной сессии.
+            lock (_sessionLock)
+            {
+                if (currentClipSeq != 0)
+                {
+                    _consumedClipboardSeq = currentClipSeq;
+                }
+
+                if (_activeSession != null && currentClipSeq != 0)
+                {
+                    _activeSession.ClipboardSequenceNumber = currentClipSeq;
+                }
+
+                if (_activeSession != null && !_activeSession.IsVirtualClipboard && !_activeSession.IsVirtualFileConsumed(cleanVirtualPath))
+                {
+                    string? fallbackMatch = _activeSession.FindAndConsume(targetFileName, cleanVirtualPath, expectedSize);
+                    if (fallbackMatch != null)
+                    {
+                        if (_activeSession.InitialCount > 0 && _activeSession.PendingFiles.Count > 0)
+                        {
+                            AppLogger.Info("WinFsp", $"[Источник] Найдено совпадение в активной сессии (осталось файлов в очереди: {_activeSession.PendingFiles.Count}/{_activeSession.InitialCount}): '{fallbackMatch}'");
+                        }
+                        else
+                        {
+                            AppLogger.Info("WinFsp", $"[Источник] Найдено совпадение в активной сессии для папки '{GetParentPath(cleanVirtualPath ?? "/")}': '{fallbackMatch}'");
+                        }
+                        return (null, fallbackMatch, false);
+                    }
+                }
+            }
+
+            return (null, null, false);
         }
 
         private static string? TryFindSourceFile(string targetFileName, string? relativeVirtualPath = null, int callerPid = 0, NodeRepository? repository = null, long expectedSize = -1)

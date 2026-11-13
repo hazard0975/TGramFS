@@ -1314,4 +1314,9 @@
     - **Реализовано**:
       1. `VerifyReadable` вынесен за пределы цикла перебора `PendingFiles` и вызывается строго один раз для победившего кандидата.
       2. В `CopySession` добавлен словарь брони `ReservedVirtualToPhysical`, сохраняющий сопоставление `cleanVirtualPath -> physicalFilePath` через 0-байтные закрытия до фактического завершения передачи (`MarkSessionFileCompleted`) или отмены (`ReleaseSessionReservation`).
-
+- [x] **8.109. Приоритет `[Handles DragDrop]` над уже отработанным буфером обмена (`_consumedClipboardSeq`, `WinFspServer.cs`)**:
+    - **Проблема**: После завершения `Ctrl+C` → `Ctrl+V` Windows оставляет `CF_HDROP` в буфере обмена; последующий перенос мышкой (`Drag-and-Drop`) в другую виртуальную папку или спустя 20 секунд мог быть перехвачен старым буфером обмена раньше `CollectOpenFileHandles`.
+    - **Реализовано**:
+      1. Внедрён трекинг отработанного `ClipboardSequenceNumber` (`_consumedClipboardSeq`) и флаги `IsFromClipboard` / `IsVirtualClipboard` / `VirtualRemainingCount` в `CopySession`.
+      2. Для уже отработанного (или не-файлового) буфера `ResolveFileSource` отдаёт приоритет `CollectOpenFileHandles` (`[Handles DragDrop]`) с переключением сессии на Drag-and-Drop.
+      3. Сохранён резервный Шаг 4 для повторного `Ctrl+V` без нового `Ctrl+C` и добавлено явное разделение меток в логе (`[Источник: Буфер обмена]`, `[Источник: Повторный буфер обмена]`, `[Handles DragDrop]`).
