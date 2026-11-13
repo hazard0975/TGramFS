@@ -81,14 +81,21 @@ namespace TGramFS.Services
         public static AudioMetadataResult ExtractFromFile(string filePath, string? originalFileName = null)
         {
             var result = new AudioMetadataResult();
+            string? rawTitle = null;
+            string? rawArtist = null;
+            string? rawAlbum = null;
             try
             {
                 if (File.Exists(filePath))
                 {
                     var track = new ATL.Track(filePath);
-                    result.Title = NormalizeTagValue(track.Title);
-                    result.Artist = NormalizeTagValue(track.Artist);
-                    result.Album = NormalizeTagValue(track.Album);
+                    rawTitle = track.Title;
+                    rawArtist = track.Artist;
+                    rawAlbum = track.Album;
+
+                    result.Title = NormalizeTagValue(rawTitle);
+                    result.Artist = NormalizeTagValue(rawArtist);
+                    result.Album = NormalizeTagValue(rawAlbum);
                     result.Genre = NormalizeTagValue(track.Genre);
                     result.Year = track.Year > 0 ? track.Year : null;
                     result.TrackNumber = track.TrackNumber > 0 ? track.TrackNumber : null;
@@ -114,6 +121,8 @@ namespace TGramFS.Services
                             result.AlbumCover = pic.PictureData;
                         }
                     }
+
+                    result.HasBadTags = CheckForBadTags(filePath, effectiveFileName, rawTitle, rawArtist, rawAlbum, result);
                 }
             }
             catch (Exception ex)
@@ -146,6 +155,25 @@ namespace TGramFS.Services
                 long originalPos = stream.CanSeek ? stream.Position : 0;
                 readBytes = stream.Read(headerBuffer, 0, headerBuffer.Length);
 
+                bool hasCorruptedId3v1Tail = false;
+                if (stream.CanSeek && stream.Length >= 128 &&
+                    (fileName.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase) || AudioMetadataExtractor.DetectAudioFormat(headerBuffer, readBytes) == ".mp3"))
+                {
+                    byte[] tail = new byte[128];
+                    stream.Seek(-128, SeekOrigin.End);
+                    int tailRead = 0;
+                    while (tailRead < 128)
+                    {
+                        int r = stream.Read(tail, tailRead, 128 - tailRead);
+                        if (r <= 0) break;
+                        tailRead += r;
+                    }
+                    if (tailRead == 128)
+                    {
+                        hasCorruptedId3v1Tail = HasCorruptedId3v1Tail(tail, 0);
+                    }
+                }
+
                 if (stream.CanSeek)
                 {
                     stream.Position = originalPos; // Возвращаем позицию потока для дальнейшей записи в TG
@@ -165,6 +193,11 @@ namespace TGramFS.Services
                         // Если тегов нет, берем имя файла без расширения
                         InferFromFileName(fileName, result);
                     }
+
+                    result.HasBadTags = hasCorruptedId3v1Tail ||
+                                        HasSuspiciousNormalizedText(result.Title, fileName) ||
+                                        HasSuspiciousNormalizedText(result.Artist, fileName) ||
+                                        HasSuspiciousNormalizedText(result.Album, fileName);
                 }
             }
             catch (Exception ex)
@@ -569,6 +602,187 @@ namespace TGramFS.Services
             result.Artist = null;
             result.Album = null;
         }
+
+        public static string? FormatTagsSummary(AudioMetadataResult? audioMeta)
+        {
+            if (audioMeta == null) return null;
+            if (string.IsNullOrEmpty(audioMeta.Artist) && string.IsNullOrEmpty(audioMeta.Title)) return null;
+            return !string.IsNullOrEmpty(audioMeta.Artist)
+                ? $"{audioMeta.Artist} - {audioMeta.Title}"
+                : audioMeta.Title;
+        }
+
+        private static bool CheckForBadTags(
+            string filePath,
+            string effectiveFileName,
+            string? rawTitle,
+            string? rawArtist,
+            string? rawAlbum,
+            AudioMetadataResult result)
+        {
+            try
+            {
+                if (HasSuspiciousRawText(rawTitle) || HasSuspiciousRawText(rawArtist) || HasSuspiciousRawText(rawAlbum))
+                    return true;
+
+                if (HasSuspiciousNormalizedText(result.Title, effectiveFileName) ||
+                    HasSuspiciousNormalizedText(result.Artist, effectiveFileName) ||
+                    HasSuspiciousNormalizedText(result.Album, effectiveFileName))
+                    return true;
+
+                if (result.AudioFormat == ".mp3")
+                {
+                    using var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                    if (fs.Length >= 128)
+                    {
+                        byte[] tail = new byte[128];
+                        fs.Seek(-128, SeekOrigin.End);
+                        int totalRead = 0;
+                        while (totalRead < 128)
+                        {
+                            int r = fs.Read(tail, totalRead, 128 - totalRead);
+                            if (r <= 0) break;
+                            totalRead += r;
+                        }
+                        if (totalRead == 128 && HasCorruptedId3v1Tail(tail, 0))
+                            return true;
+                    }
+                }
+            }
+            catch { }
+
+            return false;
+        }
+
+        private static bool HasCorruptedId3v1Tail(byte[] buffer, int offset)
+        {
+            if (offset + 128 > buffer.Length) return false;
+            if (buffer[offset] != (byte)'T' || buffer[offset + 1] != (byte)'A' || buffer[offset + 2] != (byte)'G')
+                return false;
+
+            // Поля ID3v1: Title [3..32], Artist [33..62], Album [63..92] (по 30 байт)
+            int[] fieldOffsets = { 3, 33, 63 };
+            foreach (int fOff in fieldOffsets)
+            {
+                int firstZero = -1;
+                for (int i = 0; i < 30; i++)
+                {
+                    byte b = buffer[offset + fOff + i];
+                    if (b == 0)
+                    {
+                        firstZero = i;
+                        break;
+                    }
+                    if (b < 0x20)
+                    {
+                        // Управляющие байты до первого NUL
+                        return true;
+                    }
+                }
+
+                if (firstZero >= 0)
+                {
+                    for (int j = firstZero + 1; j < 30; j++)
+                    {
+                        byte b = buffer[offset + fOff + j];
+                        // Ненулевой/непробельный мусор памяти после терминатора 0x00 (причина кракозябр в ATL.NET)
+                        if (b != 0 && b != 0x20)
+                            return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private static bool HasSuspiciousRawText(string? rawValue)
+        {
+            if (string.IsNullOrEmpty(rawValue)) return false;
+
+            for (int i = 0; i < rawValue.Length; i++)
+            {
+                char ch = rawValue[i];
+                if (ch < '\u0020' && ch != '\0' && ch != '\r' && ch != '\n' && ch != '\t')
+                    return true;
+                if (ch == '\uFFFD')
+                    return true;
+                if (char.IsHighSurrogate(ch))
+                {
+                    if (i + 1 >= rawValue.Length || !char.IsLowSurrogate(rawValue[i + 1]))
+                        return true;
+                    i++;
+                }
+                else if (char.IsLowSurrogate(ch))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool HasSuspiciousNormalizedText(string? value, string? fileName)
+        {
+            if (string.IsNullOrEmpty(value)) return false;
+
+            int consecutiveHighLatin1 = 0;
+            bool hasCjk = false;
+            bool hasHiraganaOrKatakana = false;
+
+            for (int i = 0; i < value.Length; i++)
+            {
+                char ch = value[i];
+                if (ch < '\u0020' && ch != '\r' && ch != '\n' && ch != '\t')
+                    return true;
+                if (ch >= '\u0080' && ch <= '\u009F')
+                    return true;
+                if (ch == '\uFFFD')
+                    return true;
+                if (ch >= '\uE000' && ch <= '\uF8FF')
+                    return true; // Private Use Area (битый UTF-16)
+                if (ch == '\u00A4' || ch == '\u00A6' || ch == '\u00AC' || ch == '\u00B8')
+                    return true; // Характерные артефакты битых тегов (¤, ¦, ¬, ¸)
+
+                if (ch >= '\u3040' && ch <= '\u30FF')
+                    hasHiraganaOrKatakana = true;
+                else if ((ch >= '\u4E00' && ch <= '\u9FFF') || (ch >= '\uAC00' && ch <= '\uD7AF'))
+                    hasCjk = true;
+
+                if (ch >= '\u00C0' && ch <= '\u00FF')
+                {
+                    consecutiveHighLatin1++;
+                    if (consecutiveHighLatin1 >= 2)
+                        return true; // Нераспознанные кракозябры вроде 'Òðåê' или 'ÐŸ'
+
+                    bool prevIsAsciiLetter = i > 0 && ((value[i - 1] >= 'A' && value[i - 1] <= 'Z') || (value[i - 1] >= 'a' && value[i - 1] <= 'z'));
+                    bool nextIsAsciiLetter = i + 1 < value.Length && ((value[i + 1] >= 'A' && value[i + 1] <= 'Z') || (value[i + 1] >= 'a' && value[i + 1] <= 'z'));
+                    if (!prevIsAsciiLetter && !nextIsAsciiLetter)
+                        return true; // Изолированный символ C0..FF без латинского слова (например 'Ï')
+                }
+                else
+                {
+                    consecutiveHighLatin1 = 0;
+                }
+            }
+
+            if (hasCjk && !hasHiraganaOrKatakana && !ContainsCjk(fileName))
+                return true;
+
+            return false;
+        }
+
+        private static bool ContainsCjk(string? text)
+        {
+            if (string.IsNullOrEmpty(text)) return false;
+            foreach (char ch in text)
+            {
+                if ((ch >= '\u3040' && ch <= '\u30FF') ||
+                    (ch >= '\u4E00' && ch <= '\u9FFF') ||
+                    (ch >= '\uAC00' && ch <= '\uD7AF'))
+                    return true;
+            }
+            return false;
+        }
     }
 
     public class AudioMetadataResult
@@ -584,5 +798,6 @@ namespace TGramFS.Services
         public string? AudioFormat { get; set; } // .mp3, .flac, .m4a
         public byte[]? HeaderCache { get; set; }
         public byte[]? AlbumCover { get; set; }
+        public bool HasBadTags { get; set; }
     }
 }

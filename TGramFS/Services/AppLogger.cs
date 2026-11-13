@@ -301,6 +301,7 @@ namespace TGramFS.Services
         }
 
         private static readonly object _lostFilesLock = new();
+        private static readonly object _badAudioTagsLock = new();
 
         /// <summary>
         /// Записывает строку в отдельный человекочитаемый файл журнала утраченных файлов logs/lost_files.txt
@@ -314,6 +315,27 @@ namespace TGramFS.Services
                 string line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [УДАЛЁН В TELEGRAM] Путь: '{fullPath}' | Размер: {sizeStr} | TgMsgId: {tgMessageId?.ToString() ?? "null"} | NodeId: {nodeId?.ToString() ?? "null"} | Причина: {reason} | Статус: перемещен в .Trash{Environment.NewLine}";
                 
                 lock (_lostFilesLock)
+                {
+                    File.AppendAllText(filePath, line, Encoding.UTF8);
+                }
+            }
+            catch { }
+        }
+
+        /// <summary>
+        /// Записывает трек с некорректными или подозрительными аудио-тегами в отдельный журнал logs/bad_audio_tags.txt
+        /// </summary>
+        public static void LogBadAudioTag(string virtualPath, string? sourcePath, long size, int? tgMessageId, string? tagsSummary)
+        {
+            try
+            {
+                string filePath = Path.Combine(LogDirectory, "bad_audio_tags.txt");
+                string sizeStr = FormatSizeDetailed(size);
+                string src = string.IsNullOrWhiteSpace(sourcePath) ? "поток" : sourcePath;
+                string tags = string.IsNullOrWhiteSpace(tagsSummary) ? "(пусто)" : tagsSummary;
+                string line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [BAD TAGS] Виртуальный путь: '{virtualPath}' | Источник: '{src}' | Размер: {sizeStr} | TgMsgId: {tgMessageId?.ToString() ?? "null"} | Теги: '{tags}'{Environment.NewLine}";
+
+                lock (_badAudioTagsLock)
                 {
                     File.AppendAllText(filePath, line, Encoding.UTF8);
                 }

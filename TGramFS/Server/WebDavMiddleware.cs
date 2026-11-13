@@ -409,9 +409,21 @@ namespace TGramFS.Server
 
                             // Прямая потоковая загрузка в Telegram с сохранением TCP Flow Control для Проводника
                             long? targetChannelId = repository.GetEffectiveChannelId(parentNode.Id);
+                            string? webDavAudioTagsSummary = AudioMetadataExtractor.FormatTagsSummary(audioMeta);
+                            if (audioMeta != null)
+                            {
+                                AppLogger.Info("WebDAV", $"Отправка аудио '{name}' ({AppLogger.FormatSizeDetailed(uploadLength)}) в Telegram" +
+                                    (targetChannelId != null ? $", канал: {targetChannelId}" : "") +
+                                    (!string.IsNullOrEmpty(webDavAudioTagsSummary) ? $", теги: '{webDavAudioTagsSummary}'" : "") + "...");
+                            }
                             uploadResult = await telegramService.UploadFileAsync(uploadStream, name, uploadLength, displayFileName: tgDisplayName, caption: fullPathWithVersion, audioMeta: audioMeta, videoMeta: videoMeta, targetChannelId: targetChannelId);
                             tgMessageId = uploadResult?.MessageId;
                             tgPreviewMessageId = uploadResult?.PreviewMessageId;
+
+                            if (tgMessageId != null && audioMeta?.HasBadTags == true)
+                            {
+                                AppLogger.LogBadAudioTag(path, null, uploadLength, tgMessageId, webDavAudioTagsSummary);
+                            }
                         }
                         
                         DateTime? headerLastModified = null;

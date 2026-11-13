@@ -1326,4 +1326,11 @@
       1. В `AudioMetadataExtractor` задан `ATL.Settings.DefaultTextEncoding = Encoding.Latin1` (без потерь сырых байт) и добавлен `NormalizeTagValue` + `DecodeLegacyBytes` (`UTF-8` -> эвристика `LooksLikeWindows1251` -> `Latin1`), исправляющий кириллицу в обоих путях чтения и сохраняющий западноевропейскую диакритику (`Tiësto`, `Café`, `Mötley Crüe`).
       2. В `ParseId3v2Header` добавлена поддержка `ID3v2.2`, пропуск `Extended Header`, fallback на `TPE2`/`TP2`, разбор `UTF-16` BOM и очистка `\0`-разделителей.
       3. В `WinFspServer.cs` добавлен компактный вывод `теги: '...'` в существующую строку старта передачи.
+- [x] **8.111. Логирование тегов для малых файлов (`<= 1 МБ`) / WebDAV и журнал `logs/bad_audio_tags.txt` (`AppLogger.cs`, `AudioMetadataExtractor.cs`, `WinFspServer.cs`, `WebDavMiddleware.cs`)**:
+    - **Проблема**: Для файлов `<= 1 МБ` (ветка памяти в `WinFspServer.cs`) и загрузок WebDAV теги не выводились в `app.log`; кроме того, обнаружен баг `ATL.NET` в `ID3v1` (склейка мусора из памяти после байта `0x00` на примере `жв illusion.mp3`), из-за чего такие треки требовалось собирать в отдельный аудит-лог при загрузке фонотеки.
+    - **Реализовано (Этап 1 — аудит)**:
+      1. В `WinFspServer.cs` (`<= 1 МБ`) и `WebDavMiddleware.cs` добавлен вывод `, теги: '...'` через общий хелпер `AudioMetadataExtractor.FormatTagsSummary`.
+      2. В `AudioMetadataExtractor` добавлена детекция аномальных тегов (`HasBadTags`: мусор после `0x00` в 30-байтовых полях `ID3v1`, управляющие байты, `\uFFFD`, артефакты `¤`/`¦`/`¬`/`¸`, остаточные `C0..FF`-кракозябры и случайный CJK).
+      3. В `AppLogger` добавлен потокобезопасный `LogBadAudioTag(...)` с записью в `logs/bad_audio_tags.txt` (`[BAD TAGS] Виртуальный путь | Источник | Размер | TgMsgId | Теги`) по завершении отправки в Telegram.
+- [ ] **8.112. Корневое исправление чтения `ID3v1` (строгая обрезка по первому `0x00`) в `ExtractFromFile` и `ExtractFromStream`** *(после аудита фонотеки по `logs/bad_audio_tags.txt`)*.
 

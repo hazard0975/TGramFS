@@ -928,9 +928,8 @@ namespace TGramFS.Services
                         }
 
                         long? targetChannelId = _repository.GetEffectiveChannelId(node.ParentId);
-                        string? audioTagsSummary = audioMeta != null && (!string.IsNullOrEmpty(audioMeta.Artist) || !string.IsNullOrEmpty(audioMeta.Title))
-                            ? (!string.IsNullOrEmpty(audioMeta.Artist) ? $"{audioMeta.Artist} - {audioMeta.Title}" : audioMeta.Title)
-                            : null;
+                        ctx.PendingAudioMeta = audioMeta;
+                        string? audioTagsSummary = AudioMetadataExtractor.FormatTagsSummary(audioMeta);
                         AppLogger.Info("WinFsp", $"Запуск прямой потоковой передачи '{nodeName}' ({AppLogger.FormatSizeDetailed(targetTotalSize)}) в Telegram" + 
                             (targetChannelId != null ? $", канал: {targetChannelId}" : "") +
                             (videoMeta != null ? $", видео: {videoMeta.Width}x{videoMeta.Height}, {videoMeta.DurationSeconds} сек, обложка: {(videoMeta.Thumbnail != null ? "ДА" : "НЕТ")}" : "") +
@@ -1487,6 +1486,10 @@ namespace TGramFS.Services
 
                                 MarkSessionFileCompleted(cleanFilePath);
                                 AppLogger.Info("WinFsp", $"Файл '{nodeName}' успешно сохранен в Telegram (Msg ID: {uploadResult.MessageId}" + (uploadResult.PreviewMessageId != null ? $", Preview ID: {uploadResult.PreviewMessageId}" : "") + $", дата изменения: {targetUpdatedAt:yyyy-MM-dd HH:mm:ss}). Загрузка на лету (Zero-Temp) завершена.");
+                                if (ctx.PendingAudioMeta?.HasBadTags == true)
+                                {
+                                    AppLogger.LogBadAudioTag(cleanFilePath, ctx.OriginalSourcePath, finalLength, uploadResult.MessageId, AudioMetadataExtractor.FormatTagsSummary(ctx.PendingAudioMeta));
+                                }
                             }
                             else
                             {
@@ -1513,6 +1516,7 @@ namespace TGramFS.Services
                         }
                         finally
                         {
+                            ctx.PendingAudioMeta = null;
                             try { pipe.Dispose(); } catch { }
                             try { cts?.Dispose(); } catch { }
                         }
@@ -1585,7 +1589,10 @@ namespace TGramFS.Services
                                 }
 
                                 long? targetChannelId = _repository.GetEffectiveChannelId(parentId);
-                                AppLogger.Info("WinFsp", $"Отправка файла '{nodeName}' ({AppLogger.FormatSizeDetailed(finalLength)}) из памяти в Telegram (Zero-Temp)" + (targetChannelId != null ? $", канал: {targetChannelId}" : "") + "...");
+                                string? fspAudioTagsSummary = AudioMetadataExtractor.FormatTagsSummary(fspAudioMeta);
+                                AppLogger.Info("WinFsp", $"Отправка файла '{nodeName}' ({AppLogger.FormatSizeDetailed(finalLength)}) из памяти в Telegram (Zero-Temp)" +
+                                    (targetChannelId != null ? $", канал: {targetChannelId}" : "") +
+                                    (fspAudioMeta != null ? $", аудио: {fspAudioMeta.DurationSeconds ?? 0} сек, обложка: {(fspAudioMeta.AlbumCover != null ? "ДА" : "НЕТ")}" + (!string.IsNullOrEmpty(fspAudioTagsSummary) ? $", теги: '{fspAudioTagsSummary}'" : "") : "") + "...");
                                 using var uploadMs = new MemoryStream(fileBytes, false);
                                 var uploadResult = _telegramService.UploadFileAsync(
                                     uploadMs,
@@ -1624,6 +1631,10 @@ namespace TGramFS.Services
 
                                     MarkSessionFileCompleted(cleanFilePath);
                                     AppLogger.Info("WinFsp", $"Файл '{nodeName}' успешно сохранен в Telegram (Msg ID: {uploadResult.MessageId}" + (uploadResult.PreviewMessageId != null ? $", Preview ID: {uploadResult.PreviewMessageId}" : "") + $", дата изменения: {targetUpdatedAt:yyyy-MM-dd HH:mm:ss}).");
+                                    if (fspAudioMeta?.HasBadTags == true)
+                                    {
+                                        AppLogger.LogBadAudioTag(cleanFilePath, ctx.OriginalSourcePath, finalLength, uploadResult.MessageId, fspAudioTagsSummary);
+                                    }
                                 }
                                 else
                                 {
@@ -3313,6 +3324,7 @@ namespace TGramFS.Services
             public string? OriginalSourcePath { get; set; }
             public int CreatorProcessId { get; set; }
             public string? VirtualPath { get; set; }
+            public AudioMetadataResult? PendingAudioMeta { get; set; }
 
             public FspNodeContext(Node node) => Node = node;
 
