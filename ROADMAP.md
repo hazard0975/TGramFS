@@ -1349,3 +1349,4 @@
       1. Базовые константы 96 DPI (`BaseWidth = 396`, `BaseHeight = 96`, координаты, радиусы, скорость `Marquee`, отступ `16 px`), `AutoScaleMode = AutoScaleMode.None`, `GetDpiScale()` / `ApplyDpiScale()`, `OnDpiChanged` и пересчёт размера в `PositionNearTray()` строго до вычисления координат.
       2. В `OnPaint` все координаты, толщина рамки, прогресс-бар и скорость бегущей строки синхронизированы с `g.DpiY / 96f`, высота клипа бегущей строки рассчитывается от `nameFont.GetHeight(g)`, добавлен `StringTrimming.EllipsisCharacter`.
       3. В `Dispose` добавлен пропущенный вызов `_completionTimer.Dispose()`.
+      4. Гарантированное создание `HWND` в конструкторе (`CreateHandle()`) и явное поднятие в верх Z-order при показе (`EnsureTopMost()` через Win32 `SetWindowPos(HWND_TOPMOST, SWP_NOACTIVATE)`).

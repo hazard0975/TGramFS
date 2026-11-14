@@ -3975,3 +3975,8 @@ _telegramService.UpdateSettings(_settings);
 3. **Попутное исправление утечки ресурса**:
    - В `Dispose(bool)` добавлен пропущенный вызов `_completionTimer.Dispose()`.
 
+### Дополнение 127.1 (Минимальный фикс Z-order: `CreateHandle` + `SetWindowPos(HWND_TOPMOST)`):
+- **Симптом:** При самом первом показе плашки после старта приложения она могла оказаться за активным окном Проводника, а при запуске видео — под мини-плеером в режиме «поверх всех окон», всплывая над ним только после таймаута скрытия/повторного показа.
+- **Первопричина:** В конструкторе `CreateControl()` для скрытой формы (`Visible == false`) не создавал Win32 `HWND`, а при `Show()` с `ShowWithoutActivation => true` (`SW_SHOWNOACTIVATE`) Windows не гарантирует постановку окна на самый верх слоя `HWND_TOPMOST`.
+- **Решение:** В конструкторе заменён `CreateControl()` на `CreateHandle()`, а в `TryShowOverlay()` (и `OnDpiChanged` при видимом окне) добавлен вызов `EnsureTopMost()` через Win32 `SetWindowPos(Handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW)` (Вариант 1 — минимальный, без принудительного перетягивания в таймере; чёрные уголки оставлены без изменений по решению пользователя).
+

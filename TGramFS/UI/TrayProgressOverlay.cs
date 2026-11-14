@@ -51,6 +51,15 @@ namespace TGramFS.UI
         [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
         private static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
 
+        private static readonly IntPtr HWND_TOPMOST = new IntPtr(-1);
+        private const uint SWP_NOSIZE = 0x0001;
+        private const uint SWP_NOMOVE = 0x0002;
+        private const uint SWP_NOACTIVATE = 0x0010;
+        private const uint SWP_SHOWWINDOW = 0x0040;
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+
         [StructLayout(LayoutKind.Sequential)]
         private struct RECT
         {
@@ -177,7 +186,10 @@ namespace TGramFS.UI
             BackColor = Color.FromArgb(30, 41, 59); // Slate 800
 
             // Принудительно создаем дескриптор Win32 HWND и сразу масштабируем форму под текущий DPI
-            CreateControl();
+            if (!IsHandleCreated)
+            {
+                CreateHandle();
+            }
             ApplyDpiScale(GetDpiScale());
 
             _updateTimer = new System.Windows.Forms.Timer { Interval = 35 };
@@ -237,11 +249,20 @@ namespace TGramFS.UI
             {
                 PositionNearTray();
                 Show();
+                EnsureTopMost();
                 _updateTimer.Start();
                 _hideCheckTimer.Start();
             }
 
             return true;
+        }
+
+        private void EnsureTopMost()
+        {
+            if (IsHandleCreated)
+            {
+                SetWindowPos(Handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
+            }
         }
 
         public void UpdateProgress(string fileName, long current, long total, TransferDirection direction = TransferDirection.Upload, int queueCount = 0)
@@ -534,6 +555,7 @@ namespace TGramFS.UI
             if (Visible)
             {
                 PositionNearTray();
+                EnsureTopMost();
                 Invalidate();
             }
         }
