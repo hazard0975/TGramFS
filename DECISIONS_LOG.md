@@ -4005,3 +4005,9 @@ _telegramService.UpdateSettings(_settings);
 - **Симптом:** По визуальной проверке на вкладках «Авторизация Telegram» и «База» поле ввода названия канала сжалось до `~100 px` (`"TGramFS Stora"`, `"TGramFS DB B"`), а на вкладке «Логирование» справа оставался лишний пустой запас ширины.
 - **Первопричина:** В `TableLayoutPanel` с `AutoSize = true` и `AutoSizeMode = AutoSizeMode.GrowAndShrink` колонка `SizeType.Percent (100f)` без заданного `tbl.MinimumSize` сжимается до базовой предпочитаемой ширины `TextBox` (`100 px`), игнорируя `tbl.Width`.
 - **Решение:** В `UIFactory.CreateActionInputRow` и `UIFactory.CreateInputRow` добавлена фиксация `tbl.MinimumSize = new Size(scaledW, 0)`. Базовые ширины уменьшены на `~75–85 px` по самому длинному тексту (`BaseClientWidth = 595`, `UITheme.ContentWidth = 545`, `UIFactory.DefaultInnerWidth = 520`), сохранив запас для всех 5 вкладок, карточек и рядов кнопок.
+
+### Дополнение 128.2 (Финальное сужение окна по вкладкам и расширение карточки профиля Telegram):
+- **Запрос:** Дополнительно сузить окно настроек с ориентиром на текст вкладки «Патч реестра Windows» (`1. BasicAuthLevel = 2 — ...`) без переносов и скроллбаров на остальных вкладках, а также растянуть белую карточку профиля `_pnlUserDetails` на вкладке «Авторизация Telegram» до правой границы `GroupBox`.
+- **Решение:**
+  1. Базовая геометрия уменьшена до `BaseClientWidth = 565`, `UITheme.ContentWidth = 515`, `UIFactory.DefaultInnerWidth = 495` (остаётся достаточный запас для самой длинной строки `Debug — подробная техническая отладка (COM-интерфейсы, внутренние вызовы)` на вкладке «Логирование» и для шапки из 5 вкладок без стрелок прокрутки `◄ ►`).
+  2. Ширина карточки профиля `_pnlUserDetails` изменена с `UIFactory.DefaultInnerWidth - 135` на `UIFactory.DefaultInnerWidth`, чтобы карточка занимала всю внутреннюю ширину рамки `«Текущая сессия Telegram»`.

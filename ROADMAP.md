@@ -1361,3 +1361,9 @@
     - **Реализовано**:
       1. В `UIFactory.CreateActionInputRow` и `CreateInputRow` добавлена фиксация `tbl.MinimumSize = new Size(scaledW, 0)`, чтобы `Percent`-колонка растягивала поле ввода на всю оставшуюся ширину строки (`~295 px` при `96 DPI`).
       2. Базовая ширина окна и контейнеров оптимизирована без потери запаса под самый длинный текст (`BaseClientWidth`: `680` → `595`, `UITheme.ContentWidth`: `620` → `545`, `UIFactory.DefaultInnerWidth`: `595` → `520`).
+- [x] **8.117. Дополнительное сужение окна настроек и расширение карточки профиля Telegram на всю ширину (`AuthSettingsForm.cs`, `UIFactory.cs`, `UITheme.cs`)**:
+    - **Задача**: Уменьшить лишний правый отступ в окне настроек с ориентиром на строку `1. BasicAuthLevel = 2 — разрешение подключения WebDAV по HTTP в локальной сети.` (сохранив запас под все 5 вкладок, самый длинный чекбокс на вкладке «Логирование» и ряды кнопок), а также растянуть карточку профиля Telegram (`_pnlUserDetails`) на всю внутреннюю ширину `GroupBox`.
+    - **Реализовано**:
+      1. Базовые размеры уменьшены ещё на `25–30 px` (`BaseClientWidth`: `595` → `565`, `UITheme.ContentWidth`: `545` → `515`, `UIFactory.DefaultInnerWidth`: `520` → `495`).
+      2. Ширина карточки профиля `_pnlUserDetails` в `AuthSettingsForm.cs` увеличена с `UIFactory.DefaultInnerWidth - 135` до полного `UIFactory.DefaultInnerWidth` (во всю внутреннюю ширину рамки `«Текущая сессия Telegram»`).
+      3. Валидация: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).

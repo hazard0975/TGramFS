@@ -22,7 +22,7 @@ namespace TGramFS.UI
         private readonly VirtualDriveManager? _virtualDriveManager;
         private AppSettings _settings;
 
-        private const int BaseClientWidth = 595;
+        private const int BaseClientWidth = 565;
         private const int BaseClientHeight = 660;
         private readonly List<Action<float>> _dpiScalers = new();
         private float _currentDpiScale = 1.0f;
@@ -485,7 +485,7 @@ namespace TGramFS.UI
             RegisterDpiScaler(scale => _lblStatus.Margin = new Padding(0, 0, 0, UITheme.Scale(8, scale)));
 
             // Информационная карточка профиля пользователя Telegram
-            int profileCardWidth = UIFactory.DefaultInnerWidth - 135; // 460 px при 96 DPI: выравнивание по правому краю поля ввода (левому краю кнопки [Переименовать])
+            int profileCardWidth = UIFactory.DefaultInnerWidth; // Во всю внутреннюю ширину GroupBox при 96 DPI
             _pnlUserDetails = new TableLayoutPanel
             {
                 AutoSize = true,

@@ -10,7 +10,7 @@ namespace TGramFS.UI
     /// </summary>
     public static class UIFactory
     {
-        public const int DefaultInnerWidth = 520;
+        public const int DefaultInnerWidth = 495;
 
         /// <summary>
         /// Создает рамку GroupBox с защитой от сжатия (MinimumSize) и компактными отступами.
