@@ -22,6 +22,11 @@ namespace TGramFS.UI
         private readonly VirtualDriveManager? _virtualDriveManager;
         private AppSettings _settings;
 
+        private const int BaseClientWidth = 680;
+        private const int BaseClientHeight = 660;
+        private readonly List<Action<float>> _dpiScalers = new();
+        private float _currentDpiScale = 1.0f;
+
         public event Action? SettingsSaved;
 
         // UI Controls
@@ -123,12 +128,95 @@ namespace TGramFS.UI
             UpdateUiState();
         }
 
+        private void RegisterDpiScaler(Action<float> scaler) => _dpiScalers.Add(scaler);
+
+        private FlowLayoutPanel CreateTabScrollPanel()
+        {
+            var pnl = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                AutoScroll = true
+            };
+            RegisterDpiScaler(scale => pnl.Padding = UITheme.Scale(new Padding(12), scale));
+            return pnl;
+        }
+
+        private Panel CreateBottomSpacer()
+        {
+            var spacer = new Panel { Margin = Padding.Empty };
+            RegisterDpiScaler(scale => spacer.Size = UITheme.Scale(new Size(10, 10), scale));
+            return spacer;
+        }
+
+        private float GetDpiScale()
+        {
+            int dpi = DeviceDpi;
+            if (dpi <= 0 && IsHandleCreated)
+            {
+                using var g = CreateGraphics();
+                dpi = (int)Math.Round(g.DpiX);
+            }
+            return dpi > 0 ? dpi / 96f : 1.0f;
+        }
+
+        private void UpdateFormClientSize(float dpiScale)
+        {
+            int targetClientWidth = UITheme.Scale(BaseClientWidth, dpiScale);
+            int targetClientHeight = UITheme.Scale(BaseClientHeight, dpiScale);
+
+            Rectangle workingArea = IsHandleCreated
+                ? Screen.FromHandle(Handle).WorkingArea
+                : (Screen.PrimaryScreen?.WorkingArea ?? new Rectangle(0, 0, 1920, 1080));
+
+            Size nonClientSize = Size - ClientSize;
+            int nonClientWidth = Math.Max(0, nonClientSize.Width);
+            int nonClientHeight = Math.Max(0, nonClientSize.Height);
+
+            int maxClientWidth = Math.Max(320, workingArea.Width - nonClientWidth);
+            int maxClientHeight = Math.Max(320, workingArea.Height - nonClientHeight);
+
+            ClientSize = new Size(
+                Math.Min(targetClientWidth, maxClientWidth),
+                Math.Min(targetClientHeight, maxClientHeight));
+        }
+
+        private void ApplyDpiScale(float dpiScale)
+        {
+            if (dpiScale <= 0f) dpiScale = 1.0f;
+            _currentDpiScale = dpiScale;
+
+            SuspendLayout();
+            try
+            {
+                foreach (var scaler in _dpiScalers)
+                {
+                    scaler(dpiScale);
+                }
+
+                UpdateFormClientSize(dpiScale);
+            }
+            finally
+            {
+                ResumeLayout(true);
+                PerformLayout();
+            }
+        }
+
+        protected override void OnDpiChanged(DpiChangedEventArgs e)
+        {
+            base.OnDpiChanged(e);
+            float scale = e.DeviceDpiNew > 0 ? e.DeviceDpiNew / 96f : GetDpiScale();
+            ApplyDpiScale(scale);
+        }
+
         private void InitializeComponents()
         {
+            SuspendLayout();
+
             this.Text = "TGramFS — Настройки";
-            this.AutoScaleDimensions = new SizeF(96F, 96F);
-            this.AutoScaleMode = AutoScaleMode.Dpi;
-            this.ClientSize = new Size(680, 660);
+            this.AutoScaleMode = AutoScaleMode.None;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
             this.StartPosition = FormStartPosition.CenterScreen;
@@ -136,10 +224,15 @@ namespace TGramFS.UI
 
             this.Icon = AppIconHelper.GetAppIcon();
 
+            if (!IsHandleCreated)
+            {
+                CreateHandle();
+            }
+
             // Нижняя фиксированная панель действий формы со стандартными кнопками
             var btnSaveAll = UIFactory.CreateButton("Сохранить", (s, e) => SaveAllSettings());
             var btnClose = UIFactory.CreateButton("Закрыть", (s, e) => this.Close());
-            var pnlBottomBar = UIFactory.CreateBottomBar(btnSaveAll, btnClose);
+            var pnlBottomBar = UIFactory.CreateBottomBar(btnSaveAll, btnClose, RegisterDpiScaler);
 
             _tabControl = new TabControl { Dock = DockStyle.Fill };
 
@@ -147,25 +240,18 @@ namespace TGramFS.UI
             // === Вкладка 1: Основные настройки (Сервер и Диск) =======================
             // =========================================================================
             _tabGeneral = new TabPage("Сервер и Диск");
-            var pnlGeneral = new FlowLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                FlowDirection = FlowDirection.TopDown,
-                WrapContents = false,
-                Padding = new Padding(12),
-                AutoScroll = true
-            };
+            var pnlGeneral = CreateTabScrollPanel();
 
             // 1. Рамка: Сетевой диск и служба
-            var grpServerDrive = UIFactory.CreateGroupBox("Сетевой диск и служба");
-            var pnlServerInner = UIFactory.CreateVerticalContainer();
+            var grpServerDrive = UIFactory.CreateGroupBox("Сетевой диск и служба", registerScaler: RegisterDpiScaler);
+            var pnlServerInner = UIFactory.CreateVerticalContainer(registerScaler: RegisterDpiScaler);
 
-            _chkWebDavEnabled = UIFactory.CreateCheckBox("Включить встроенный WebDAV сервер", _settings.Server.WebDavEnabled);
-            _numPort = UIFactory.CreateNumericInput(1024, 65535, _settings.Server.Port, 80);
-            var rowPort = UIFactory.CreateSettingRow("HTTP Порт:", _numPort, 140);
+            _chkWebDavEnabled = UIFactory.CreateCheckBox("Включить встроенный WebDAV сервер", _settings.Server.WebDavEnabled, registerScaler: RegisterDpiScaler);
+            _numPort = UIFactory.CreateNumericInput(1024, 65535, _settings.Server.Port, 80, registerScaler: RegisterDpiScaler);
+            var rowPort = UIFactory.CreateSettingRow("HTTP Порт:", _numPort, 140, registerScaler: RegisterDpiScaler);
 
-            _chkMountDrive = UIFactory.CreateCheckBox("Автоматически монтировать сетевой диск в Windows", _settings.Server.MountDrive);
-            _chkMountForAdministrator = UIFactory.CreateCheckBox("Подключать диск и для Администратора (UAC)", _settings.Server.MountForAdministrator);
+            _chkMountDrive = UIFactory.CreateCheckBox("Автоматически монтировать сетевой диск в Windows", _settings.Server.MountDrive, registerScaler: RegisterDpiScaler);
+            _chkMountForAdministrator = UIFactory.CreateCheckBox("Подключать диск и для Администратора (UAC)", _settings.Server.MountForAdministrator, registerScaler: RegisterDpiScaler);
             _chkMountForAdministrator.Enabled = _chkMountDrive.Checked;
             _chkMountDrive.CheckedChanged += (s, e) =>
             {
@@ -176,22 +262,24 @@ namespace TGramFS.UI
                 }
             };
 
-            _cmbEngine = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 260, Font = UITheme.BaseFont };
+            _cmbEngine = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Font = UITheme.BaseFont };
+            RegisterDpiScaler(scale => _cmbEngine.Width = UITheme.Scale(260, scale));
             _cmbEngine.Items.Add("WinFsp (Прямой стриминг в ОЗУ)");
             _cmbEngine.Items.Add("WebDAV (Служба Windows WebClient)");
             _cmbEngine.SelectedIndex = _settings.Server.Engine == DriveEngine.WinFsp ? 0 : 1;
-            var rowEngine = UIFactory.CreateSettingRow("Драйвер диска:", _cmbEngine, 140);
+            var rowEngine = UIFactory.CreateSettingRow("Драйвер диска:", _cmbEngine, 140, registerScaler: RegisterDpiScaler);
 
-            _txtVolumeName = new TextBox { Text = _settings.Server.DriveName ?? "TGramFS Drive", Width = 260, Font = UITheme.BaseFont };
-            var rowVolumeName = UIFactory.CreateSettingRow("Имя тома:", _txtVolumeName, 140);
+            _txtVolumeName = new TextBox { Text = _settings.Server.DriveName ?? "TGramFS Drive", Font = UITheme.BaseFont };
+            RegisterDpiScaler(scale => _txtVolumeName.Width = UITheme.Scale(260, scale));
+            var rowVolumeName = UIFactory.CreateSettingRow("Имя тома:", _txtVolumeName, 140, registerScaler: RegisterDpiScaler);
 
-            _cmbDriveLetter = new ComboBox 
-            { 
-                DropDownStyle = ComboBoxStyle.DropDownList, 
-                Width = 80, 
+            _cmbDriveLetter = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList,
                 Font = UITheme.BaseFont,
                 MaxDropDownItems = 12
             };
+            RegisterDpiScaler(scale => _cmbDriveLetter.Width = UITheme.Scale(80, scale));
             string currentConfigLetter = _settings.Server.DriveLetter?.Trim().ToUpper() ?? "Z:";
             if (!currentConfigLetter.EndsWith(":") && currentConfigLetter != "AUTO")
             {
@@ -242,13 +330,13 @@ namespace TGramFS.UI
             {
                 _cmbDriveLetter.SelectedItem = _cmbDriveLetter.Items.Count > 0 ? _cmbDriveLetter.Items[0] : "AUTO";
             }
-            var rowDriveLetter = UIFactory.CreateSettingRow("Буква диска:", _cmbDriveLetter, 140);
+            var rowDriveLetter = UIFactory.CreateSettingRow("Буква диска:", _cmbDriveLetter, 140, registerScaler: RegisterDpiScaler);
 
-            _numCapacityGb = UIFactory.CreateNumericInput(10, 1048576, _settings.Server.VirtualDiskCapacityGb > 0 ? _settings.Server.VirtualDiskCapacityGb : 1024, 80);
-            var rowCapacity = UIFactory.CreateSettingRow("Размер диска (ГБ):", _numCapacityGb, 140);
+            _numCapacityGb = UIFactory.CreateNumericInput(10, 1048576, _settings.Server.VirtualDiskCapacityGb > 0 ? _settings.Server.VirtualDiskCapacityGb : 1024, 80, registerScaler: RegisterDpiScaler);
+            var rowCapacity = UIFactory.CreateSettingRow("Размер диска (ГБ):", _numCapacityGb, 140, registerScaler: RegisterDpiScaler);
 
-            _chkAutoExpand = UIFactory.CreateCheckBox("Автоматически расширять диск при заполнении > 70%", _settings.Server.AutoExpandDiskCapacity);
-            _chkIncludeTrashInSpace = UIFactory.CreateCheckBox("Учитывать файлы в корзине (.Trash) в занятом месте", _settings.Server.IncludeTrashInUsedSpace);
+            _chkAutoExpand = UIFactory.CreateCheckBox("Автоматически расширять диск при заполнении > 70%", _settings.Server.AutoExpandDiskCapacity, registerScaler: RegisterDpiScaler);
+            _chkIncludeTrashInSpace = UIFactory.CreateCheckBox("Учитывать файлы в корзине (.Trash) в занятом месте", _settings.Server.IncludeTrashInUsedSpace, registerScaler: RegisterDpiScaler);
 
             pnlServerInner.Controls.AddRange(new Control[] {
                 _chkWebDavEnabled, rowPort, _chkMountDrive, _chkMountForAdministrator, rowEngine, rowVolumeName, rowDriveLetter, rowCapacity, _chkAutoExpand, _chkIncludeTrashInSpace
@@ -256,15 +344,15 @@ namespace TGramFS.UI
             grpServerDrive.Controls.Add(pnlServerInner);
 
             // 2. Рамка: Интеграция с Windows и проводником
-            var grpIntegration = UIFactory.CreateGroupBox("Интеграция с Windows и проводником");
-            var pnlIntegrationInner = UIFactory.CreateVerticalContainer();
+            var grpIntegration = UIFactory.CreateGroupBox("Интеграция с Windows и проводником", registerScaler: RegisterDpiScaler);
+            var pnlIntegrationInner = UIFactory.CreateVerticalContainer(registerScaler: RegisterDpiScaler);
 
             bool isAutoStart = AutoStartHelper.IsAutoStartEnabled();
-            _chkAutoStart = UIFactory.CreateCheckBox("Автозапуск сервиса при входе в Windows", isAutoStart || _settings.Server.AutoStartWithWindows);
-            _chkHideTrash = UIFactory.CreateCheckBox("Скрывать папку .Trash из корня диска (чистый корень)", _settings.Server.HideTrashFromRoot);
-            _chkContextMenu = UIFactory.CreateCheckBox("Пункт «Открыть корзину TGramFS» в контекстном меню Windows", _settings.Server.AddTrashToContextMenu);
-            _chkAutoShowProgressOverlay = UIFactory.CreateCheckBox("Отображать индикатор прогресса операций с файлами", _settings.Server.AutoShowProgressOverlay);
-            _chkGalleryPreview = UIFactory.CreateCheckBox("Создавать фото-превью для галереи Telegram", _settings.Server.CreatePhotoGalleryPreview);
+            _chkAutoStart = UIFactory.CreateCheckBox("Автозапуск сервиса при входе в Windows", isAutoStart || _settings.Server.AutoStartWithWindows, registerScaler: RegisterDpiScaler);
+            _chkHideTrash = UIFactory.CreateCheckBox("Скрывать папку .Trash из корня диска (чистый корень)", _settings.Server.HideTrashFromRoot, registerScaler: RegisterDpiScaler);
+            _chkContextMenu = UIFactory.CreateCheckBox("Пункт «Открыть корзину TGramFS» в контекстном меню Windows", _settings.Server.AddTrashToContextMenu, registerScaler: RegisterDpiScaler);
+            _chkAutoShowProgressOverlay = UIFactory.CreateCheckBox("Отображать индикатор прогресса операций с файлами", _settings.Server.AutoShowProgressOverlay, registerScaler: RegisterDpiScaler);
+            _chkGalleryPreview = UIFactory.CreateCheckBox("Создавать фото-превью для галереи Telegram", _settings.Server.CreatePhotoGalleryPreview, registerScaler: RegisterDpiScaler);
 
             pnlIntegrationInner.Controls.AddRange(new Control[] {
                 _chkAutoStart, _chkHideTrash, _chkContextMenu, _chkAutoShowProgressOverlay, _chkGalleryPreview
@@ -272,50 +360,52 @@ namespace TGramFS.UI
             grpIntegration.Controls.Add(pnlIntegrationInner);
 
             // 3. Рамка: Кэширование и стриминг
-            var grpCache = UIFactory.CreateGroupBox("Кэширование, стриминг и скорость MTProto");
-            var pnlCacheInner = UIFactory.CreateVerticalContainer();
+            var grpCache = UIFactory.CreateGroupBox("Кэширование, стриминг и скорость MTProto", registerScaler: RegisterDpiScaler);
+            var pnlCacheInner = UIFactory.CreateVerticalContainer(registerScaler: RegisterDpiScaler);
 
-            _chkEnableDiskCache = UIFactory.CreateCheckBox("Сохранять прочитанные файлы в дисковый кэш (%TEMP%)", _settings.Server.EnableDiskReadCache);
+            _chkEnableDiskCache = UIFactory.CreateCheckBox("Сохранять прочитанные файлы в дисковый кэш (%TEMP%)", _settings.Server.EnableDiskReadCache, registerScaler: RegisterDpiScaler);
 
             _numDownloadWorkers = UIFactory.CreateNumericInput(
-                ServerSettings.MinDownloadWorkerCount, 
-                ServerSettings.MaxDownloadWorkerCount, 
-                Math.Clamp(_settings.Server.DownloadWorkerCount, ServerSettings.MinDownloadWorkerCount, ServerSettings.MaxDownloadWorkerCount), 
-                80);
-            var rowDownloadWorkers = UIFactory.CreateSettingRow($"Параллельных воркеров MTProto ({ServerSettings.MinDownloadWorkerCount}-{ServerSettings.MaxDownloadWorkerCount}):", _numDownloadWorkers, 270);
+                ServerSettings.MinDownloadWorkerCount,
+                ServerSettings.MaxDownloadWorkerCount,
+                Math.Clamp(_settings.Server.DownloadWorkerCount, ServerSettings.MinDownloadWorkerCount, ServerSettings.MaxDownloadWorkerCount),
+                80,
+                registerScaler: RegisterDpiScaler);
+            var rowDownloadWorkers = UIFactory.CreateSettingRow($"Параллельных воркеров MTProto ({ServerSettings.MinDownloadWorkerCount}-{ServerSettings.MaxDownloadWorkerCount}):", _numDownloadWorkers, 270, registerScaler: RegisterDpiScaler);
 
             _numPacingDelayMs = UIFactory.CreateNumericInput(
-                ServerSettings.MinPacingDelayMs, 
-                ServerSettings.MaxPacingDelayMs, 
-                Math.Clamp(_settings.Server.PacingDelayMs, ServerSettings.MinPacingDelayMs, ServerSettings.MaxPacingDelayMs), 
-                80);
-            var rowPacingDelay = UIFactory.CreateSettingRow("Задержка между запросами (мс):", _numPacingDelayMs, 270);
+                ServerSettings.MinPacingDelayMs,
+                ServerSettings.MaxPacingDelayMs,
+                Math.Clamp(_settings.Server.PacingDelayMs, ServerSettings.MinPacingDelayMs, ServerSettings.MaxPacingDelayMs),
+                80,
+                registerScaler: RegisterDpiScaler);
+            var rowPacingDelay = UIFactory.CreateSettingRow("Задержка между запросами (мс):", _numPacingDelayMs, 270, registerScaler: RegisterDpiScaler);
 
-            _numMemoryCacheMb = UIFactory.CreateNumericInput(32, 4096, _settings.Server.MemoryCacheSizeMb > 0 ? _settings.Server.MemoryCacheSizeMb : 128, 80);
-            var rowMemCache = UIFactory.CreateSettingRow("Буфер кэша в ОЗУ (МБ):", _numMemoryCacheMb, 270);
+            _numMemoryCacheMb = UIFactory.CreateNumericInput(32, 4096, _settings.Server.MemoryCacheSizeMb > 0 ? _settings.Server.MemoryCacheSizeMb : 128, 80, registerScaler: RegisterDpiScaler);
+            var rowMemCache = UIFactory.CreateSettingRow("Буфер кэша в ОЗУ (МБ):", _numMemoryCacheMb, 270, registerScaler: RegisterDpiScaler);
 
-            _numChunkTtlMinutes = UIFactory.CreateNumericInput(1, 120, _settings.Server.ChunkMemoryCacheTtlMinutes > 0 ? _settings.Server.ChunkMemoryCacheTtlMinutes : 10, 80);
-            var rowChunkTtl = UIFactory.CreateSettingRow("Время жизни кэша в ОЗУ (мин):", _numChunkTtlMinutes, 270);
+            _numChunkTtlMinutes = UIFactory.CreateNumericInput(1, 120, _settings.Server.ChunkMemoryCacheTtlMinutes > 0 ? _settings.Server.ChunkMemoryCacheTtlMinutes : 10, 80, registerScaler: RegisterDpiScaler);
+            var rowChunkTtl = UIFactory.CreateSettingRow("Время жизни кэша в ОЗУ (мин):", _numChunkTtlMinutes, 270, registerScaler: RegisterDpiScaler);
 
-            _numStreamingActivationMb = UIFactory.CreateNumericInput(1, 50, _settings.Server.StreamingActivationThresholdMb > 0 ? _settings.Server.StreamingActivationThresholdMb : 1, 80);
-            var rowStreamingActivation = UIFactory.CreateSettingRow("Старт упреждения после (МБ):", _numStreamingActivationMb, 270);
+            _numStreamingActivationMb = UIFactory.CreateNumericInput(1, 50, _settings.Server.StreamingActivationThresholdMb > 0 ? _settings.Server.StreamingActivationThresholdMb : 1, 80, registerScaler: RegisterDpiScaler);
+            var rowStreamingActivation = UIFactory.CreateSettingRow("Старт упреждения после (МБ):", _numStreamingActivationMb, 270, registerScaler: RegisterDpiScaler);
 
-            _numAudioWindowMb = UIFactory.CreateNumericInput(1, 100, _settings.Server.AudioPrefetchWindowMb > 0 ? _settings.Server.AudioPrefetchWindowMb : 2, 80);
-            var rowAudioWindow = UIFactory.CreateSettingRow("Буфер упреждения для аудио (МБ):", _numAudioWindowMb, 270);
+            _numAudioWindowMb = UIFactory.CreateNumericInput(1, 100, _settings.Server.AudioPrefetchWindowMb > 0 ? _settings.Server.AudioPrefetchWindowMb : 2, 80, registerScaler: RegisterDpiScaler);
+            var rowAudioWindow = UIFactory.CreateSettingRow("Буфер упреждения для аудио (МБ):", _numAudioWindowMb, 270, registerScaler: RegisterDpiScaler);
 
-            _numStreamingWindowMb = UIFactory.CreateNumericInput(5, 200, _settings.Server.StreamingPrefetchWindowMb > 0 ? _settings.Server.StreamingPrefetchWindowMb : 20, 80);
-            var rowStreamingWindow = UIFactory.CreateSettingRow("Буфер упреждения для видео/файлов (МБ):", _numStreamingWindowMb, 270);
+            _numStreamingWindowMb = UIFactory.CreateNumericInput(5, 200, _settings.Server.StreamingPrefetchWindowMb > 0 ? _settings.Server.StreamingPrefetchWindowMb : 20, 80, registerScaler: RegisterDpiScaler);
+            var rowStreamingWindow = UIFactory.CreateSettingRow("Буфер упреждения для видео/файлов (МБ):", _numStreamingWindowMb, 270, registerScaler: RegisterDpiScaler);
 
             pnlCacheInner.Controls.AddRange(new Control[] {
                 _chkEnableDiskCache, rowDownloadWorkers, rowPacingDelay, rowMemCache, rowChunkTtl, rowStreamingActivation, rowAudioWindow, rowStreamingWindow
             });
             grpCache.Controls.Add(pnlCacheInner);
 
-            pnlGeneral.Controls.AddRange(new Control[] { 
-                grpServerDrive, 
-                grpIntegration, 
-                grpCache, 
-                new Panel { Height = 10, Width = 10, Margin = Padding.Empty } 
+            pnlGeneral.Controls.AddRange(new Control[] {
+                grpServerDrive,
+                grpIntegration,
+                grpCache,
+                CreateBottomSpacer()
             });
             _tabGeneral.Controls.Add(pnlGeneral);
 
@@ -323,44 +413,37 @@ namespace TGramFS.UI
             // === Вкладка 2: Авторизация Telegram =====================================
             // =========================================================================
             _tabTelegram = new TabPage("Авторизация Telegram");
-            var pnlTg = new FlowLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                FlowDirection = FlowDirection.TopDown,
-                WrapContents = false,
-                Padding = new Padding(12),
-                AutoScroll = true
-            };
+            var pnlTg = CreateTabScrollPanel();
 
             // 1. Рамка: Параметры приложения (my.telegram.org)
-            var grpTelegramApi = UIFactory.CreateGroupBox("Параметры приложения (my.telegram.org)");
-            var pnlTgApiInner = UIFactory.CreateVerticalContainer();
+            var grpTelegramApi = UIFactory.CreateGroupBox("Параметры приложения (my.telegram.org)", registerScaler: RegisterDpiScaler);
+            var pnlTgApiInner = UIFactory.CreateVerticalContainer(registerScaler: RegisterDpiScaler);
 
             var currentAccount = _repository.GetActiveTelegramAccount();
             var primaryChannel = _repository.GetPrimaryTelegramChannel(currentAccount?.Id);
 
             int apiInputWidth = UIFactory.DefaultInnerWidth - 90;
 
-            _txtApiId = new TextBox 
-            { 
-                Text = currentAccount != null && currentAccount.ApiId > 0 ? currentAccount.ApiId.ToString() : "", 
-                Width = apiInputWidth,
-                Font = UITheme.BaseFont 
+            _txtApiId = new TextBox
+            {
+                Text = currentAccount != null && currentAccount.ApiId > 0 ? currentAccount.ApiId.ToString() : "",
+                Font = UITheme.BaseFont
             };
-            var rowApiId = UIFactory.CreateSettingRow("API ID:", _txtApiId, 90, UIFactory.DefaultInnerWidth);
+            RegisterDpiScaler(scale => _txtApiId.Width = UITheme.Scale(apiInputWidth, scale));
+            var rowApiId = UIFactory.CreateSettingRow("API ID:", _txtApiId, 90, UIFactory.DefaultInnerWidth, RegisterDpiScaler);
 
-            _txtApiHash = new TextBox 
-            { 
-                Text = currentAccount?.ApiHash ?? "", 
-                Width = apiInputWidth,
-                UseSystemPasswordChar = true, 
-                Font = UITheme.BaseFont 
+            _txtApiHash = new TextBox
+            {
+                Text = currentAccount?.ApiHash ?? "",
+                UseSystemPasswordChar = true,
+                Font = UITheme.BaseFont
             };
-            var rowApiHash = UIFactory.CreateSettingRow("API Hash:", _txtApiHash, 90, UIFactory.DefaultInnerWidth);
+            RegisterDpiScaler(scale => _txtApiHash.Width = UITheme.Scale(apiInputWidth, scale));
+            var rowApiHash = UIFactory.CreateSettingRow("API Hash:", _txtApiHash, 90, UIFactory.DefaultInnerWidth, RegisterDpiScaler);
 
-            _btnSaveApi = UIFactory.CreateButton("Сохранить параметры Telegram", (s, e) => SaveTelegramApiKeys(), width: apiInputWidth);
+            _btnSaveApi = UIFactory.CreateButton("Сохранить параметры Telegram", (s, e) => SaveTelegramApiKeys(), width: apiInputWidth, registerScaler: RegisterDpiScaler);
             _btnSaveApi.Enabled = false;
-            var rowSaveApi = UIFactory.CreateSettingRow("", _btnSaveApi, 90, UIFactory.DefaultInnerWidth);
+            var rowSaveApi = UIFactory.CreateSettingRow("", _btnSaveApi, 90, UIFactory.DefaultInnerWidth, RegisterDpiScaler);
 
             _txtApiId.TextChanged += (s, e) => UpdateSaveApiButtonState();
             _txtApiHash.TextChanged += (s, e) => UpdateSaveApiButtonState();
@@ -369,76 +452,88 @@ namespace TGramFS.UI
             grpTelegramApi.Controls.Add(pnlTgApiInner);
 
             // 2. Рамка: Основной канал хранилища
-            _grpPrimaryChannel = UIFactory.CreateGroupBox("Основной канал хранилища");
-            var pnlPrimaryChannelInner = UIFactory.CreateVerticalContainer();
+            _grpPrimaryChannel = UIFactory.CreateGroupBox("Основной канал хранилища", registerScaler: RegisterDpiScaler);
+            var pnlPrimaryChannelInner = UIFactory.CreateVerticalContainer(registerScaler: RegisterDpiScaler);
 
-            _txtChannelTitle = new TextBox 
-            { 
-                Text = primaryChannel != null && !string.IsNullOrWhiteSpace(primaryChannel.Title) ? primaryChannel.Title : "TGramFS Storage", 
-                Font = UITheme.BaseFont 
+            _txtChannelTitle = new TextBox
+            {
+                Text = primaryChannel != null && !string.IsNullOrWhiteSpace(primaryChannel.Title) ? primaryChannel.Title : "TGramFS Storage",
+                Font = UITheme.BaseFont
             };
 
-            _btnRenamePrimaryChannel = UIFactory.CreateButton("Переименовать", async (s, e) => await RenamePrimaryChannelAsync(), width: 135);
+            _btnRenamePrimaryChannel = UIFactory.CreateButton("Переименовать", async (s, e) => await RenamePrimaryChannelAsync(), width: 135, registerScaler: RegisterDpiScaler);
             _btnRenamePrimaryChannel.Enabled = false;
 
             _txtChannelTitle.TextChanged += (s, e) => UpdatePrimaryRenameButtonState();
 
-            var rowPrimaryChannel = UIFactory.CreateActionInputRow("Название:", _txtChannelTitle, _btnRenamePrimaryChannel, 90, 135, UIFactory.DefaultInnerWidth);
+            var rowPrimaryChannel = UIFactory.CreateActionInputRow("Название:", _txtChannelTitle, _btnRenamePrimaryChannel, 90, 135, UIFactory.DefaultInnerWidth, RegisterDpiScaler);
 
             pnlPrimaryChannelInner.Controls.Add(rowPrimaryChannel);
             _grpPrimaryChannel.Controls.Add(pnlPrimaryChannelInner);
             UpdatePrimaryChannelControls();
 
             // 3. Рамка: Текущая сессия Telegram
-            var grpTelegramSession = UIFactory.CreateGroupBox("Текущая сессия Telegram");
-            var pnlTgSessionInner = UIFactory.CreateVerticalContainer();
+            var grpTelegramSession = UIFactory.CreateGroupBox("Текущая сессия Telegram", registerScaler: RegisterDpiScaler);
+            var pnlTgSessionInner = UIFactory.CreateVerticalContainer(registerScaler: RegisterDpiScaler);
 
             _lblStatus = new Label
             {
                 Text = "Статус: Проверка сессии...",
                 AutoSize = true,
-                Font = UITheme.HeaderFont,
-                Margin = new Padding(0, 0, 0, 8)
+                Font = UITheme.HeaderFont
             };
+            RegisterDpiScaler(scale => _lblStatus.Margin = new Padding(0, 0, 0, UITheme.Scale(8, scale)));
 
             // Информационная карточка профиля пользователя Telegram
             int profileCardWidth = UIFactory.DefaultInnerWidth - 135; // 460 px при 96 DPI: выравнивание по правому краю поля ввода (левому краю кнопки [Переименовать])
             _pnlUserDetails = new TableLayoutPanel
             {
-                Width = profileCardWidth,
-                MinimumSize = new Size(profileCardWidth, 0),
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowOnly,
                 ColumnCount = 2,
                 RowCount = 6,
-                Margin = new Padding(0, 0, 0, 8),
-                Padding = new Padding(8, 6, 8, 6),
                 BackColor = UITheme.BackgroundLight
             };
             _pnlUserDetails.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             _pnlUserDetails.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-
-            Label createDetailHeader(string title) => new Label
+            RegisterDpiScaler(scale =>
             {
-                Text = title,
-                AutoSize = true,
-                Font = UITheme.BoldFont,
-                ForeColor = UITheme.TextMain,
-                Dock = DockStyle.Fill,
-                TextAlign = ContentAlignment.MiddleLeft,
-                Margin = new Padding(0, 3, 10, 3)
-            };
+                int cardW = UITheme.Scale(profileCardWidth, scale);
+                _pnlUserDetails.Width = cardW;
+                _pnlUserDetails.MinimumSize = new Size(cardW, 0);
+                _pnlUserDetails.Margin = new Padding(0, 0, 0, UITheme.Scale(8, scale));
+                _pnlUserDetails.Padding = UITheme.Scale(new Padding(8, 6, 8, 6), scale);
+            });
 
-            Label createDetailValue() => new Label
+            Label createDetailHeader(string title)
             {
-                Text = "—",
-                AutoSize = true,
-                Font = UITheme.BaseFont,
-                ForeColor = UITheme.TextMain,
-                Dock = DockStyle.Fill,
-                TextAlign = ContentAlignment.MiddleLeft,
-                Margin = new Padding(0, 3, 0, 3)
-            };
+                var lbl = new Label
+                {
+                    Text = title,
+                    AutoSize = true,
+                    Font = UITheme.BoldFont,
+                    ForeColor = UITheme.TextMain,
+                    Dock = DockStyle.Fill,
+                    TextAlign = ContentAlignment.MiddleLeft
+                };
+                RegisterDpiScaler(scale => lbl.Margin = UITheme.Scale(new Padding(0, 3, 10, 3), scale));
+                return lbl;
+            }
+
+            Label createDetailValue()
+            {
+                var lbl = new Label
+                {
+                    Text = "—",
+                    AutoSize = true,
+                    Font = UITheme.BaseFont,
+                    ForeColor = UITheme.TextMain,
+                    Dock = DockStyle.Fill,
+                    TextAlign = ContentAlignment.MiddleLeft
+                };
+                RegisterDpiScaler(scale => lbl.Margin = UITheme.Scale(new Padding(0, 3, 0, 3), scale));
+                return lbl;
+            }
 
             _lblUserName = createDetailValue();
             _lblUserTag = createDetailValue();
@@ -469,27 +564,37 @@ namespace TGramFS.UI
             {
                 Text = "Введите номер телефона в международном формате (+3...):",
                 AutoSize = true,
-                Font = UITheme.BaseFont,
-                Margin = new Padding(0, 0, 0, 6)
+                Font = UITheme.BaseFont
             };
+            RegisterDpiScaler(scale =>
+            {
+                _lblInstruction.MaximumSize = new Size(UITheme.Scale(UIFactory.DefaultInnerWidth, scale), 0);
+                _lblInstruction.Margin = new Padding(0, 0, 0, UITheme.Scale(6, scale));
+            });
 
-            _txtInput = new TextBox { Width = UIFactory.DefaultInnerWidth, Font = UITheme.BaseFont, Margin = new Padding(0, 0, 0, 8) };
+            _txtInput = new TextBox { Font = UITheme.BaseFont };
+            RegisterDpiScaler(scale =>
+            {
+                _txtInput.Width = UITheme.Scale(UIFactory.DefaultInnerWidth, scale);
+                _txtInput.Margin = new Padding(0, 0, 0, UITheme.Scale(8, scale));
+            });
 
-            _btnAction = UIFactory.CreateButton("Отправить", async (s, e) => await HandleTelegramActionAsync(), width: 180);
-            _btnResetAuth = UIFactory.CreateButton("Изменить номер", (s, e) => HandleResetAuth(), width: 140, foreColor: UITheme.TextMuted);
-            _btnLogout = UIFactory.CreateButton("Выйти из аккаунта", (s, e) => HandleTelegramLogout(), width: 160, foreColor: UITheme.TextDanger);
+            _btnAction = UIFactory.CreateButton("Отправить", async (s, e) => await HandleTelegramActionAsync(), width: 180, registerScaler: RegisterDpiScaler);
+            _btnResetAuth = UIFactory.CreateButton("Изменить номер", (s, e) => HandleResetAuth(), width: 140, foreColor: UITheme.TextMuted, registerScaler: RegisterDpiScaler);
+            _btnLogout = UIFactory.CreateButton("Выйти из аккаунта", (s, e) => HandleTelegramLogout(), width: 160, foreColor: UITheme.TextDanger, registerScaler: RegisterDpiScaler);
 
-            var pnlTgButtons = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.LeftToRight, WrapContents = false, Margin = new Padding(0, 4, 0, 4) };
+            var pnlTgButtons = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.LeftToRight, WrapContents = false };
+            RegisterDpiScaler(scale => pnlTgButtons.Margin = UITheme.Scale(new Padding(0, 4, 0, 4), scale));
             pnlTgButtons.Controls.AddRange(new Control[] { _btnAction, _btnResetAuth, _btnLogout });
 
             pnlTgSessionInner.Controls.AddRange(new Control[] { _lblStatus, _pnlUserDetails, _lblInstruction, _txtInput, pnlTgButtons });
             grpTelegramSession.Controls.Add(pnlTgSessionInner);
 
-            pnlTg.Controls.AddRange(new Control[] { 
-                grpTelegramApi, 
+            pnlTg.Controls.AddRange(new Control[] {
+                grpTelegramApi,
                 _grpPrimaryChannel,
-                grpTelegramSession, 
-                new Panel { Height = 10, Width = 10, Margin = Padding.Empty } 
+                grpTelegramSession,
+                CreateBottomSpacer()
             });
             _tabTelegram.Controls.Add(pnlTg);
 
@@ -497,25 +602,18 @@ namespace TGramFS.UI
             // === Вкладка 3: База данных (SQLite и бэкап) =============================
             // =========================================================================
             _tabBackup = new TabPage("База");
-            var pnlBackup = new FlowLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                FlowDirection = FlowDirection.TopDown,
-                WrapContents = false,
-                Padding = new Padding(12),
-                AutoScroll = true
-            };
+            var pnlBackup = CreateTabScrollPanel();
 
             // 1. Рамка: База данных SQLite (base.db)
-            var grpDb = UIFactory.CreateGroupBox("База данных SQLite (base.db)");
-            var pnlDbInner = UIFactory.CreateVerticalContainer();
+            var grpDb = UIFactory.CreateGroupBox("База данных SQLite (base.db)", registerScaler: RegisterDpiScaler);
+            var pnlDbInner = UIFactory.CreateVerticalContainer(registerScaler: RegisterDpiScaler);
 
             var lblDbStats = new Label
             {
                 AutoSize = true,
-                Margin = new Padding(0, 2, 0, 4),
                 Font = UITheme.SmallFont
             };
+            RegisterDpiScaler(scale => lblDbStats.Margin = UITheme.Scale(new Padding(0, 2, 0, 4), scale));
 
             Action updateDbStats = () =>
             {
@@ -540,7 +638,7 @@ namespace TGramFS.UI
             };
             updateDbStats();
 
-            var btnVacuum = UIFactory.CreateButton("🗜 Сжать базу (VACUUM)");
+            var btnVacuum = UIFactory.CreateButton("🗜 Сжать базу (VACUUM)", registerScaler: RegisterDpiScaler);
             btnVacuum.Click += async (s, e) =>
             {
                 btnVacuum.Enabled = false;
@@ -562,7 +660,7 @@ namespace TGramFS.UI
                 }
             };
 
-            var btnOpenDbFolder = UIFactory.CreateButton("📁 Папка с базой данных");
+            var btnOpenDbFolder = UIFactory.CreateButton("📁 Папка с базой данных", registerScaler: RegisterDpiScaler);
             btnOpenDbFolder.Click += (s, e) =>
             {
                 try
@@ -586,53 +684,54 @@ namespace TGramFS.UI
 
             _chkAutoVacuum = UIFactory.CreateCheckBox(
                 "Автоматически сжимать базу (VACUUM) при очистке корзины",
-                _settings.Database.AutoVacuumOnTrashDelete
+                _settings.Database.AutoVacuumOnTrashDelete,
+                registerScaler: RegisterDpiScaler
             );
 
-            var rowDbButtons = UIFactory.CreateActionRow(btnVacuum, btnOpenDbFolder);
+            var rowDbButtons = UIFactory.CreateActionRow(RegisterDpiScaler, btnVacuum, btnOpenDbFolder);
             pnlDbInner.Controls.AddRange(new Control[] { lblDbStats, _chkAutoVacuum, rowDbButtons });
             grpDb.Controls.Add(pnlDbInner);
 
             // 2. Рамка: Канал для резервных копий
-            _grpBackupChannel = UIFactory.CreateGroupBox("Канал для резервных копий");
-            var pnlBackupChannelInner = UIFactory.CreateVerticalContainer();
+            _grpBackupChannel = UIFactory.CreateGroupBox("Канал для резервных копий", registerScaler: RegisterDpiScaler);
+            var pnlBackupChannelInner = UIFactory.CreateVerticalContainer(registerScaler: RegisterDpiScaler);
 
             var currentBackupCh = _repository?.GetBackupChannel();
 
-            _txtBackupChannelTitle = new TextBox 
-            { 
-                Text = currentBackupCh?.Title ?? "TGramFS DB Backups", 
-                Font = UITheme.BaseFont 
+            _txtBackupChannelTitle = new TextBox
+            {
+                Text = currentBackupCh?.Title ?? "TGramFS DB Backups",
+                Font = UITheme.BaseFont
             };
 
-            _btnRenameBackupChannel = UIFactory.CreateButton("Переименовать", async (s, e) => await RenameBackupChannelAsync(), width: 135);
+            _btnRenameBackupChannel = UIFactory.CreateButton("Переименовать", async (s, e) => await RenameBackupChannelAsync(), width: 135, registerScaler: RegisterDpiScaler);
             _btnRenameBackupChannel.Enabled = false;
 
             _txtBackupChannelTitle.TextChanged += (s, e) => UpdateBackupRenameButtonState();
 
-            var rowBackupChannel = UIFactory.CreateActionInputRow("Название:", _txtBackupChannelTitle, _btnRenameBackupChannel, 90, 135, UIFactory.DefaultInnerWidth);
+            var rowBackupChannel = UIFactory.CreateActionInputRow("Название:", _txtBackupChannelTitle, _btnRenameBackupChannel, 90, 135, UIFactory.DefaultInnerWidth, RegisterDpiScaler);
 
             pnlBackupChannelInner.Controls.Add(rowBackupChannel);
             _grpBackupChannel.Controls.Add(pnlBackupChannelInner);
             UpdateBackupChannelControls();
 
             // 2. Рамка: Автоматический бэкап
-            var grpAutoBackup = UIFactory.CreateGroupBox("Политика автоматического бэкапа");
-            var pnlAutoBackupInner = UIFactory.CreateVerticalContainer();
+            var grpAutoBackup = UIFactory.CreateGroupBox("Политика автоматического бэкапа", registerScaler: RegisterDpiScaler);
+            var pnlAutoBackupInner = UIFactory.CreateVerticalContainer(registerScaler: RegisterDpiScaler);
 
-            _chkBackupOnExit = UIFactory.CreateCheckBox("Создавать резервную копию при выходе из программы", _settings.Database.Backup.BackupOnExit);
+            _chkBackupOnExit = UIFactory.CreateCheckBox("Создавать резервную копию при выходе из программы", _settings.Database.Backup.BackupOnExit, registerScaler: RegisterDpiScaler);
 
-            _chkEnableAutoBackup = UIFactory.CreateCheckBox("Включить автоматическую выгрузку бэкапа в Telegram", _settings.Database.Backup.EnableAutoBackup);
-            
-            _numDebounceMinutes = UIFactory.CreateNumericInput(1, 120, _settings.Database.Backup.DebounceMinutes > 0 ? _settings.Database.Backup.DebounceMinutes : 15, 80);
-            var rowDebounce = UIFactory.CreateSettingRow("Таймер тишины после записи (мин):", _numDebounceMinutes, 240);
+            _chkEnableAutoBackup = UIFactory.CreateCheckBox("Включить автоматическую выгрузку бэкапа в Telegram", _settings.Database.Backup.EnableAutoBackup, registerScaler: RegisterDpiScaler);
+
+            _numDebounceMinutes = UIFactory.CreateNumericInput(1, 120, _settings.Database.Backup.DebounceMinutes > 0 ? _settings.Database.Backup.DebounceMinutes : 15, 80, registerScaler: RegisterDpiScaler);
+            var rowDebounce = UIFactory.CreateSettingRow("Таймер тишины после записи (мин):", _numDebounceMinutes, 240, registerScaler: RegisterDpiScaler);
             _numDebounceMinutes.Enabled = _chkEnableAutoBackup.Checked;
             _chkEnableAutoBackup.CheckedChanged += (s, e) => _numDebounceMinutes.Enabled = _chkEnableAutoBackup.Checked;
 
-            _chkCheckOnStartup = UIFactory.CreateCheckBox("Проверять наличие свежей базы в Telegram (сценарий Дом/Работа)", _settings.Database.Backup.CheckForRemoteOnStartup);
+            _chkCheckOnStartup = UIFactory.CreateCheckBox("Проверять наличие свежей базы в Telegram (сценарий Дом/Работа)", _settings.Database.Backup.CheckForRemoteOnStartup, registerScaler: RegisterDpiScaler);
 
-            _numRemoteCheckInterval = UIFactory.CreateNumericInput(1, 120, _settings.Database.Backup.RemoteCheckIntervalMinutes > 0 ? _settings.Database.Backup.RemoteCheckIntervalMinutes : 5, 80);
-            var rowRemoteCheck = UIFactory.CreateSettingRow("Интервал фоновой проверки (мин):", _numRemoteCheckInterval, 240);
+            _numRemoteCheckInterval = UIFactory.CreateNumericInput(1, 120, _settings.Database.Backup.RemoteCheckIntervalMinutes > 0 ? _settings.Database.Backup.RemoteCheckIntervalMinutes : 5, 80, registerScaler: RegisterDpiScaler);
+            var rowRemoteCheck = UIFactory.CreateSettingRow("Интервал фоновой проверки (мин):", _numRemoteCheckInterval, 240, registerScaler: RegisterDpiScaler);
             _numRemoteCheckInterval.Enabled = _chkCheckOnStartup.Checked;
             _chkCheckOnStartup.CheckedChanged += (s, e) => _numRemoteCheckInterval.Enabled = _chkCheckOnStartup.Checked;
 
@@ -640,15 +739,15 @@ namespace TGramFS.UI
             grpAutoBackup.Controls.Add(pnlAutoBackupInner);
 
             // 3. Рамка: Ручные действия
-            var grpBackupActions = UIFactory.CreateGroupBox("Действия с резервными копиями");
-            var pnlBackupActionsInner = UIFactory.CreateVerticalContainer();
+            var grpBackupActions = UIFactory.CreateGroupBox("Действия с резервными копиями", registerScaler: RegisterDpiScaler);
+            var pnlBackupActionsInner = UIFactory.CreateVerticalContainer(registerScaler: RegisterDpiScaler);
 
             _lblBackupStatus = new Label
             {
                 AutoSize = true,
-                Font = UITheme.SmallFont,
-                Margin = new Padding(0, 2, 0, 6)
+                Font = UITheme.SmallFont
             };
+            RegisterDpiScaler(scale => _lblBackupStatus.Margin = UITheme.Scale(new Padding(0, 2, 0, 6), scale));
 
             Action updateBackupStatusText = () =>
             {
@@ -685,7 +784,7 @@ namespace TGramFS.UI
             };
             updateBackupStatusText();
 
-            var btnManualBackup = UIFactory.CreateButton("📤 Отправить бэкап в Telegram сейчас");
+            var btnManualBackup = UIFactory.CreateButton("📤 Отправить бэкап в Telegram сейчас", registerScaler: RegisterDpiScaler);
             btnManualBackup.Click += async (s, e) =>
             {
                 if (_backupService == null)
@@ -746,7 +845,7 @@ namespace TGramFS.UI
                 }
             };
 
-            var btnOpenBackupsDir = UIFactory.CreateButton("📁 Папка локальных бэкапов");
+            var btnOpenBackupsDir = UIFactory.CreateButton("📁 Папка локальных бэкапов", registerScaler: RegisterDpiScaler);
             btnOpenBackupsDir.Click += (s, e) =>
             {
                 try
@@ -761,7 +860,7 @@ namespace TGramFS.UI
                 }
             };
 
-            var btnRestoreFromTelegram = UIFactory.CreateButton("📥 Восстановить базу из Telegram");
+            var btnRestoreFromTelegram = UIFactory.CreateButton("📥 Восстановить базу из Telegram", registerScaler: RegisterDpiScaler);
             btnRestoreFromTelegram.Click += async (s, e) =>
             {
                 if (_backupService == null)
@@ -832,8 +931,8 @@ namespace TGramFS.UI
                 }
             };
 
-            var rowBackupBtns = UIFactory.CreateActionRow(btnManualBackup, btnRestoreFromTelegram);
-            var rowFolderBtn = UIFactory.CreateActionRow(btnOpenBackupsDir);
+            var rowBackupBtns = UIFactory.CreateActionRow(RegisterDpiScaler, btnManualBackup, btnRestoreFromTelegram);
+            var rowFolderBtn = UIFactory.CreateActionRow(RegisterDpiScaler, btnOpenBackupsDir);
             pnlBackupActionsInner.Controls.AddRange(new Control[] { _lblBackupStatus, rowBackupBtns, rowFolderBtn });
             grpBackupActions.Controls.Add(pnlBackupActionsInner);
 
@@ -842,7 +941,7 @@ namespace TGramFS.UI
                 _grpBackupChannel,
                 grpAutoBackup,
                 grpBackupActions,
-                new Panel { Height = 10, Width = 10, Margin = Padding.Empty }
+                CreateBottomSpacer()
             });
             _tabBackup.Controls.Add(pnlBackup);
 
@@ -850,17 +949,10 @@ namespace TGramFS.UI
             // === Вкладка 4: Патч реестра Windows =====================================
             // =========================================================================
             _tabRegistry = new TabPage("Патч реестра Windows");
-            var pnlReg = new FlowLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                FlowDirection = FlowDirection.TopDown,
-                WrapContents = false,
-                Padding = new Padding(12),
-                AutoScroll = true
-            };
+            var pnlReg = CreateTabScrollPanel();
 
-            var grpRegistry = UIFactory.CreateGroupBox("Системные твики службы Windows WebClient и UAC");
-            var pnlRegInner = UIFactory.CreateVerticalContainer();
+            var grpRegistry = UIFactory.CreateGroupBox("Системные твики службы Windows WebClient и UAC", registerScaler: RegisterDpiScaler);
+            var pnlRegInner = UIFactory.CreateVerticalContainer(registerScaler: RegisterDpiScaler);
 
             _lblRegStatus = new Label
             {
@@ -870,19 +962,26 @@ namespace TGramFS.UI
                        "3. EnableLinkedConnections = 1 — сквозная видимость дисков между сессиями пользователя и Администратора.\n" +
                        "4. ZoneMap (Местная интрасеть) — устранение системных предупреждений безопасности при копировании файлов.",
                 AutoSize = true,
-                Width = UIFactory.DefaultInnerWidth,
-                MaximumSize = new Size(UIFactory.DefaultInnerWidth, 0),
-                Font = UITheme.BaseFont,
-                Margin = new Padding(0, 2, 0, 10)
+                Font = UITheme.BaseFont
             };
+            RegisterDpiScaler(scale =>
+            {
+                int w = UITheme.Scale(UIFactory.DefaultInnerWidth, scale);
+                _lblRegStatus.Width = w;
+                _lblRegStatus.MaximumSize = new Size(w, 0);
+                _lblRegStatus.Margin = UITheme.Scale(new Padding(0, 2, 0, 10), scale);
+            });
 
             _lblRegCurrentState = new Label
             {
                 AutoSize = true,
-                MaximumSize = new Size(UIFactory.DefaultInnerWidth, 0),
-                Font = UITheme.HeaderFont,
-                Margin = new Padding(0, 0, 0, 10)
+                Font = UITheme.HeaderFont
             };
+            RegisterDpiScaler(scale =>
+            {
+                _lblRegCurrentState.MaximumSize = new Size(UITheme.Scale(UIFactory.DefaultInnerWidth, scale), 0);
+                _lblRegCurrentState.Margin = UITheme.Scale(new Padding(0, 0, 0, 10), scale);
+            });
 
             Action refreshRegState = () =>
             {
@@ -900,8 +999,8 @@ namespace TGramFS.UI
             };
             refreshRegState();
 
-            _btnApplyRegFix = UIFactory.CreateButton("🛡 Применить комплексный фикс реестра (с запросом UAC)", null, height: 34, width: UIFactory.DefaultInnerWidth);
-            _btnApplyRegFix.Margin = new Padding(0, 6, 0, 8);
+            _btnApplyRegFix = UIFactory.CreateButton("🛡 Применить комплексный фикс реестра (с запросом UAC)", null, height: 34, width: UIFactory.DefaultInnerWidth, registerScaler: RegisterDpiScaler);
+            RegisterDpiScaler(scale => _btnApplyRegFix.Margin = UITheme.Scale(new Padding(0, 6, 0, 8), scale));
             _btnApplyRegFix.Click += (s, e) =>
             {
                 _btnApplyRegFix.Enabled = false;
@@ -936,60 +1035,57 @@ namespace TGramFS.UI
             pnlRegInner.Controls.AddRange(new Control[] { _lblRegStatus, _lblRegCurrentState, _btnApplyRegFix });
             grpRegistry.Controls.Add(pnlRegInner);
 
-            pnlReg.Controls.AddRange(new Control[] { 
-                grpRegistry, 
-                new Panel { Height = 10, Width = 10, Margin = Padding.Empty } 
+            pnlReg.Controls.AddRange(new Control[] {
+                grpRegistry,
+                CreateBottomSpacer()
             });
             _tabRegistry.Controls.Add(pnlReg);
 
             // =========================================================================
-            // === Вкладка 4: Логирование ==============================================
+            // === Вкладка 5: Логирование ==============================================
             // =========================================================================
             _tabLogs = new TabPage("Логирование");
-            var pnlLogs = new FlowLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                FlowDirection = FlowDirection.TopDown,
-                WrapContents = false,
-                Padding = new Padding(12),
-                AutoScroll = true
-            };
+            var pnlLogs = CreateTabScrollPanel();
 
             // 1. Рамка: Уровни логирования
-            var grpLogLevels = UIFactory.CreateGroupBox("Уровни логирования");
-            var pnlLogLevels = UIFactory.CreateVerticalContainer();
+            var grpLogLevels = UIFactory.CreateGroupBox("Уровни логирования", registerScaler: RegisterDpiScaler);
+            var pnlLogLevels = UIFactory.CreateVerticalContainer(registerScaler: RegisterDpiScaler);
 
-            _chkLogDebug = UIFactory.CreateCheckBox("Debug — подробная техническая отладка (COM-интерфейсы, внутренние вызовы)", _settings.Logging.EnableDebug);
-            _chkLogInfo = UIFactory.CreateCheckBox("Info — стандартные информационные события (файлы, загрузки, запуски)", _settings.Logging.EnableInfo);
-            _chkLogWarn = UIFactory.CreateCheckBox("Warn — предупреждения и некритичные отклонения", _settings.Logging.EnableWarn);
-            _chkLogError = UIFactory.CreateCheckBox("Error — ошибки приложения и сбои операций", _settings.Logging.EnableError);
+            _chkLogDebug = UIFactory.CreateCheckBox("Debug — подробная техническая отладка (COM-интерфейсы, внутренние вызовы)", _settings.Logging.EnableDebug, registerScaler: RegisterDpiScaler);
+            _chkLogInfo = UIFactory.CreateCheckBox("Info — стандартные информационные события (файлы, загрузки, запуски)", _settings.Logging.EnableInfo, registerScaler: RegisterDpiScaler);
+            _chkLogWarn = UIFactory.CreateCheckBox("Warn — предупреждения и некритичные отклонения", _settings.Logging.EnableWarn, registerScaler: RegisterDpiScaler);
+            _chkLogError = UIFactory.CreateCheckBox("Error — ошибки приложения и сбои операций", _settings.Logging.EnableError, registerScaler: RegisterDpiScaler);
 
             pnlLogLevels.Controls.AddRange(new Control[] { _chkLogDebug, _chkLogInfo, _chkLogWarn, _chkLogError });
             grpLogLevels.Controls.Add(pnlLogLevels);
 
             // 2. Рамка: Параметры хранения и ротации
-            var grpRotation = UIFactory.CreateGroupBox("Параметры хранения и ротации лог-файлов");
-            var pnlRotation = UIFactory.CreateVerticalContainer();
+            var grpRotation = UIFactory.CreateGroupBox("Параметры хранения и ротации лог-файлов", registerScaler: RegisterDpiScaler);
+            var pnlRotation = UIFactory.CreateVerticalContainer(registerScaler: RegisterDpiScaler);
 
-            _numMaxLogMb = UIFactory.CreateNumericInput(1, 50, Math.Clamp(_settings.Logging.MaxLogFileSizeMb > 0 ? _settings.Logging.MaxLogFileSizeMb : 5, 1, 50), 90);
-            var rowMaxMb = UIFactory.CreateSettingRow("Максимальный размер одного файла лога (МБ):", _numMaxLogMb, 330);
+            _numMaxLogMb = UIFactory.CreateNumericInput(1, 50, Math.Clamp(_settings.Logging.MaxLogFileSizeMb > 0 ? _settings.Logging.MaxLogFileSizeMb : 5, 1, 50), 90, registerScaler: RegisterDpiScaler);
+            var rowMaxMb = UIFactory.CreateSettingRow("Максимальный размер одного файла лога (МБ):", _numMaxLogMb, 330, registerScaler: RegisterDpiScaler);
 
-            _numMaxLogFiles = UIFactory.CreateNumericInput(1, 10, Math.Clamp(_settings.Logging.MaxArchivedFiles > 0 ? _settings.Logging.MaxArchivedFiles : 3, 1, 10), 90);
-            var rowMaxFiles = UIFactory.CreateSettingRow("Количество хранящихся архивных файлов:", _numMaxLogFiles, 330);
+            _numMaxLogFiles = UIFactory.CreateNumericInput(1, 10, Math.Clamp(_settings.Logging.MaxArchivedFiles > 0 ? _settings.Logging.MaxArchivedFiles : 3, 1, 10), 90, registerScaler: RegisterDpiScaler);
+            var rowMaxFiles = UIFactory.CreateSettingRow("Количество хранящихся архивных файлов:", _numMaxLogFiles, 330, registerScaler: RegisterDpiScaler);
 
             pnlRotation.Controls.AddRange(new Control[] { rowMaxMb, rowMaxFiles });
             grpRotation.Controls.Add(pnlRotation);
 
             // 3. Рамка: Текущая информация и действия
-            var grpStats = UIFactory.CreateGroupBox("Текущая информация и действия");
-            var pnlStatsInner = UIFactory.CreateVerticalContainer();
+            var grpStats = UIFactory.CreateGroupBox("Текущая информация и действия", registerScaler: RegisterDpiScaler);
+            var pnlStatsInner = UIFactory.CreateVerticalContainer(registerScaler: RegisterDpiScaler);
 
             _lblLogStats = new Label
             {
                 AutoSize = true,
-                Margin = new Padding(0, 2, 0, 4),
                 Font = UITheme.SmallFont
             };
+            RegisterDpiScaler(scale =>
+            {
+                _lblLogStats.MaximumSize = new Size(UITheme.Scale(UIFactory.DefaultInnerWidth, scale), 0);
+                _lblLogStats.Margin = UITheme.Scale(new Padding(0, 2, 0, 4), scale);
+            });
 
             Action updateLogStats = () =>
             {
@@ -1021,7 +1117,7 @@ namespace TGramFS.UI
             };
             updateLogStats();
 
-            var btnOpenLogDir = UIFactory.CreateButton("📁 Папка с логами");
+            var btnOpenLogDir = UIFactory.CreateButton("📁 Папка с логами", registerScaler: RegisterDpiScaler);
             btnOpenLogDir.Click += (s, e) =>
             {
                 try
@@ -1035,7 +1131,7 @@ namespace TGramFS.UI
                 }
             };
 
-            var btnOpenLogFile = UIFactory.CreateButton("📄 Открыть app.log");
+            var btnOpenLogFile = UIFactory.CreateButton("📄 Открыть app.log", registerScaler: RegisterDpiScaler);
             btnOpenLogFile.Click += (s, e) =>
             {
                 try
@@ -1059,7 +1155,7 @@ namespace TGramFS.UI
                 }
             };
 
-            var btnClearLogs = UIFactory.CreateButton("🗑 Очистить логи", foreColor: UITheme.TextDanger);
+            var btnClearLogs = UIFactory.CreateButton("🗑 Очистить логи", foreColor: UITheme.TextDanger, registerScaler: RegisterDpiScaler);
             btnClearLogs.Click += (s, e) =>
             {
                 if (MessageBox.Show("Вы действительно хотите очистить текущий лог и все его архивы?", "Подтверждение", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
@@ -1070,21 +1166,24 @@ namespace TGramFS.UI
                 }
             };
 
-            var rowLogActions = UIFactory.CreateActionRow(btnOpenLogDir, btnOpenLogFile, btnClearLogs);
+            var rowLogActions = UIFactory.CreateActionRow(RegisterDpiScaler, btnOpenLogDir, btnOpenLogFile, btnClearLogs);
             pnlStatsInner.Controls.AddRange(new Control[] { _lblLogStats, rowLogActions });
             grpStats.Controls.Add(pnlStatsInner);
 
-            pnlLogs.Controls.AddRange(new Control[] { 
-                grpLogLevels, 
-                grpRotation, 
-                grpStats, 
-                new Panel { Height = 10, Width = 10, Margin = Padding.Empty } 
+            pnlLogs.Controls.AddRange(new Control[] {
+                grpLogLevels,
+                grpRotation,
+                grpStats,
+                CreateBottomSpacer()
             });
             _tabLogs.Controls.Add(pnlLogs);
 
             _tabControl.TabPages.AddRange(new TabPage[] { _tabGeneral, _tabTelegram, _tabBackup, _tabRegistry, _tabLogs });
             this.Controls.Add(_tabControl);
             this.Controls.Add(pnlBottomBar);
+
+            ResumeLayout(false);
+            ApplyDpiScale(GetDpiScale());
         }
 
         private void SaveTelegramApiKeys()
@@ -1565,7 +1664,6 @@ namespace TGramFS.UI
             _settings.Logging.MaxArchivedFiles = (int)_numMaxLogFiles.Value;
             _settings.Database.AutoVacuumOnTrashDelete = _chkAutoVacuum.Checked;
 
-            _settings.Database.Backup.EnableAutoBackup = _chkEnableAutoBackup.Checked;
             _settings.Database.Backup.EnableAutoBackup = _chkEnableAutoBackup.Checked;
             _settings.Database.Backup.DebounceMinutes = (int)_numDebounceMinutes.Value;
             _settings.Database.Backup.BackupOnExit = _chkBackupOnExit.Checked;

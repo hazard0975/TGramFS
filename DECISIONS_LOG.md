@@ -3980,3 +3980,23 @@ _telegramService.UpdateSettings(_settings);
 - **Первопричина:** В конструкторе `CreateControl()` для скрытой формы (`Visible == false`) не создавал Win32 `HWND`, а при `Show()` с `ShowWithoutActivation => true` (`SW_SHOWNOACTIVATE`) Windows не гарантирует постановку окна на самый верх слоя `HWND_TOPMOST`.
 - **Решение:** В конструкторе заменён `CreateControl()` на `CreateHandle()`, а в `TryShowOverlay()` (и `OnDpiChanged` при видимом окне) добавлен вызов `EnsureTopMost()` через Win32 `SetWindowPos(Handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW)` (Вариант 1 — минимальный, без принудительного перетягивания в таймере; чёрные уголки оставлены без изменений по решению пользователя).
 
+---
+
+## 128. Полноценная адаптивность High-DPI в окне настроек (`AuthSettingsForm.cs`, `UIFactory.cs`, `UITheme.cs`)
+
+### Контекст и симптомы:
+После включения `HighDpiMode.PerMonitorV2` в `Program.cs` окна `AboutForm` и `TrayProgressOverlay` были переведены на явный расчёт от `DeviceDpi` и `OnDpiChanged`, тогда как `AuthSettingsForm` по-прежнему опирался только на `AutoScaleMode.Dpi` и жёсткие пиксельные константы `96 DPI` в `UIFactory` и конструкторе формы.
+
+### Первопричины:
+1. WinForms при `AutoScaleMode.Dpi` для программно собираемых в коде контейнеров не масштабирует `ColumnStyle(SizeType.Absolute)`, `MinimumSize`, `MaximumSize`, `Padding`, `Margin` и локальные ширины/высоты (`_cmbEngine`, `_txtVolumeName`, `_cmbDriveLetter`, `CreateBottomBar`, `CreateActionRow` и др.).
+2. В `UIFactory.CreateActionInputRow` обработчик `tbl.Layout` заново выставлял `button.MinimumSize = new Size(buttonWidth, currentBoxHeight)`, сбрасывая ширину кнопки «Переименовать» к немасштабированным `135 px`.
+3. Отсутствовал `OnDpiChanged`, а совместное использование `AutoScaleMode.Dpi` и ручного масштабирования несло риск двойного масштабирования при `GraphicsUnit.Point`-шрифтах.
+
+### Принятое решение:
+1. **Единые хелперы `UITheme.Scale` и подписка `registerScaler` в `UIFactory`**:
+   - В `UITheme.cs` добавлены `Scale(int, float)`, `Scale(Padding, float)` и `Scale(Size, float)`.
+   - В `UIFactory.cs` все фабричные методы принимают опциональный `registerScaler` и обновляют ширины, высоты, отступы, `MinimumSize`/`MaximumSize` и колонки `TableLayoutPanel` при старте и смене DPI; в `CreateActionInputRow` средняя колонка поля ввода переведена на `Percent (100f)` с `Anchor = Left | Right`, а `tbl.Layout` использует масштабируемый `scaledBtnW`.
+2. **Детерминированное масштабирование в `AuthSettingsForm.cs` (`AutoScaleMode.None` + `OnDpiChanged`)**:
+   - Форма переведена на `AutoScaleMode = AutoScaleMode.None` (шрифты в `Point` масштабирует WinForms/GDI+, геометрию — `ApplyDpiScale(GetDpiScale())` после `CreateHandle()` и в `OnDpiChanged`).
+   - По согласованию с пользователем сохранена фиксированная рамка `FormBorderStyle.FixedDialog` (`MaximizeBox = false`), при этом `UpdateFormClientSize` ограничивает расчётный `ClientSize` по `WorkingArea` текущего монитора, чтобы на экранах вроде `1080p @ 150%` нижняя панель кнопок не уходила под панель задач (внутри вкладок работает `AutoScroll`).
+   - Попутно удалена дублирующаяся строка присвоения `_settings.Database.Backup.EnableAutoBackup` в `SaveAllSettings()`.

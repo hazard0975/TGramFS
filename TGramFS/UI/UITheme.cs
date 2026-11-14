@@ -1,3 +1,4 @@
+using System;
 using System.Drawing;
 using System.Windows.Forms;
 
@@ -38,5 +39,19 @@ namespace TGramFS.UI
         public static readonly Padding GroupBoxPadding = new Padding(8, 6, 8, 4);
         public static readonly Padding RowMargin = new Padding(0, 1, 0, 3);
         public static readonly Padding ControlMargin = new Padding(0, 2, 0, 2);
+
+        // === Хелперы масштабирования High-DPI (от базовых 96 DPI) ===
+        public static int Scale(int basePx, float dpiScale) =>
+            basePx <= 0 ? 0 : Math.Max(1, (int)Math.Round(basePx * dpiScale));
+
+        public static Padding Scale(Padding basePadding, float dpiScale) =>
+            new Padding(
+                Scale(basePadding.Left, dpiScale),
+                Scale(basePadding.Top, dpiScale),
+                Scale(basePadding.Right, dpiScale),
+                Scale(basePadding.Bottom, dpiScale));
+
+        public static Size Scale(Size baseSize, float dpiScale) =>
+            new Size(Scale(baseSize.Width, dpiScale), Scale(baseSize.Height, dpiScale));
     }
 }
