@@ -10,7 +10,7 @@ namespace TGramFS.UI
     /// </summary>
     public static class UIFactory
     {
-        public const int DefaultInnerWidth = 595;
+        public const int DefaultInnerWidth = 520;
 
         /// <summary>
         /// Создает рамку GroupBox с защитой от сжатия (MinimumSize) и компактными отступами.
@@ -145,8 +145,10 @@ namespace TGramFS.UI
 
             Action<float> applyScale = scale =>
             {
+                int scaledW = UITheme.Scale(width, scale);
                 int scaledLabelW = UITheme.Scale(labelWidth, scale);
-                tbl.Width = UITheme.Scale(width, scale);
+                tbl.Width = scaledW;
+                tbl.MinimumSize = new Size(scaledW, 0);
                 tbl.Margin = UITheme.Scale(UITheme.RowMargin, scale);
                 tbl.ColumnStyles[0].Width = scaledLabelW;
                 lbl.MaximumSize = new Size(Math.Max(1, scaledLabelW - UITheme.Scale(4, scale)), 0);
@@ -220,6 +222,7 @@ namespace TGramFS.UI
                 int scaledBtnW = UITheme.Scale(buttonWidth, scale);
 
                 tbl.Width = scaledW;
+                tbl.MinimumSize = new Size(scaledW, 0);
                 tbl.Margin = UITheme.Scale(UITheme.RowMargin, scale);
                 tbl.ColumnStyles[0].Width = scaledLabelW;
                 tbl.ColumnStyles[2].Width = scaledBtnW;

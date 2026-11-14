@@ -22,7 +22,7 @@ namespace TGramFS.UI
         private readonly VirtualDriveManager? _virtualDriveManager;
         private AppSettings _settings;
 
-        private const int BaseClientWidth = 680;
+        private const int BaseClientWidth = 595;
         private const int BaseClientHeight = 660;
         private readonly List<Action<float>> _dpiScalers = new();
         private float _currentDpiScale = 1.0f;

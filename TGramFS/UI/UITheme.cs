@@ -25,7 +25,7 @@ namespace TGramFS.UI
         public static readonly Color BackgroundLight = Color.FromArgb(248, 249, 250);
 
         // === Размеры контролов (px при базовых 96 DPI / 100%) ===
-        public const int ContentWidth = 620;
+        public const int ContentWidth = 545;
         public const int ButtonHeightDefault = 28; // Стандартная высота кнопок действий Windows 10/11 (28-30 px)
         public const int ButtonHeightPrimary = 30; // Акцентная кнопка диалога
         public const int ButtonHeightSmall = 23;   // 14 DLU — канонический стандарт Microsoft Windows UX для однострочных элементов ввода и ассоциированных кнопок при 96 DPI

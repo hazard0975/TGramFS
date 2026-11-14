@@ -4000,3 +4000,8 @@ _telegramService.UpdateSettings(_settings);
    - Форма переведена на `AutoScaleMode = AutoScaleMode.None` (шрифты в `Point` масштабирует WinForms/GDI+, геометрию — `ApplyDpiScale(GetDpiScale())` после `CreateHandle()` и в `OnDpiChanged`).
    - По согласованию с пользователем сохранена фиксированная рамка `FormBorderStyle.FixedDialog` (`MaximizeBox = false`), при этом `UpdateFormClientSize` ограничивает расчётный `ClientSize` по `WorkingArea` текущего монитора, чтобы на экранах вроде `1080p @ 150%` нижняя панель кнопок не уходила под панель задач (внутри вкладок работает `AutoScroll`).
    - Попутно удалена дублирующаяся строка присвоения `_settings.Database.Backup.EnableAutoBackup` в `SaveAllSettings()`.
+
+### Дополнение 128.1 (Фикс ширины `CreateActionInputRow` и сужение окна настроек):
+- **Симптом:** По визуальной проверке на вкладках «Авторизация Telegram» и «База» поле ввода названия канала сжалось до `~100 px` (`"TGramFS Stora"`, `"TGramFS DB B"`), а на вкладке «Логирование» справа оставался лишний пустой запас ширины.
+- **Первопричина:** В `TableLayoutPanel` с `AutoSize = true` и `AutoSizeMode = AutoSizeMode.GrowAndShrink` колонка `SizeType.Percent (100f)` без заданного `tbl.MinimumSize` сжимается до базовой предпочитаемой ширины `TextBox` (`100 px`), игнорируя `tbl.Width`.
+- **Решение:** В `UIFactory.CreateActionInputRow` и `UIFactory.CreateInputRow` добавлена фиксация `tbl.MinimumSize = new Size(scaledW, 0)`. Базовые ширины уменьшены на `~75–85 px` по самому длинному тексту (`BaseClientWidth = 595`, `UITheme.ContentWidth = 545`, `UIFactory.DefaultInnerWidth = 520`), сохранив запас для всех 5 вкладок, карточек и рядов кнопок.
