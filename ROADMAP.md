@@ -1367,3 +1367,9 @@
       1. Базовые размеры уменьшены ещё на `25–30 px` (`BaseClientWidth`: `595` → `565`, `UITheme.ContentWidth`: `545` → `515`, `UIFactory.DefaultInnerWidth`: `520` → `495`).
       2. Ширина карточки профиля `_pnlUserDetails` в `AuthSettingsForm.cs` увеличена с `UIFactory.DefaultInnerWidth - 135` до полного `UIFactory.DefaultInnerWidth` (во всю внутреннюю ширину рамки `«Текущая сессия Telegram»`).
       3. Валидация: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
+- [x] **8.118. Единая стандартная высота `28 px` для кнопок в `CreateActionInputRow` (`UIFactory.cs`)**:
+    - **Проблема**: В строках переименования каналов (`«Авторизация Telegram»`, `«База»`) кнопка `«Переименовать»` принудительно сжималась под высоту `TextBox` (`23 px` при `96 DPI`) через `tbl.Layout` и `applyScale`. Из-за внутренних отступов темы Windows нативные кнопки при `23 px` выглядели визуально ниже поля ввода и мельче остальных кнопок формы (`28 px`).
+    - **Реализовано**:
+      1. В `UIFactory.CreateActionInputRow` удалён обработчик `tbl.Layout` с пересчётом под `textBox.Height` и снято ограничение `MaximumSize`.
+      2. Высота кнопки в `applyScale` переведена на единый стандарт `UITheme.ButtonHeightDefault` (`28 px` при `96 DPI`, т.е. `+5 px`) с пропорциональным масштабированием под DPI и вертикальным центрированием строки.
+      3. Валидация: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).

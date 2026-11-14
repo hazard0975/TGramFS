@@ -194,32 +194,16 @@ namespace TGramFS.UI
 
             button.Anchor = AnchorStyles.Left;
 
-            float activeScale = 1.0f;
-
-            // Динамическая привязка высоты кнопки к системной высоте TextBox при любом DPI масштабировании
-            tbl.Layout += (s, e) =>
-            {
-                int scaledBtnW = UITheme.Scale(buttonWidth, activeScale);
-                int currentBoxHeight = textBox.Height > 0 ? textBox.Height : textBox.PreferredHeight;
-                if (currentBoxHeight > 0 && (button.Height != currentBoxHeight || button.Width != scaledBtnW || button.MinimumSize.Width != scaledBtnW))
-                {
-                    button.Width = scaledBtnW;
-                    button.Height = currentBoxHeight;
-                    button.MinimumSize = new Size(scaledBtnW, currentBoxHeight);
-                    button.MaximumSize = new Size(scaledBtnW * 2, currentBoxHeight);
-                }
-            };
-
             tbl.Controls.Add(lbl, 0, 0);
             tbl.Controls.Add(textBox, 1, 0);
             tbl.Controls.Add(button, 2, 0);
 
             Action<float> applyScale = scale =>
             {
-                activeScale = scale;
                 int scaledW = UITheme.Scale(width, scale);
                 int scaledLabelW = UITheme.Scale(labelWidth, scale);
                 int scaledBtnW = UITheme.Scale(buttonWidth, scale);
+                int scaledBtnH = UITheme.Scale(UITheme.ButtonHeightDefault, scale);
 
                 tbl.Width = scaledW;
                 tbl.MinimumSize = new Size(scaledW, 0);
@@ -232,13 +216,10 @@ namespace TGramFS.UI
                 textBox.Margin = UITheme.Scale(new Padding(0, 2, 8, 2), scale);
                 button.Margin = UITheme.Scale(new Padding(0, 2, 0, 2), scale);
 
-                int targetHeight = textBox.Height > 0
-                    ? textBox.Height
-                    : (textBox.PreferredHeight > 0 ? textBox.PreferredHeight : UITheme.Scale(UITheme.ButtonHeightSmall, scale));
+                button.MinimumSize = new Size(scaledBtnW, scaledBtnH);
+                button.MaximumSize = Size.Empty;
                 button.Width = scaledBtnW;
-                button.Height = targetHeight;
-                button.MinimumSize = new Size(scaledBtnW, targetHeight);
-                button.MaximumSize = new Size(scaledBtnW * 2, targetHeight);
+                button.Height = scaledBtnH;
             };
             applyScale(1.0f);
             registerScaler?.Invoke(applyScale);
