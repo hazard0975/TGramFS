@@ -29,6 +29,7 @@ namespace TGramFS.UI
         public const int ButtonHeightDefault = 28; // Стандартная высота кнопок действий Windows 10/11 (28-30 px)
         public const int ButtonHeightPrimary = 30; // Акцентная кнопка диалога
         public const int ButtonHeightSmall = 23;   // 14 DLU — канонический стандарт Microsoft Windows UX для однострочных элементов ввода и ассоциированных кнопок при 96 DPI
+        public const int ButtonHeightInline = 25;  // Высота кнопки рядом с однострочным TextBox (23 px + 2 px компенсации 1px-отступа рамки UxTheme)
         public const int InputHeight = 23;         // 14 DLU — системная высота однострочного поля ввода (TextBox / ComboBox) при 96 DPI
         public const int InputNumberWidth = 90;
         public const int InputPortWidth = 90;

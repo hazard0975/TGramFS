@@ -461,7 +461,7 @@ namespace TGramFS.UI
                 Font = UITheme.BaseFont
             };
 
-            _btnRenamePrimaryChannel = UIFactory.CreateButton("Переименовать", async (s, e) => await RenamePrimaryChannelAsync(), width: 135, registerScaler: RegisterDpiScaler);
+            _btnRenamePrimaryChannel = UIFactory.CreateButton("Переименовать", async (s, e) => await RenamePrimaryChannelAsync(), height: UITheme.ButtonHeightInline, width: 135, registerScaler: RegisterDpiScaler);
             _btnRenamePrimaryChannel.Enabled = false;
 
             _txtChannelTitle.TextChanged += (s, e) => UpdatePrimaryRenameButtonState();
@@ -704,7 +704,7 @@ namespace TGramFS.UI
                 Font = UITheme.BaseFont
             };
 
-            _btnRenameBackupChannel = UIFactory.CreateButton("Переименовать", async (s, e) => await RenameBackupChannelAsync(), width: 135, registerScaler: RegisterDpiScaler);
+            _btnRenameBackupChannel = UIFactory.CreateButton("Переименовать", async (s, e) => await RenameBackupChannelAsync(), height: UITheme.ButtonHeightInline, width: 135, registerScaler: RegisterDpiScaler);
             _btnRenameBackupChannel.Enabled = false;
 
             _txtBackupChannelTitle.TextChanged += (s, e) => UpdateBackupRenameButtonState();

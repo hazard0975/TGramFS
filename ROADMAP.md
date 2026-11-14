@@ -1373,3 +1373,9 @@
       1. В `UIFactory.CreateActionInputRow` удалён обработчик `tbl.Layout` с пересчётом под `textBox.Height` и снято ограничение `MaximumSize`.
       2. Высота кнопки в `applyScale` переведена на единый стандарт `UITheme.ButtonHeightDefault` (`28 px` при `96 DPI`, т.е. `+5 px`) с пропорциональным масштабированием под DPI и вертикальным центрированием строки.
       3. Валидация: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
+- [x] **8.119. Точная калибровка высоты inline-кнопок рядом с `TextBox` до `25 px` (`UITheme.ButtonHeightInline`)**:
+    - **Задача**: По результатам визуальной проверки `28 px` кнопки `«Переименовать»` рядом с `23 px` полем `TextBox` выступали сверху и снизу примерно на `2 px`; потребовалась «золотая середина» между `23 px` (казалось меньше поля) и `28 px` (казалось выше поля).
+    - **Реализовано**:
+      1. В `UITheme.cs` добавлена константа `ButtonHeightInline = 25` (`23 px + 2 px` компенсации `1px`-отступа рамки нативной темы `UxTheme` сверху и снизу).
+      2. В `UIFactory.CreateActionInputRow` и при создании обеих кнопок `«Переименовать»` в `AuthSettingsForm.cs` задана единая высота `UITheme.ButtonHeightInline` (`25 px` при `96 DPI` с масштабированием под DPI) без дублирования между `CreateButton` и `CreateActionInputRow`.
+      3. Валидация: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).

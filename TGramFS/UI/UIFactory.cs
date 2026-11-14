@@ -203,7 +203,7 @@ namespace TGramFS.UI
                 int scaledW = UITheme.Scale(width, scale);
                 int scaledLabelW = UITheme.Scale(labelWidth, scale);
                 int scaledBtnW = UITheme.Scale(buttonWidth, scale);
-                int scaledBtnH = UITheme.Scale(UITheme.ButtonHeightDefault, scale);
+                int scaledBtnH = UITheme.Scale(UITheme.ButtonHeightInline, scale);
 
                 tbl.Width = scaledW;
                 tbl.MinimumSize = new Size(scaledW, 0);
