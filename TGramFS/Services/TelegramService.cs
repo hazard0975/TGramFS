@@ -1258,6 +1258,7 @@ namespace TGramFS.Services
                             _pendingChannelTitle = null;
                             _repository?.SaveOrUpdateTelegramChannel(account.Id, newCh.ID, newCh.access_hash, newCh.Title, isPrimary: true);
                             AppLogger.Info("TelegramService", $"Создан новый приватный канал '{newCh.Title}' (ID: {newCh.ID}). Записан в SQLite.");
+                            await TrySetDefaultChannelPhotoAsync(newCh);
                             return _storagePeer;
                         }
                     }
@@ -1303,6 +1304,7 @@ namespace TGramFS.Services
                     {
                         _repository?.SaveOrUpdateTelegramChannel(account.Id, newCh.ID, newCh.access_hash, newCh.Title, isPrimary: false);
                         AppLogger.Info("TelegramService", $"Создан новый кастомный канал '{newCh.Title}' (ID: {newCh.ID}). Записан в SQLite.");
+                        await TrySetDefaultChannelPhotoAsync(newCh);
                         return _repository?.GetTelegramChannel(newCh.ID);
                     }
                 }
@@ -2972,6 +2974,7 @@ namespace TGramFS.Services
                             _repository.SaveOrUpdateBackupChannel(account.Id, newCh.ID, newCh.access_hash, newCh.Title);
                         }
                         AppLogger.Info("TelegramService", $"Создан новый канал резервных копий: '{newCh.Title}' (ID: {newCh.ID}) и сохранен в базу данных.");
+                        await TrySetDefaultChannelPhotoAsync(newCh);
                         return newCh.ToInputPeer();
                     }
                 }
@@ -4300,6 +4303,102 @@ namespace TGramFS.Services
                 AppLogger.Warn("TelegramService", $"Сбой при пакетном удалении группы из {ids.Length} сообщений ({ex.Message}). Разделяем пополам на {left.Length} и {right.Length}...");
                 await DeleteBatchWithBisectAsync(peer, isChannel, left);
                 await DeleteBatchWithBisectAsync(peer, isChannel, right);
+            }
+        }
+
+        private static readonly object _channelIconLock = new();
+        private static byte[]? _cachedChannelIconJpeg;
+
+        /// <summary>
+        /// Возвращает кэшированный JPEG-снимок встроенной иконки приложения (256x256) для аватарки каналов Telegram.
+        /// </summary>
+        private static byte[]? GetChannelIconJpegBytes()
+        {
+            lock (_channelIconLock)
+            {
+                if (_cachedChannelIconJpeg != null)
+                    return _cachedChannelIconJpeg;
+
+                try
+                {
+                    using var iconImage = TGramFS.UI.AppIconHelper.GetAppIconBitmap(256, 256);
+                    if (iconImage == null)
+                        return null;
+
+                    using var canvas = new System.Drawing.Bitmap(256, 256, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
+                    using (var g = System.Drawing.Graphics.FromImage(canvas))
+                    {
+                        g.Clear(System.Drawing.Color.White);
+                        g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+                        g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+                        g.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
+                        g.DrawImage(iconImage, 0, 0, 256, 256);
+                    }
+
+                    using var outMs = new MemoryStream();
+                    var encoder = GetEncoder(System.Drawing.Imaging.ImageFormat.Jpeg);
+                    if (encoder != null)
+                    {
+                        using var encoderParams = new System.Drawing.Imaging.EncoderParameters(1);
+                        encoderParams.Param[0] = new System.Drawing.Imaging.EncoderParameter(System.Drawing.Imaging.Encoder.Quality, 92L);
+                        canvas.Save(outMs, encoder, encoderParams);
+                    }
+                    else
+                    {
+                        canvas.Save(outMs, System.Drawing.Imaging.ImageFormat.Jpeg);
+                    }
+
+                    _cachedChannelIconJpeg = outMs.ToArray();
+                    return _cachedChannelIconJpeg;
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Warn("TelegramService", $"Не удалось подготовить JPEG-иконку канала из ресурсов: {ex.Message}");
+                    return null;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Устанавливает стандартную иконку приложения в качестве аватарки нового канала Telegram.
+        /// Ошибки загрузки фото не прерывают процесс создания канала.
+        /// </summary>
+        private async Task TrySetDefaultChannelPhotoAsync(TL.Channel channel)
+        {
+            if (_client == null || !IsAuthorized || channel == null || channel.ID == 0)
+                return;
+
+            try
+            {
+                byte[]? jpegBytes = GetChannelIconJpegBytes();
+                if (jpegBytes == null || jpegBytes.Length == 0)
+                {
+                    AppLogger.Warn("TelegramService", $"Не удалось подготовить иконку канала для '{channel.Title}' (ID: {channel.ID}).");
+                    return;
+                }
+
+                await EnsureFloodWaitDelayAsync();
+
+                using var ms = new MemoryStream(jpegBytes, writable: false);
+                var inputFile = await _client.UploadFileAsync(ms, "tgramfs_channel_icon.jpg");
+                var photo = new TL.InputChatUploadedPhoto
+                {
+                    flags = TL.InputChatUploadedPhoto.Flags.has_file,
+                    file = inputFile
+                };
+
+                await _client.Channels_EditPhoto(new TL.InputChannel(channel.ID, channel.access_hash), photo);
+                AppLogger.Info("TelegramService", $"Установлена стандартная иконка для канала '{channel.Title}' (ID: {channel.ID}).");
+            }
+            catch (TL.RpcException rpcEx) when (rpcEx.Code == 420)
+            {
+                TriggerGlobalFloodWait(rpcEx.X);
+                AppLogger.Warn("TelegramService", $"Не удалось установить иконку для канала '{channel.Title}' (ID: {channel.ID}) из-за FLOOD_WAIT ({rpcEx.X} сек).");
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Warn("TelegramService", $"Не удалось установить иконку для канала '{channel.Title}' (ID: {channel.ID}): {ex.Message}");
             }
         }
 

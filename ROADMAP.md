@@ -1393,3 +1393,10 @@
       2. Добавлен `PositionFormInWorkingArea(workingArea)`: строго по центру по горизонтали и в оптическом центре по вертикали (`30%` свободной высоты сверху / `70%` снизу) с жёстким зажимом внутри `WorkingArea` экрана под курсором.
       3. В `OnLoad` выполняется финальная сверка DPI монитора показа, пересчёт `ClientSize` и точная установка позиции до отрисовки (без вмешательства в `Location` при перетаскивании в `OnDpiChanged`).
       4. Валидация: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
+- [x] **8.122. Автоматическая установка иконки приложения (`TGramFS.icon.ico`) при создании всех типов каналов Telegram (`TelegramService.cs`)**:
+    - **Задача**: Сделать так, чтобы все создаваемые приложением приватные каналы (основной канал хранилища, кастомные каналы привязанных папок и канал резервных копий БД) автоматически получали единую фирменную иконку приложения и выделялись в общей ленте чатов Telegram.
+    - **Реализовано**:
+      1. Добавлен ленивый потокобезопасный кэш `GetChannelIconJpegBytes()`, извлекающий слой `256x256` из встроенного ресурса `TGramFS.icon.ico` (`AppIconHelper.GetAppIconBitmap(256, 256)`) и сохраняющий его в памяти в формате `JPEG` (требование `Channels_EditPhoto` / `InputChatUploadedPhoto`, без добавления полей и изменения рисунка, т.к. прозрачные углы скруглённого квадрата отсекаются круглой маской Telegram).
+      2. Добавлен безопасный метод `TrySetDefaultChannelPhotoAsync(TL.Channel)`, вызывающий `_client.UploadFileAsync(...)` и `_client.Channels_EditPhoto(...)` с учётом `EnsureFloodWaitDelayAsync()` и мягкой обработкой ошибок (`FLOOD_WAIT` / сеть не прерывают создание канала; сервисное сообщение о смене фото не удаляется).
+      3. Вызов `TrySetDefaultChannelPhotoAsync` встроен во все три точки создания каналов в `TelegramService.cs`: `GetStoragePeerAsync` (основной), `CreateCustomChannelAsync` (папки) и `GetBackupStoragePeerAsync` (бэкапы БД).
+      4. Валидация: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
