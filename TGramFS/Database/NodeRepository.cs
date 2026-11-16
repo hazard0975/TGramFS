@@ -792,6 +792,71 @@ namespace TGramFS.Database
         }
 
         /// <summary>
+        /// Собирает все физические узлы поддерева по parent_id (независимо от флага in_trash)
+        /// в безопасном для удаления порядке снизу вверх: сначала файлы, затем папки от самых глубоких к корню.
+        /// </summary>
+        public List<Node> GetPhysicalSubtreeNodesBottomUp(int rootNodeId)
+        {
+            var collected = new List<(Node Node, int Depth)>();
+            var rootNode = GetNodeById(rootNodeId);
+            if (rootNode == null) return new List<Node>();
+
+            var visited = new HashSet<int> { rootNode.Id };
+            collected.Add((rootNode, 0));
+
+            if (rootNode.IsDir)
+            {
+                using var connection = _dbManager.GetConnection();
+                var currentLevelIds = new List<int> { rootNode.Id };
+                int depth = 1;
+                const int chunkSize = 500;
+
+                while (currentLevelIds.Count > 0)
+                {
+                    var nextLevelIds = new List<int>();
+
+                    for (int offset = 0; offset < currentLevelIds.Count; offset += chunkSize)
+                    {
+                        int count = Math.Min(chunkSize, currentLevelIds.Count - offset);
+                        using var cmd = connection.CreateCommand();
+                        var paramNames = new string[count];
+                        for (int i = 0; i < count; i++)
+                        {
+                            string pName = $"@pid{i}";
+                            paramNames[i] = pName;
+                            cmd.Parameters.AddWithValue(pName, currentLevelIds[offset + i]);
+                        }
+
+                        cmd.CommandText = $"SELECT * FROM nodes WHERE parent_id IN ({string.Join(",", paramNames)});";
+                        using var reader = cmd.ExecuteReader();
+                        while (reader.Read())
+                        {
+                            var child = MapReaderToNode(reader);
+                            if (visited.Add(child.Id))
+                            {
+                                collected.Add((child, depth));
+                                if (child.IsDir)
+                                {
+                                    nextLevelIds.Add(child.Id);
+                                }
+                            }
+                        }
+                    }
+
+                    currentLevelIds = nextLevelIds;
+                    depth++;
+                }
+            }
+
+            return collected
+                .OrderBy(x => x.Node.IsDir ? 1 : 0)
+                .ThenByDescending(x => x.Depth)
+                .ThenByDescending(x => x.Node.Id)
+                .Select(x => x.Node)
+                .ToList();
+        }
+
+        /// <summary>
         /// Собирает файлы для миграции в новый канал Telegram.
         /// Если дочерняя подпапка уже имеет собственный уникальный tg_channel_id,
         /// её ветка полностью пропускается вместе со всеми её файлами.
@@ -826,13 +891,14 @@ namespace TGramFS.Database
 
         /// <summary>
         /// Атомарно помещает ID сообщений Telegram в персистентную очередь pending_deletions
-        /// и удаляет сами узлы из таблицы nodes в единой транзакции SQLite.
+        /// и удаляет сами узлы из таблицы nodes в единой транзакции SQLite (гарантированно снизу вверх: потомки до родителей).
         /// Гарантирует мгновенное исчезновение файлов из файловой системы и надежное фоновое удаление из Telegram.
         /// </summary>
         public void EnqueuePermanentDeletion(List<(int MessageId, long ChannelId)> items, List<int> dbNodeIds)
         {
             var uniqueItems = (items != null) ? items.Where(x => x.MessageId > 0).GroupBy(x => x.MessageId).Select(g => g.First()).ToList() : new List<(int MessageId, long ChannelId)>();
-            int nodeCount = dbNodeIds?.Count ?? 0;
+            var uniqueNodeIds = (dbNodeIds != null) ? dbNodeIds.Where(id => id > 0).Distinct().ToList() : new List<int>();
+            int nodeCount = uniqueNodeIds.Count;
 
             AppLogger.Info("Database", $"[EnqueuePermanentDeletion] Транзакция перманентного удаления: {nodeCount} узлов из БД, {uniqueItems.Count} уникальных сообщений Telegram в очередь pending_deletions.");
             if (uniqueItems.Count > 0)
@@ -841,31 +907,39 @@ namespace TGramFS.Database
             }
             if (nodeCount > 0)
             {
-                AppLogger.Debug("Database", $"[EnqueuePermanentDeletion] Список ID узлов БД для удаления: [{string.Join(", ", dbNodeIds!)}]");
+                AppLogger.Debug("Database", $"[EnqueuePermanentDeletion] Список ID узлов БД для удаления: [{string.Join(", ", uniqueNodeIds)}]");
             }
+
+            const int chunkSize = 500;
 
             using (var connection = _dbManager.GetConnection())
             using (var transaction = connection.BeginTransaction())
             {
                 try
                 {
-                    // Гарантированно подтягиваем все сегменты составных файлов (node_parts) для удаляемых узлов
-                    if (dbNodeIds != null && dbNodeIds.Count > 0)
+                    // Гарантированно подтягиваем все сегменты составных файлов (node_parts) для удаляемых узлов с разбивкой по чанкам
+                    if (uniqueNodeIds.Count > 0)
                     {
-                        using (var partCmd = connection.CreateCommand())
+                        var seenMsgIds = new HashSet<int>(uniqueItems.Select(u => u.MessageId));
+                        for (int offset = 0; offset < uniqueNodeIds.Count; offset += chunkSize)
                         {
+                            int count = Math.Min(chunkSize, uniqueNodeIds.Count - offset);
+                            using var partCmd = connection.CreateCommand();
                             partCmd.Transaction = transaction;
-                            partCmd.CommandText = $"SELECT tg_message_id, tg_channel_id FROM node_parts WHERE node_id IN ({string.Join(",", dbNodeIds.Select((_, idx) => $"@nid{idx}"))});";
-                            for (int i = 0; i < dbNodeIds.Count; i++)
+                            var paramNames = new string[count];
+                            for (int i = 0; i < count; i++)
                             {
-                                partCmd.Parameters.AddWithValue($"@nid{i}", dbNodeIds[i]);
+                                string pName = $"@nid{i}";
+                                paramNames[i] = pName;
+                                partCmd.Parameters.AddWithValue(pName, uniqueNodeIds[offset + i]);
                             }
+                            partCmd.CommandText = $"SELECT tg_message_id, tg_channel_id FROM node_parts WHERE node_id IN ({string.Join(",", paramNames)});";
                             using var partReader = partCmd.ExecuteReader();
                             while (partReader.Read())
                             {
                                 int pMsgId = partReader.GetInt32(0);
                                 long pChId = partReader.GetInt64(1);
-                                if (pMsgId > 0 && !uniqueItems.Any(u => u.MessageId == pMsgId))
+                                if (pMsgId > 0 && seenMsgIds.Add(pMsgId))
                                 {
                                     uniqueItems.Add((pMsgId, pChId));
                                 }
@@ -891,15 +965,37 @@ namespace TGramFS.Database
                         }
                     }
 
-                    if (dbNodeIds != null && dbNodeIds.Count > 0)
+                    if (uniqueNodeIds.Count > 0)
                     {
+                        // Чистим связанные фоновые задачи для удаляемых узлов
+                        for (int offset = 0; offset < uniqueNodeIds.Count; offset += chunkSize)
+                        {
+                            int count = Math.Min(chunkSize, uniqueNodeIds.Count - offset);
+                            using var cleanupCmd = connection.CreateCommand();
+                            cleanupCmd.Transaction = transaction;
+                            var paramNames = new string[count];
+                            for (int i = 0; i < count; i++)
+                            {
+                                string pName = $"@cid{i}";
+                                paramNames[i] = pName;
+                                cleanupCmd.Parameters.AddWithValue(pName, uniqueNodeIds[offset + i]);
+                            }
+                            string inClause = string.Join(",", paramNames);
+                            cleanupCmd.CommandText = $"DELETE FROM pending_caption_updates WHERE node_id IN ({inClause}); DELETE FROM pending_channel_migrations WHERE node_id IN ({inClause});";
+                            cleanupCmd.ExecuteNonQuery();
+                        }
+
+                        // Сортируем удаляемые узлы топологически снизу вверх (листья -> родители),
+                        // чтобы FOREIGN KEY (parent_id) REFERENCES nodes(id) никогда не нарушался независимо от порядка входного списка
+                        var orderedDeleteIds = SortNodeIdsBottomUp(connection, transaction, uniqueNodeIds, chunkSize);
+
                         using (var deleteCmd = connection.CreateCommand())
                         {
                             deleteCmd.Transaction = transaction;
                             deleteCmd.CommandText = "DELETE FROM nodes WHERE id = @id;";
                             var idParam = deleteCmd.Parameters.Add("@id", SqliteType.Integer);
 
-                            foreach (var id in dbNodeIds)
+                            foreach (var id in orderedDeleteIds)
                             {
                                 idParam.Value = id;
                                 deleteCmd.ExecuteNonQuery();
@@ -918,6 +1014,88 @@ namespace TGramFS.Database
                     throw;
                 }
             }
+        }
+
+        private static List<int> SortNodeIdsBottomUp(SqliteConnection connection, SqliteTransaction transaction, List<int> uniqueNodeIds, int chunkSize)
+        {
+            if (uniqueNodeIds.Count <= 1) return uniqueNodeIds;
+
+            var nodeSet = new HashSet<int>(uniqueNodeIds);
+            var parentById = new Dictionary<int, int?>(uniqueNodeIds.Count);
+            var childCount = new Dictionary<int, int>(uniqueNodeIds.Count);
+            foreach (var id in uniqueNodeIds)
+            {
+                childCount[id] = 0;
+            }
+
+            for (int offset = 0; offset < uniqueNodeIds.Count; offset += chunkSize)
+            {
+                int count = Math.Min(chunkSize, uniqueNodeIds.Count - offset);
+                using var cmd = connection.CreateCommand();
+                cmd.Transaction = transaction;
+                var paramNames = new string[count];
+                for (int i = 0; i < count; i++)
+                {
+                    string pName = $"@nid{i}";
+                    paramNames[i] = pName;
+                    cmd.Parameters.AddWithValue(pName, uniqueNodeIds[offset + i]);
+                }
+
+                cmd.CommandText = $"SELECT id, parent_id FROM nodes WHERE id IN ({string.Join(",", paramNames)});";
+                using var reader = cmd.ExecuteReader();
+                while (reader.Read())
+                {
+                    int id = reader.GetInt32(0);
+                    int? parentId = reader.IsDBNull(1) ? (int?)null : reader.GetInt32(1);
+                    parentById[id] = parentId;
+                    if (parentId.HasValue && nodeSet.Contains(parentId.Value) && parentId.Value != id)
+                    {
+                        childCount[parentId.Value]++;
+                    }
+                }
+            }
+
+            var queue = new Queue<int>();
+            foreach (var id in uniqueNodeIds)
+            {
+                if (childCount[id] == 0)
+                {
+                    queue.Enqueue(id);
+                }
+            }
+
+            var ordered = new List<int>(uniqueNodeIds.Count);
+            var processed = new HashSet<int>(uniqueNodeIds.Count);
+
+            while (queue.Count > 0)
+            {
+                int currentId = queue.Dequeue();
+                if (!processed.Add(currentId)) continue;
+
+                ordered.Add(currentId);
+
+                if (parentById.TryGetValue(currentId, out var pId) && pId.HasValue && nodeSet.Contains(pId.Value) && pId.Value != currentId)
+                {
+                    childCount[pId.Value]--;
+                    if (childCount[pId.Value] == 0)
+                    {
+                        queue.Enqueue(pId.Value);
+                    }
+                }
+            }
+
+            if (ordered.Count < uniqueNodeIds.Count)
+            {
+                foreach (var id in uniqueNodeIds)
+                {
+                    if (processed.Add(id))
+                    {
+                        ordered.Add(id);
+                    }
+                }
+            }
+
+            return ordered;
         }
 
         /// <summary>
@@ -2377,20 +2555,28 @@ namespace TGramFS.Database
         public List<(int MessageId, long ChannelId)> GetPartsForNodes(IEnumerable<int> nodeIds)
         {
             var result = new List<(int MessageId, long ChannelId)>();
-            var idList = nodeIds?.Distinct().ToList();
+            var idList = nodeIds?.Where(id => id > 0).Distinct().ToList();
             if (idList == null || idList.Count == 0) return result;
 
+            const int chunkSize = 500;
             using var connection = _dbManager.GetConnection();
-            using var command = connection.CreateCommand();
-            command.CommandText = $"SELECT tg_message_id, tg_channel_id FROM node_parts WHERE node_id IN ({string.Join(",", idList.Select((_, i) => $"@id{i}"))});";
-            for (int i = 0; i < idList.Count; i++)
+            for (int offset = 0; offset < idList.Count; offset += chunkSize)
             {
-                command.Parameters.AddWithValue($"@id{i}", idList[i]);
-            }
-            using var reader = command.ExecuteReader();
-            while (reader.Read())
-            {
-                result.Add((reader.GetInt32(0), reader.GetInt64(1)));
+                int count = Math.Min(chunkSize, idList.Count - offset);
+                using var command = connection.CreateCommand();
+                var paramNames = new string[count];
+                for (int i = 0; i < count; i++)
+                {
+                    string pName = $"@id{i}";
+                    paramNames[i] = pName;
+                    command.Parameters.AddWithValue(pName, idList[offset + i]);
+                }
+                command.CommandText = $"SELECT tg_message_id, tg_channel_id FROM node_parts WHERE node_id IN ({string.Join(",", paramNames)});";
+                using var reader = command.ExecuteReader();
+                while (reader.Read())
+                {
+                    result.Add((reader.GetInt32(0), reader.GetInt64(1)));
+                }
             }
             return result;
         }

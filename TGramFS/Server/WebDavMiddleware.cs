@@ -532,8 +532,8 @@ namespace TGramFS.Server
 
             if (isPermanent)
             {
-                // По рекурсии получаем все узлы поддерева: сначала файлы (is_dir == 0), затем пустые папки (is_dir == 1)
-                var nodesToDelete = repository.GetSubtreeNodes(node.Id).OrderBy(n => n.IsDir ? 1 : 0).ToList();
+                // Получаем все физические узлы поддерева снизу вверх: сначала файлы, затем папки от самых глубоких к корню
+                var nodesToDelete = repository.GetPhysicalSubtreeNodesBottomUp(node.Id);
 
                 // 1. Вычисляем кастомные каналы, которые будут полностью уничтожены в Telegram вместе с удаляемой папкой
                 long primaryChannelId = repository.GetPrimaryTelegramChannel()?.ChannelId ?? 0;

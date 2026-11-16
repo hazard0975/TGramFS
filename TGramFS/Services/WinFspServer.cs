@@ -1266,101 +1266,109 @@ namespace TGramFS.Services
                     return;
                 }
 
-                // Проверяем, находится ли элемент уже в корзине (.Trash) или помечен ли он как удаленный
-                bool isPermanent = node.InTrash || _repository.IsNodeInTrash(node.Id);
-
-                if (isPermanent)
+                try
                 {
-                    AppLogger.Info("WinFsp", $"Перманентное удаление элемента '{node.Name}' (ID {node.Id}) из корзины...");
-                    var subtree = _repository.GetSubtreeNodes(node.Id);
-                    // Гарантируем порядок: сначала удаляются файлы (is_dir == 0), затем пустые папки (is_dir == 1)
-                    var sortedSubtree = subtree.OrderBy(n => n.IsDir ? 1 : 0).ToList();
-                    var dbNodeIds = new List<int>();
-                    var tgMessageIds = new List<int>();
+                    // Проверяем, находится ли элемент уже в корзине (.Trash) или помечен ли он как удаленный
+                    bool isPermanent = node.InTrash || _repository.IsNodeInTrash(node.Id);
 
-                    // 1. Вычисляем кастомные каналы, которые будут полностью уничтожены в Telegram вместе с удаляемой папкой
-                    long primaryChannelId = _repository.GetPrimaryTelegramChannel()?.ChannelId ?? 0;
-                    var channelsToDestroy = new HashSet<long>();
-
-                    // Канал подлежит полному уничтожению через Channels_DeleteChannel ТОЛЬКО если:
-                    // 1. Удаляемый узел является самой корневой привязанной папкой (node.Id == n.Id для папки с этим каналом).
-                    // 2. В базе данных больше не осталось других узлов, принадлежащих этому каналу (удаляется всё поддерево целиком).
-                    var boundFoldersToDelete = sortedSubtree
-                        .Where(n => n.IsDir && n.TgChannelId.HasValue && n.TgChannelId.Value != 0 && n.TgChannelId.Value != primaryChannelId && n.Id == node.Id)
-                        .Select(n => n.TgChannelId!.Value)
-                        .Distinct()
-                        .ToList();
-
-                    foreach (var chId in boundFoldersToDelete)
+                    if (isPermanent)
                     {
-                        int nodesInSubtreeForChannel = sortedSubtree.Count(n => (n.TgChannelId ?? _repository.GetEffectiveChannelId(n.ParentId)) == chId);
-                        int totalNodesInDbForChannel = _repository.GetNodeCountForChannel(chId);
-                        if (totalNodesInDbForChannel > 0 && totalNodesInDbForChannel <= nodesInSubtreeForChannel)
+                        AppLogger.Info("WinFsp", $"Перманентное удаление элемента '{node.Name}' (ID {node.Id}) из корзины...");
+                        // Порядок снизу вверх: сначала файлы, затем папки от самых глубоких к корню (безопасно для FOREIGN KEY parent_id)
+                        var sortedSubtree = _repository.GetPhysicalSubtreeNodesBottomUp(node.Id);
+                        var dbNodeIds = new List<int>();
+
+                        // 1. Вычисляем кастомные каналы, которые будут полностью уничтожены в Telegram вместе с удаляемой папкой
+                        long primaryChannelId = _repository.GetPrimaryTelegramChannel()?.ChannelId ?? 0;
+                        var channelsToDestroy = new HashSet<long>();
+
+                        // Канал подлежит полному уничтожению через Channels_DeleteChannel ТОЛЬКО если:
+                        // 1. Удаляемый узел является самой корневой привязанной папкой (node.Id == n.Id для папки с этим каналом).
+                        // 2. В базе данных больше не осталось других узлов, принадлежащих этому каналу (удаляется всё поддерево целиком).
+                        var boundFoldersToDelete = sortedSubtree
+                            .Where(n => n.IsDir && n.TgChannelId.HasValue && n.TgChannelId.Value != 0 && n.TgChannelId.Value != primaryChannelId && n.Id == node.Id)
+                            .Select(n => n.TgChannelId!.Value)
+                            .Distinct()
+                            .ToList();
+
+                        foreach (var chId in boundFoldersToDelete)
                         {
-                            channelsToDestroy.Add(chId);
+                            int nodesInSubtreeForChannel = sortedSubtree.Count(n => (n.TgChannelId ?? _repository.GetEffectiveChannelId(n.ParentId)) == chId);
+                            int totalNodesInDbForChannel = _repository.GetNodeCountForChannel(chId);
+                            if (totalNodesInDbForChannel > 0 && totalNodesInDbForChannel <= nodesInSubtreeForChannel)
+                            {
+                                channelsToDestroy.Add(chId);
+                            }
+                        }
+
+                        // 2. Формируем списки на удаление: файлы каналов, уничтожаемых целиком через Channels_DeleteChannel,
+                        // не спамят очередь поштучного удаления сообщений
+                        var deletionItems = new List<(int MessageId, long ChannelId)>();
+                        foreach (var n in sortedSubtree)
+                        {
+                            dbNodeIds.Add(n.Id);
+
+                            long fileChannelId = n.TgChannelId ?? _repository.GetEffectiveChannelId(n.ParentId) ?? primaryChannelId;
+                            if (channelsToDestroy.Contains(fileChannelId))
+                            {
+                                // Сообщения этого канала мгновенно уничтожаются на сервере Telegram вместе с самим каналом
+                                continue;
+                            }
+
+                            if (n.TgMessageId.HasValue && n.TgMessageId.Value > 0)
+                            {
+                                deletionItems.Add((n.TgMessageId.Value, fileChannelId));
+                            }
+                            else if (!n.IsDir && n.Size > 0 && n.InlineData == null)
+                            {
+                                AppLogger.Warn("WinFsp", $"[CleanupDelete Subtree] ВНИМАНИЕ: Файл '{n.Name}' (ID {n.Id}) не имеет TgMessageId в БД (null/0). Сообщение в Telegram не может быть удалено!");
+                            }
+                            if (n.TgPreviewMessageId.HasValue && n.TgPreviewMessageId.Value > 0)
+                            {
+                                deletionItems.Add((n.TgPreviewMessageId.Value, fileChannelId));
+                            }
+                            AppLogger.Debug("WinFsp", $"[CleanupDelete Subtree] Элемент поддерева: ID {n.Id} ('{n.Name}'), IsDir={n.IsDir}, InTrash={n.InTrash}, ParentId={n.ParentId}, TgMessageId={n.TgMessageId?.ToString() ?? "NULL"}, TgPreviewMessageId={n.TgPreviewMessageId?.ToString() ?? "NULL"}");
+                        }
+
+                        // Атомарно помещаем сообщения в гарантированную очередь удаления и удаляем узлы из базы
+                        _repository.EnqueuePermanentDeletion(deletionItems, dbNodeIds);
+                        AppLogger.Info("WinFsp", $"Удалено {dbNodeIds.Count} узлов из базы; {deletionItems.Count} сообщений отправлено в очередь удаления Telegram.");
+
+                        if (deletionItems.Count > 0)
+                        {
+                            _telegramService.TriggerDeletionQueueProcessing();
+                        }
+
+                        // 3. Авто-удаление уничтожаемых каналов из Telegram
+                        foreach (var chId in channelsToDestroy)
+                        {
+                            AppLogger.Info("WinFsp", $"Привязанная папка удалена навсегда, канал Telegram ID {chId} больше не используется. Авто-удаление канала и всех его сообщений из Telegram...");
+                            _ = Task.Run(async () =>
+                            {
+                                await _telegramService.DeleteChannelAsync(chId);
+                            });
+                        }
+
+                        if (_configManager.Load().Database.AutoVacuumOnTrashDelete)
+                        {
+                            _repository.ScheduleVacuum(3000);
                         }
                     }
-
-                    // 2. Формируем списки на удаление: файлы каналов, уничтожаемых целиком через Channels_DeleteChannel,
-                    // не спамят очередь поштучного удаления сообщений
-                    var deletionItems = new List<(int MessageId, long ChannelId)>();
-                    foreach (var n in sortedSubtree)
+                    else
                     {
-                        dbNodeIds.Add(n.Id);
-
-                        long fileChannelId = n.TgChannelId ?? _repository.GetEffectiveChannelId(n.ParentId) ?? primaryChannelId;
-                        if (channelsToDestroy.Contains(fileChannelId))
-                        {
-                            // Сообщения этого канала мгновенно уничтожаются на сервере Telegram вместе с самим каналом
-                            continue;
-                        }
-
-                        if (n.TgMessageId.HasValue && n.TgMessageId.Value > 0)
-                        {
-                            deletionItems.Add((n.TgMessageId.Value, fileChannelId));
-                        }
-                        else if (!n.IsDir && n.Size > 0 && n.InlineData == null)
-                        {
-                            AppLogger.Warn("WinFsp", $"[CleanupDelete Subtree] ВНИМАНИЕ: Файл '{n.Name}' (ID {n.Id}) не имеет TgMessageId в БД (null/0). Сообщение в Telegram не может быть удалено!");
-                        }
-                        if (n.TgPreviewMessageId.HasValue && n.TgPreviewMessageId.Value > 0)
-                        {
-                            deletionItems.Add((n.TgPreviewMessageId.Value, fileChannelId));
-                        }
-                        AppLogger.Debug("WinFsp", $"[CleanupDelete Subtree] Элемент поддерева: ID {n.Id} ('{n.Name}'), IsDir={n.IsDir}, InTrash={n.InTrash}, ParentId={n.ParentId}, TgMessageId={n.TgMessageId?.ToString() ?? "NULL"}, TgPreviewMessageId={n.TgPreviewMessageId?.ToString() ?? "NULL"}");
-                    }
-
-                    // Атомарно помещаем сообщения в гарантированную очередь удаления и удаляем узлы из базы
-                    _repository.EnqueuePermanentDeletion(deletionItems, dbNodeIds);
-                    AppLogger.Info("WinFsp", $"Удалено {dbNodeIds.Count} узлов из базы; {deletionItems.Count} сообщений отправлено в очередь удаления Telegram.");
-
-                    if (deletionItems.Count > 0)
-                    {
-                        _telegramService.TriggerDeletionQueueProcessing();
-                    }
-
-                    // 3. Авто-удаление уничтожаемых каналов из Telegram
-                    foreach (var chId in channelsToDestroy)
-                    {
-                        AppLogger.Info("WinFsp", $"Привязанная папка удалена навсегда, канал Telegram ID {chId} больше не используется. Авто-удаление канала и всех его сообщений из Telegram...");
-                        _ = Task.Run(async () =>
-                        {
-                            await _telegramService.DeleteChannelAsync(chId);
-                        });
-                    }
-
-                    if (_configManager.Load().Database.AutoVacuumOnTrashDelete)
-                    {
-                        _repository.ScheduleVacuum(3000);
+                        AppLogger.Info("WinFsp", $"Перемещение элемента '{node.Name}' (ID {node.Id}) в корзину (.Trash)...");
+                        _repository.SoftDeleteNode(node.Id);
                     }
                 }
-                else
+                catch (Exception ex)
                 {
-                    AppLogger.Info("WinFsp", $"Перемещение элемента '{node.Name}' (ID {node.Id}) в корзину (.Trash)...");
-                    _repository.SoftDeleteNode(node.Id);
+                    AppLogger.Error("WinFsp", $"[CleanupDelete] Ошибка при удалении элемента '{node.Name}' (ID {node.Id}): {ex.Message}", ex);
+                }
+                finally
+                {
+                    ctx.Dispose();
                 }
 
-                ctx.Dispose();
                 return;
             }
 

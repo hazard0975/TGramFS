@@ -4053,3 +4053,25 @@ _telegramService.UpdateSettings(_settings);
    - Автоматическое сервисное сообщение Telegram о смене фотографии канала не удаляется.
    - Ошибки сети и `FLOOD_WAIT` логируются как `Warn` и не прерывают создание и регистрацию канала в SQLite.
 
+---
+
+## 130. Исправление ошибки `FOREIGN KEY constraint failed` при перманентном удалении папок из корзины (`NodeRepository.cs`, `WinFspServer.cs`, `WebDavMiddleware.cs`)
+
+### Контекст и симптомы:
+При перманентном удалении содержимого корзины `.Trash` через WinFsp одиночные файлы и пустые папки удалялись успешно, а все папки со вложенными подпапками (например, `'2004-2005'`, `'копирование'`, `'перенос'`) падали в `NodeRepository.EnqueuePermanentDeletion` с ошибкой `SQLite Error 19: 'FOREIGN KEY constraint failed'`.
+
+### Первопричина:
+1. В `Schema.sql` и `DatabaseManager.cs` таблица `nodes` имеет самоссылающийся внешний ключ `FOREIGN KEY (parent_id) REFERENCES nodes(id)` без `ON DELETE CASCADE` (в `Microsoft.Data.Sqlite` проверка FK включена по умолчанию).
+2. `WinFspServer.Cleanup` и `WebDavMiddleware.HandleDeleteAsync` вызывали `GetSubtreeNodes` (обход сверху вниз) и применяли `.OrderBy(n => n.IsDir ? 1 : 0)`. Это ставило файлы перед папками, но среди самих папок сохранялся порядок сверху вниз (родительская папка перед дочерними подпапками), из-за чего `DELETE FROM nodes WHERE id = @id` на родительской папке падал с нарушением FK.
+3. Дополнительно `GetSubtreeNodes` опирался на `GetChildren`, фильтрующий по `in_trash`, из-за чего случайные физические потомки с `in_trash = 0` под удаляемой папкой могли быть пропущены и заблокировать удаление родителя.
+
+### Принятое решение:
+1. **Сбор физического поддерева снизу вверх (`NodeRepository.GetPhysicalSubtreeNodesBottomUp`)**:
+   - Итеративный BFS-обход по `parent_id` (без фильтра `in_trash`, батчами по 500 ID с защитой `visited` от циклов) возвращает узлы в порядке: сначала файлы, затем папки строго от максимальной глубины к корню.
+   - Применён в `WinFspServer.Cleanup` и `WebDavMiddleware.HandleDeleteAsync` (без изменения `GetSubtreeNodes` для операций `Rename`/`Move`).
+2. **Топологическая защита внутри `NodeRepository.EnqueuePermanentDeletion` (`SortNodeIdsBottomUp`)**:
+   - Независимо от порядка входного списка `dbNodeIds`, внутри транзакции строится граф `parent_id` и выполняется удаление строго от листьев к родителям (сортировка Кана).
+   - Добавлен чанкинг по 500 ID для выборок `node_parts` (и в `GetPartsForNodes`) и очистка связанных зависших задач в `pending_caption_updates` и `pending_channel_migrations`.
+3. **Защита дескриптора WinFsp**:
+   - Блок удаления в `WinFspServer.Cleanup` обёрнут в `try/catch/finally` с гарантированным `ctx.Dispose()`.
+

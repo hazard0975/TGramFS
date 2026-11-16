@@ -1,65 +1,35 @@
 
-[2026-11-13 22:30:53.173] [INFO ] [WinFsp] Открыт каталог: '/Music' (ID 5)
-[2026-11-13 22:30:53.327] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Ваня Рудик.mp3' (виртуальный путь: '/Music/Ваня Рудик.mp3')...
-[2026-11-13 22:30:53.360] [INFO ] [WinFsp] [Handles DragDrop] Сканирование хэндлов для 1 процессов (PID: 3860, вызывающий процесс: explorer (PID: 3860))...
-[2026-11-13 22:30:53.419] [INFO ] [WinFsp] [Handles DragDrop] В системе обнаружено 116130 дескрипторов ядра (File Type Index: 36).
-[2026-11-13 22:30:53.436] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/Ваня Рудик.mp3' (alloc: 782336)
-[2026-11-13 22:30:53.576] [INFO ] [WinFsp] Файл 'Ваня Рудик.mp3' (0 байт) сохранен в базе данных без отправки в Telegram (inline_data).
-[2026-11-13 22:30:53.710] [INFO ] [WinFsp] Обновлены системные даты для 'Ваня Рудик.mp3' (ID 488): Изменен: 2006-07-26 10:52:22.000, Создан: 2026-11-13 20:30:53.435
-[2026-11-13 22:30:53.713] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Ваня Рудик.mp3' (виртуальный путь: '/Music/Ваня Рудик.mp3')...
-[2026-11-13 22:30:53.714] [INFO ] [WinFsp] [Handles DragDrop] Сканирование хэндлов для 1 процессов (PID: 3860, вызывающий процесс: explorer (PID: 3860))...
-[2026-11-13 22:30:53.751] [INFO ] [WinFsp] [Handles DragDrop] В системе обнаружено 116129 дескрипторов ядра (File Type Index: 36).
-[2026-11-13 22:30:53.781] [INFO ] [WinFsp] Отправка файла 'Ваня Рудик.mp3' (762,2 КБ (780 458 байт)) из памяти в Telegram (Zero-Temp), канал: 4432518768, аудио: 0 сек, обложка: НЕТ, теги: 'Âàíÿ - Ðóäèê'...
-[2026-11-13 22:30:53.789] [INFO ] [TelegramService] Прямая потоковая передача файла 'Ваня Рудик.mp3' (780458 байт) в Telegram...
-[2026-11-13 22:30:54.071] [INFO ] [TrayProgressOverlay] Показ окна прогресса [Upload] для Ваня Рудик.mp3 (524288/780458)
-[2026-11-13 22:30:54.088] [INFO ] [TelegramService] Файл 'Ваня Рудик.mp3' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /Music/Ваня Рудик_v1.mp3
-#latest')...
-[2026-11-13 22:30:54.661] [INFO ] [TelegramService] Файл 'Ваня Рудик.mp3' успешно сохранен в Telegram. Message ID: 515
-[2026-11-13 22:30:54.662] [INFO ] [TrayContext] Событие OnUploadCompleted для 'Ваня Рудик.mp3' получено из TelegramService.
-[2026-11-13 22:30:54.662] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для 'Ваня Рудик.mp3'. Запуск _completionTimer...
-[2026-11-13 22:30:54.827] [INFO ] [WinFsp] Файл 'Ваня Рудик.mp3' успешно сохранен в Telegram (Msg ID: 515, дата изменения: 2006-07-26 10:52:22).
-[2026-11-13 22:30:54.839] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Music' (/Music) (ID 5), элементов: 6
-[2026-11-13 22:30:55.980] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 1
-[2026-11-13 22:30:56.062] [INFO ] [TrayProgressOverlay] _completionTimer Tick! _isTransferring=False, _isCompleted=True, Visible=True
-[2026-11-13 22:30:56.082] [INFO ] [TrayProgressOverlay] Оверлей успешно скрыт по завершению таймаута.
-[2026-11-13 22:30:56.536] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Music' (/Music) (ID 5), элементов: 6
-[2026-11-13 22:30:56.808] [INFO ] [MtprotoWorkerPool] [Воркер #2] Запрос чанка #1/1 для 'Ваня Рудик.mp3' (/Music/Ваня Рудик.mp3) (смещение 0 б, размер 782 336 б) [Остаток 764,00 КБ]...
-[2026-11-13 22:30:57.037] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 1
-[2026-11-13 22:30:57.044] [INFO ] [MtprotoWorkerPool] [Воркер #2] Получен чанк #1/1 для 'Ваня Рудик.mp3' (/Music/Ваня Рудик.mp3) (780 458 б за 235 мс) [Остаток 762,17 КБ].
-[2026-11-13 22:30:57.044] [INFO ] [TelegramService] [NetworkAudit] Завершено для 'Ваня Рудик.mp3' (/Music/Ваня Рудик.mp3): Размер: 780 458 б (0,74 МБ) | Из сети TG: 780 458 б (0,74 МБ) | Из ОЗУ: 0 б (0,00 МБ) | Эффективность сети: 1.00x (Идеально — 0% дублирования)
-[2026-11-13 22:30:57.044] [INFO ] [TrayContext] Событие OnDownloadCompleted для 'Ваня Рудик.mp3' получено из TelegramService.
-[2026-11-13 22:30:57.044] [INFO ] [TrayProgressOverlay] CompleteTransfer [Download] вызван для 'Ваня Рудик.mp3'. Запуск _completionTimer...
-[2026-11-13 22:30:57.045] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Ваня Рудик.mp3' (ID 515): Глобальный Чанк #1 (смещение 0, 12 288 байт). Скачано 1 из 1 чанков (100%).
-[2026-11-13 22:30:57.046] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Ваня Рудик.mp3' (ID 515): Глобальный Чанк #1 (смещение 749 568, 30 890 байт). Скачано 1 из 1 чанков (100%).
-[2026-11-13 22:30:58.451] [INFO ] [TrayProgressOverlay] _completionTimer Tick! _isTransferring=False, _isCompleted=True, Visible=True
-[2026-11-13 22:30:58.454] [INFO ] [TrayProgressOverlay] Оверлей успешно скрыт по завершению таймаута.
-[2026-11-13 22:31:34.848] [INFO ] [WinFsp] Открыт каталог: '/Music/перенос' (ID 170)
-
-
-
-[2026-11-13 22:40:48.527] [INFO ] [WinFsp] Открыт каталог: '/Music/перенос' (ID 170)
-[2026-11-13 22:40:48.555] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 1
-[2026-11-13 22:40:48.573] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Ваня Рудик.mp3' (виртуальный путь: '/Music/перенос/Ваня Рудик.mp3')...
-[2026-11-13 22:40:48.573] [INFO ] [WinFsp] [Источник] Предыдущая сессия копирования завершена по таймауту бездействия (20 сек).
-[2026-11-13 22:40:48.573] [INFO ] [WinFsp] [Handles DragDrop] Сканирование хэндлов для 1 процессов (PID: 3860, вызывающий процесс: explorer (PID: 3860))...
-[2026-11-13 22:40:48.606] [INFO ] [WinFsp] [Handles DragDrop] В системе обнаружено 114833 дескрипторов ядра (File Type Index: 36).
-[2026-11-13 22:40:48.617] [INFO ] [WinFsp] [Handles DragDrop] Обнаружен открытый файл в процессе PID 3860: 'D:\Music\2006\BEST\Ваня Рудик.mp3'
-[2026-11-13 22:40:48.618] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\Music\2006\BEST\Ваня Рудик.mp3' существует и доступен для чтения (размер: 762,2 КБ (780 458 байт)).
-[2026-11-13 22:40:48.618] [INFO ] [WinFsp] [Handles DragDrop] Привязана папка-источник 'D:\Music\2006\BEST' для виртуального каталога '/Music/перенос'
-[2026-11-13 22:40:48.618] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/перенос/Ваня Рудик.mp3' (alloc: 782336), источник: 'D:\Music\2006\BEST\Ваня Рудик.mp3'
-[2026-11-13 22:40:48.620] [INFO ] [WinFsp] Обновлены системные даты для 'Ваня Рудик.mp3' (ID -5): Изменен: 2006-07-26 10:52:22.000, Создан: 2026-11-13 20:40:48.618
-[2026-11-13 22:40:48.622] [INFO ] [WinFsp] Отправка файла 'Ваня Рудик.mp3' (762,2 КБ (780 458 байт)) из памяти в Telegram (Zero-Temp), канал: 4432518768, аудио: 49 сек, обложка: НЕТ, теги: 'Âàíÿ - Ðóäèê'...
-[2026-11-13 22:40:48.623] [INFO ] [TelegramService] Прямая потоковая передача файла 'Ваня Рудик.mp3' (780458 байт) в Telegram...
-[2026-11-13 22:40:48.773] [INFO ] [TrayProgressOverlay] Показ окна прогресса [Upload] для Ваня Рудик.mp3 (524288/780458)
-[2026-11-13 22:40:48.777] [INFO ] [TelegramService] Файл 'Ваня Рудик.mp3' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /Music/перенос/Ваня Рудик_v1.mp3
-#latest')...
-[2026-11-13 22:40:49.287] [INFO ] [TelegramService] Файл 'Ваня Рудик.mp3' успешно сохранен в Telegram. Message ID: 519
-[2026-11-13 22:40:49.287] [INFO ] [TrayContext] Событие OnUploadCompleted для 'Ваня Рудик.mp3' получено из TelegramService.
-[2026-11-13 22:40:49.287] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для 'Ваня Рудик.mp3'. Запуск _completionTimer...
-[2026-11-13 22:40:49.760] [INFO ] [WinFsp] Файл 'Ваня Рудик.mp3' успешно сохранен в Telegram (Msg ID: 519, дата изменения: 2006-07-26 10:52:22).
-[2026-11-13 22:40:49.763] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Music' (/Music) (ID 5), элементов: 6
-[2026-11-13 22:40:50.681] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 1
-[2026-11-13 22:40:50.686] [INFO ] [TrayProgressOverlay] _completionTimer Tick! _isTransferring=False, _isCompleted=True, Visible=True
-[2026-11-13 22:40:50.696] [INFO ] [TrayProgressOverlay] Оверлей успешно скрыт по завершению таймаута.
-[2026-11-13 22:40:51.301] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Music' (/Music) (ID 5), элементов: 6
-[2026-11-13 22:40:52.002] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 1
+[2026-11-17 01:01:21.813] [INFO ] [WinFsp] Перманентное удаление элемента '2004-2005' (ID 10) из корзины...
+[2026-11-17 01:01:21.873] [INFO ] [Database] [EnqueuePermanentDeletion] Транзакция перманентного удаления: 137 узлов из БД, 132 уникальных сообщений Telegram в очередь pending_deletions.
+[2026-11-17 01:01:22.364] [ERROR] [Database] [EnqueuePermanentDeletion] Сбой транзакции перманентного удаления: SQLite Error 19: 'FOREIGN KEY constraint failed'. | Ex: SQLite Error 19: 'FOREIGN KEY constraint failed'.
+   at Microsoft.Data.Sqlite.SqliteException.ThrowExceptionForRC(Int32 rc, sqlite3 db)
+   at Microsoft.Data.Sqlite.SqliteDataReader.NextResult()
+   at Microsoft.Data.Sqlite.SqliteCommand.ExecuteReader(CommandBehavior behavior)
+   at Microsoft.Data.Sqlite.SqliteCommand.ExecuteNonQuery()
+   at TGramFS.Database.NodeRepository.EnqueuePermanentDeletion(List`1 items, List`1 dbNodeIds)
+[2026-11-17 01:01:22.369] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка '.Trash' (/.Trash) (ID 2), элементов: 1
+[2026-11-17 01:01:22.387] [INFO ] [WinFsp] Перманентное удаление элемента 'копирование' (ID 213) из корзины...
+[2026-11-17 01:01:22.391] [INFO ] [Database] [EnqueuePermanentDeletion] Транзакция перманентного удаления: 79 узлов из БД, 101 уникальных сообщений Telegram в очередь pending_deletions.
+[2026-11-17 01:01:22.395] [ERROR] [Database] [EnqueuePermanentDeletion] Сбой транзакции перманентного удаления: SQLite Error 19: 'FOREIGN KEY constraint failed'. | Ex: SQLite Error 19: 'FOREIGN KEY constraint failed'.
+   at Microsoft.Data.Sqlite.SqliteException.ThrowExceptionForRC(Int32 rc, sqlite3 db)
+   at Microsoft.Data.Sqlite.SqliteDataReader.NextResult()
+   at Microsoft.Data.Sqlite.SqliteCommand.ExecuteReader(CommandBehavior behavior)
+   at Microsoft.Data.Sqlite.SqliteCommand.ExecuteNonQuery()
+   at TGramFS.Database.NodeRepository.EnqueuePermanentDeletion(List`1 items, List`1 dbNodeIds)
+[2026-11-17 01:01:22.419] [INFO ] [WinFsp] Перманентное удаление элемента 'перенос' (ID 192) из корзины...
+[2026-11-17 01:01:22.423] [INFO ] [Database] [EnqueuePermanentDeletion] Транзакция перманентного удаления: 57 узлов из БД, 66 уникальных сообщений Telegram в очередь pending_deletions.
+[2026-11-17 01:01:22.426] [ERROR] [Database] [EnqueuePermanentDeletion] Сбой транзакции перманентного удаления: SQLite Error 19: 'FOREIGN KEY constraint failed'. | Ex: SQLite Error 19: 'FOREIGN KEY constraint failed'.
+   at Microsoft.Data.Sqlite.SqliteException.ThrowExceptionForRC(Int32 rc, sqlite3 db)
+   at Microsoft.Data.Sqlite.SqliteDataReader.NextResult()
+   at Microsoft.Data.Sqlite.SqliteCommand.ExecuteReader(CommandBehavior behavior)
+   at Microsoft.Data.Sqlite.SqliteCommand.ExecuteNonQuery()
+   at TGramFS.Database.NodeRepository.EnqueuePermanentDeletion(List`1 items, List`1 dbNodeIds)
+[2026-11-17 01:01:22.448] [INFO ] [WinFsp] Перманентное удаление элемента 'ц' (ID 171) из корзины...
+[2026-11-17 01:01:22.449] [INFO ] [Database] [EnqueuePermanentDeletion] Транзакция перманентного удаления: 1 узлов из БД, 0 уникальных сообщений Telegram в очередь pending_deletions.
+[2026-11-17 01:01:22.720] [INFO ] [Database] [EnqueuePermanentDeletion] Транзакция успешно зафиксирована.
+[2026-11-17 01:01:22.721] [INFO ] [WinFsp] Удалено 1 узлов из базы; 0 сообщений отправлено в очередь удаления Telegram.
+[2026-11-17 01:01:22.734] [INFO ] [WinFsp] Перманентное удаление элемента 'Alloise - Love Me Or Leave Me (Mokka China & Vitaly Hazard remix).mp4' (ID 347) из корзины...
+[2026-11-17 01:01:22.734] [INFO ] [Database] [EnqueuePermanentDeletion] Транзакция перманентного удаления: 1 узлов из БД, 1 уникальных сообщений Telegram в очередь pending_deletions.
+[2026-11-17 01:01:22.867] [INFO ] [Database] [EnqueuePermanentDeletion] Транзакция успешно зафиксирована.
+[2026-11-17 01:01:22.868] [INFO ] [WinFsp] Удалено 1 узлов из базы; 1 сообщений отправлено в очередь удаления Telegram.
+[2026-11-17 01:01:22.869] [INFO ] [TelegramService] [DeletionQueue] Фоновое перманентное удаление 1 сообщений из Telegram...

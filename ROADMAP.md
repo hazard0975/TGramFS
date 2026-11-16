@@ -1400,3 +1400,11 @@
       2. Добавлен безопасный метод `TrySetDefaultChannelPhotoAsync(TL.Channel)`, вызывающий `_client.UploadFileAsync(...)` и `_client.Channels_EditPhoto(...)` с учётом `EnsureFloodWaitDelayAsync()` и мягкой обработкой ошибок (`FLOOD_WAIT` / сеть не прерывают создание канала; сервисное сообщение о смене фото не удаляется).
       3. Вызов `TrySetDefaultChannelPhotoAsync` встроен во все три точки создания каналов в `TelegramService.cs`: `GetStoragePeerAsync` (основной), `CreateCustomChannelAsync` (папки) и `GetBackupStoragePeerAsync` (бэкапы БД).
       4. Валидация: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
+- [x] **8.123. Исправление `SQLite Error 19: 'FOREIGN KEY constraint failed'` при перманентном удалении вложенных папок из корзины (`NodeRepository.cs`, `WinFspServer.cs`, `WebDavMiddleware.cs`)**:
+    - **Проблема**: При очистке корзины `.Trash` одиночные файлы и пустые папки удалялись успешно, но папки с подпапками падали с `FOREIGN KEY constraint failed` в `EnqueuePermanentDeletion`, так как `OrderBy(n => n.IsDir ? 1 : 0)` после `GetSubtreeNodes` оставлял родительские папки в списке раньше вложенных подпапок при наличии `FOREIGN KEY (parent_id) REFERENCES nodes(id)`.
+    - **Реализовано**:
+      1. Добавлен `NodeRepository.GetPhysicalSubtreeNodesBottomUp(rootNodeId)` (сбор всех физических потомков по `parent_id` без фильтра `in_trash` в порядке: файлы -> папки от максимальной глубины к корню) и подключён в `WinFspServer.Cleanup` и `WebDavMiddleware.HandleDeleteAsync`.
+      2. В `EnqueuePermanentDeletion` добавлена топологическая сортировка удаляемых ID снизу вверх (`SortNodeIdsBottomUp`), очистка `pending_caption_updates` / `pending_channel_migrations` и чанкинг по 500 ID для `IN (...)` запросов (включая `GetPartsForNodes`).
+      3. В `WinFspServer.Cleanup` ветка удаления обёрнута в `try/catch/finally` с гарантированным `ctx.Dispose()`.
+      4. Валидация: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
+
