@@ -194,16 +194,42 @@ namespace TGramFS.UI
 
             button.Anchor = AnchorStyles.Left;
 
+            float activeScale = 1.0f;
+
+            void SyncButtonSize(float scale)
+            {
+                int scaledBtnW = UITheme.Scale(buttonWidth, scale);
+                int boxH = textBox.IsHandleCreated && textBox.Height > 0
+                    ? textBox.Height
+                    : (textBox.PreferredHeight > 0 ? textBox.PreferredHeight : UITheme.Scale(UITheme.InputHeight, scale));
+                int targetBtnH = boxH + UITheme.Scale(2, scale);
+
+                if (button.Width != scaledBtnW ||
+                    button.Height != targetBtnH ||
+                    button.MinimumSize.Width != scaledBtnW ||
+                    button.MinimumSize.Height != targetBtnH ||
+                    button.MaximumSize != Size.Empty)
+                {
+                    button.MaximumSize = Size.Empty;
+                    button.MinimumSize = new Size(scaledBtnW, targetBtnH);
+                    button.Width = scaledBtnW;
+                    button.Height = targetBtnH;
+                }
+            }
+
+            tbl.Layout += (s, e) => SyncButtonSize(activeScale);
+            textBox.SizeChanged += (s, e) => SyncButtonSize(activeScale);
+
             tbl.Controls.Add(lbl, 0, 0);
             tbl.Controls.Add(textBox, 1, 0);
             tbl.Controls.Add(button, 2, 0);
 
             Action<float> applyScale = scale =>
             {
+                activeScale = scale;
                 int scaledW = UITheme.Scale(width, scale);
                 int scaledLabelW = UITheme.Scale(labelWidth, scale);
                 int scaledBtnW = UITheme.Scale(buttonWidth, scale);
-                int scaledBtnH = UITheme.Scale(UITheme.ButtonHeightInline, scale);
 
                 tbl.Width = scaledW;
                 tbl.MinimumSize = new Size(scaledW, 0);
@@ -216,10 +242,7 @@ namespace TGramFS.UI
                 textBox.Margin = UITheme.Scale(new Padding(0, 2, 8, 2), scale);
                 button.Margin = UITheme.Scale(new Padding(0, 2, 0, 2), scale);
 
-                button.MinimumSize = new Size(scaledBtnW, scaledBtnH);
-                button.MaximumSize = Size.Empty;
-                button.Width = scaledBtnW;
-                button.Height = scaledBtnH;
+                SyncButtonSize(scale);
             };
             applyScale(1.0f);
             registerScaler?.Invoke(applyScale);

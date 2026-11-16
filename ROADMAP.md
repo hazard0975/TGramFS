@@ -1379,3 +1379,9 @@
       1. В `UITheme.cs` добавлена константа `ButtonHeightInline = 25` (`23 px + 2 px` компенсации `1px`-отступа рамки нативной темы `UxTheme` сверху и снизу).
       2. В `UIFactory.CreateActionInputRow` и при создании обеих кнопок `«Переименовать»` в `AuthSettingsForm.cs` задана единая высота `UITheme.ButtonHeightInline` (`25 px` при `96 DPI` с масштабированием под DPI) без дублирования между `CreateButton` и `CreateActionInputRow`.
       3. Валидация: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
+- [x] **8.120. Адаптивная синхронизация высоты кнопок `CreateActionInputRow` с реальной высотой `TextBox` на всех масштабах DPI (`100%–200%`) (`UIFactory.cs`, `AuthSettingsForm.cs`)**:
+    - **Проблема**: При линейном масштабировании `UITheme.ButtonHeightInline` (`25 * scale`) кнопка совпадала с `TextBox` пиксель-в-пиксель при `100%` (`96 DPI`), но на `125%` (`31 px`) и `175%` (`44 px`) начинала выступать над/под полем ввода, так как высота системного `TextBox` (`Шрифт + рамка`) растёт сублинейно относительно `25 * scale`.
+    - **Реализовано**:
+      1. В `UIFactory.CreateActionInputRow` добавлен `SyncButtonSize(scale)` (вызывается в `applyScale`, `tbl.Layout` и `textBox.SizeChanged`), вычисляющий высоту кнопки от фактической высоты поля ввода (`textBox.Height` при созданном `HWND` / `textBox.PreferredHeight`) плюс `UITheme.Scale(2, scale)` на внешний `1px`-контур нативной темы `UxTheme` без блокирующего `MaximumSize`.
+      2. В `AuthSettingsForm.cs` убрана передача `registerScaler` в `CreateButton` для `_btnRenamePrimaryChannel` и `_btnRenameBackupChannel`, чтобы размером этих кнопок единолично управлял `CreateActionInputRow` без двойного ресайза.
+      3. Валидация: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).

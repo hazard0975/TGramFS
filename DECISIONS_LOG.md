@@ -4019,3 +4019,9 @@ _telegramService.UpdateSettings(_settings);
 ### Дополнение 128.4 (Калибровка inline-кнопок «Переименовать» до `25 px` — `UITheme.ButtonHeightInline`):
 - **Симптом:** По визуальной проверке при `28 px` кнопка `«Переименовать»` заметно выступала над/под полем `TextBox` (`23 px`), тогда как при `23 px` казалась меньше него из-за `1px` прозрачного контура рамки `UxTheme`.
 - **Решение:** В `UITheme.cs` введена константа `ButtonHeightInline = 25` (`96 DPI`). Она применена одновременно в `UIFactory.CreateActionInputRow` и при создании `_btnRenamePrimaryChannel` / `_btnRenameBackupChannel` в `AuthSettingsForm.cs`, чтобы исключить расхождение между скейлерами `CreateButton` и `CreateActionInputRow` и выровнять видимые границы кнопки вровень с рамкой `TextBox`.
+
+### Дополнение 128.5 (Привязка высоты inline-кнопок к фактической высоте `TextBox` + `Scale(2, scale)` на `100%–200%` DPI):
+- **Симптом:** По замерам на `100%`, `125%` и `175%` DPI при `100%` кнопка `25 px` идеально совпадала с `TextBox` (`23 px`), а при увеличении масштаба (`125%` → `31 px`, `175%` → `44 px`) линейно обгоняла фактическую высоту `TextBox`, так как системный `EDIT`-контрол складывается из шрифта и почти не масштабируемых рамок/отступов.
+- **Решение (Вариант 2):**
+  1. В `UIFactory.CreateActionInputRow` внедрён `SyncButtonSize(scale)` (с подписками на `tbl.Layout`, `textBox.SizeChanged` и вызовом из `applyScale`), который вычисляет высоту кнопки как `boxH + UITheme.Scale(2, scale)` от реального `textBox.Height` (при созданном `HWND`) или `textBox.PreferredHeight` с `MaximumSize = Size.Empty`.
+  2. В `AuthSettingsForm.cs` у кнопок `_btnRenamePrimaryChannel` и `_btnRenameBackupChannel` убран `registerScaler` из вызова `CreateButton`, чтобы `CreateActionInputRow` был единственным источником расчёта их размеров при старте и `OnDpiChanged`.
