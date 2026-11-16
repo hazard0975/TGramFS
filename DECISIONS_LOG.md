@@ -4025,3 +4025,11 @@ _telegramService.UpdateSettings(_settings);
 - **Решение (Вариант 2):**
   1. В `UIFactory.CreateActionInputRow` внедрён `SyncButtonSize(scale)` (с подписками на `tbl.Layout`, `textBox.SizeChanged` и вызовом из `applyScale`), который вычисляет высоту кнопки как `boxH + UITheme.Scale(2, scale)` от реального `textBox.Height` (при созданном `HWND`) или `textBox.PreferredHeight` с `MaximumSize = Size.Empty`.
   2. В `AuthSettingsForm.cs` у кнопок `_btnRenamePrimaryChannel` и `_btnRenameBackupChannel` убран `registerScaler` из вызова `CreateButton`, чтобы `CreateActionInputRow` был единственным источником расчёта их размеров при старте и `OnDpiChanged`.
+
+### Дополнение 128.6 (Исправление начальной позиции `AuthSettingsForm` — удаление раннего `CreateHandle()` и оптическое центрирование):
+- **Симптом:** При открытии из системного трея окно настроек появлялось сильно ниже центра экрана (`Top ≈ 366 px` на `1080p`), из-за чего нижняя панель с кнопками `«Сохранить»` / `«Закрыть»` уходила под панель задач (в отличие от `AboutForm`, открывавшегося строго по центру).
+- **Первопричина:** В `InitializeComponents()` после `StartPosition = FormStartPosition.CenterScreen` вызывался `CreateHandle()` при дефолтном размере формы `300 x 300`, фиксируя `Top` по центру от `300 x 300`; последующий `ApplyDpiScale()` увеличивал `ClientSize` до `565 x 660 * scale` вниз без обновления `Location` и без проверки границ `WorkingArea`.
+- **Решение:**
+  1. Преждевременный `CreateHandle()` удалён из `InitializeComponents()`, выставлен `StartPosition = FormStartPosition.Manual`.
+  2. Реализован метод `PositionFormInWorkingArea(workingArea)`: горизонтальное выравнивание строго по центру, вертикальное — по оптическому центру (согласовано с пользователем: `30%` свободной высоты сверху / `70%` снизу) с `Math.Clamp` в границах `WorkingArea` экрана под курсором.
+  3. Вызов пересчёта масштаба и `PositionFormInWorkingArea` добавлен в конец `InitializeComponents()` (для создания `HWND` сразу на нужном мониторе) и в `OnLoad()` (для точной подгонки под реальный DPI и неклиентскую рамку окна перед показом).

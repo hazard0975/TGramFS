@@ -1385,3 +1385,11 @@
       1. В `UIFactory.CreateActionInputRow` добавлен `SyncButtonSize(scale)` (вызывается в `applyScale`, `tbl.Layout` и `textBox.SizeChanged`), вычисляющий высоту кнопки от фактической высоты поля ввода (`textBox.Height` при созданном `HWND` / `textBox.PreferredHeight`) плюс `UITheme.Scale(2, scale)` на внешний `1px`-контур нативной темы `UxTheme` без блокирующего `MaximumSize`.
       2. В `AuthSettingsForm.cs` убрана передача `registerScaler` в `CreateButton` для `_btnRenamePrimaryChannel` и `_btnRenameBackupChannel`, чтобы размером этих кнопок единолично управлял `CreateActionInputRow` без двойного ресайза.
       3. Валидация: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
+- [x] **8.121. Исправление начальной позиции `AuthSettingsForm` и оптическое центрирование в `WorkingArea` (`AuthSettingsForm.cs`)**:
+    - **Проблема**: Окно настроек при открытии смещалось вниз на ~35% от верха экрана, из-за чего нижняя панель кнопок `«Сохранить»` / `«Закрыть»` уходила под панель задач.
+    - **Первопричина**: В `InitializeComponents()` до расчёта финального `ClientSize` вызывался `CreateHandle()`, фиксировавший начальную позицию окна для дефолтных `300 x 300`, после чего форма вырастала вниз до `565 x 660 * scale` без пересчёта `Location` и без зажима в `WorkingArea`.
+    - **Реализовано**:
+      1. Удалён преждевременный `CreateHandle()` из `InitializeComponents()`, форма переведена на `StartPosition = FormStartPosition.Manual`.
+      2. Добавлен `PositionFormInWorkingArea(workingArea)`: строго по центру по горизонтали и в оптическом центре по вертикали (`30%` свободной высоты сверху / `70%` снизу) с жёстким зажимом внутри `WorkingArea` экрана под курсором.
+      3. В `OnLoad` выполняется финальная сверка DPI монитора показа, пересчёт `ClientSize` и точная установка позиции до отрисовки (без вмешательства в `Location` при перетаскивании в `OnDpiChanged`).
+      4. Валидация: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).

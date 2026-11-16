@@ -168,7 +168,7 @@ namespace TGramFS.UI
 
             Rectangle workingArea = IsHandleCreated
                 ? Screen.FromHandle(Handle).WorkingArea
-                : (Screen.PrimaryScreen?.WorkingArea ?? new Rectangle(0, 0, 1920, 1080));
+                : Screen.FromPoint(Cursor.Position).WorkingArea;
 
             Size nonClientSize = Size - ClientSize;
             int nonClientWidth = Math.Max(0, nonClientSize.Width);
@@ -204,6 +204,42 @@ namespace TGramFS.UI
             }
         }
 
+        private void PositionFormInWorkingArea(Rectangle workingArea)
+        {
+            int freeWidth = Math.Max(0, workingArea.Width - Width);
+            int freeHeight = Math.Max(0, workingArea.Height - Height);
+
+            int targetLeft = workingArea.Left + freeWidth / 2;
+            int targetTop = workingArea.Top + (int)Math.Round(freeHeight * 0.30);
+
+            int maxLeft = Math.Max(workingArea.Left, workingArea.Right - Width);
+            int maxTop = Math.Max(workingArea.Top, workingArea.Bottom - Height);
+
+            Location = new Point(
+                Math.Clamp(targetLeft, workingArea.Left, maxLeft),
+                Math.Clamp(targetTop, workingArea.Top, maxTop));
+        }
+
+        protected override void OnLoad(EventArgs e)
+        {
+            base.OnLoad(e);
+
+            float actualScale = GetDpiScale();
+            if (Math.Abs(actualScale - _currentDpiScale) > 0.01f)
+            {
+                ApplyDpiScale(actualScale);
+            }
+            else
+            {
+                UpdateFormClientSize(actualScale);
+            }
+
+            Rectangle workingArea = IsHandleCreated
+                ? Screen.FromHandle(Handle).WorkingArea
+                : Screen.FromPoint(Cursor.Position).WorkingArea;
+            PositionFormInWorkingArea(workingArea);
+        }
+
         protected override void OnDpiChanged(DpiChangedEventArgs e)
         {
             base.OnDpiChanged(e);
@@ -219,15 +255,10 @@ namespace TGramFS.UI
             this.AutoScaleMode = AutoScaleMode.None;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
-            this.StartPosition = FormStartPosition.CenterScreen;
+            this.StartPosition = FormStartPosition.Manual;
             this.Font = UITheme.BaseFont;
 
             this.Icon = AppIconHelper.GetAppIcon();
-
-            if (!IsHandleCreated)
-            {
-                CreateHandle();
-            }
 
             // Нижняя фиксированная панель действий формы со стандартными кнопками
             var btnSaveAll = UIFactory.CreateButton("Сохранить", (s, e) => SaveAllSettings());
@@ -1184,6 +1215,7 @@ namespace TGramFS.UI
 
             ResumeLayout(false);
             ApplyDpiScale(GetDpiScale());
+            PositionFormInWorkingArea(Screen.FromPoint(Cursor.Position).WorkingArea);
         }
 
         private void SaveTelegramApiKeys()
