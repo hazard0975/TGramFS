@@ -4106,4 +4106,28 @@ _telegramService.UpdateSettings(_settings);
 5. **Временные диагностические логи (`[DIAG ...]`)**:
    - По согласованию с пользователем сохранены на один контрольный тест после сборки, с последующей плановой зачисткой.
 
+---
 
+## 132. Сохранение `[VirtualCopy Read Bypass]` на второй проход записи (`Pass 2`) и зачистка `[DIAG ...]` логов (`WinFspServer.cs`)
+
+### Контекст и симптомы:
+При проверке контрольного лога (`log.MD`, 4 031 строк) после решения #131 подтвердилось:
+- Цикл из 18 коллизий полностью исчез (3 быстрых проверки за 3–4 мс);
+- Переименованная копия (`... — копия.mp3` и `.txt`) корректно пошла через `ForwardMessages`;
+- Проводник выполнил двухпроходную запись именно на `.mp3` (`9,53 МБ`), и `[VirtualCopy Pass2]` успешно заблокировал повторную отправку файла в Telegram.
+
+Однако на `.mp3` в промежутке между первым `Cleanup(written=0)` и завершением второго прохода `Pass 2` Проводник выкачал из Telegram ~8 МБ исходного файла (`чанки #2..#9`, ~4 сек), чтобы передать их в отбрасываемый `Write()` целевого файла.
+
+### Первопричины:
+1. В первом проходе `Cleanup` вызывался `UnregisterActiveVirtualCopy(node.Id)` до регистрации `_recentTwoPassVirtualCopies`, снимая обход чтения источника (`[VirtualCopy Read Bypass]`) до старта второго прохода `Open -> Read(source) -> Write(target)`.
+2. Безусловный вызов `UnregisterActiveVirtualCopy(Node.Id)` внутри `FspNodeContext.Dispose()` без проверки владения мог также досрочно сбрасывать активную запись при закрытии контекста первого прохода (после присвоения `node.Id = newNodeId`) или посторонних read-дескрипторов.
+
+### Принятое решение (`WinFspServer.cs`):
+1. **Явное владение `OwnsActiveVirtualCopy` и TTL в `ActiveVirtualCopyInfo`**:
+   - В `FspNodeContext` добавлен флаг `OwnsActiveVirtualCopy`, чтобы `Dispose()` снимал регистрацию строго при владении контекстом.
+   - В `ActiveVirtualCopyInfo` добавлен динамический `ExpiresAtUtc` и параметр `TimeSpan? ttl` в `RegisterActiveVirtualCopy`.
+2. **Бесшовная передача `Read Bypass` из Pass 1 в Pass 2**:
+   - В `Cleanup` первого прохода после присвоения `node.Id = newNodeId` старая временная регистрация `prevActiveTargetId` снимается; если `TotalBytesWritten == 0 && VirtualSourceNode.Size > 0`, помимо `RegisterTwoPassVirtualCopy` регистрируется `RegisterActiveVirtualCopy(node.Id, sourceId, CreatorProcessId, TimeSpan.FromSeconds(20))`.
+   - Во втором проходе `Open` (при `TryGetTwoPassVirtualCopy`) обновляет `OwnsActiveVirtualCopy = true` и продлевает TTL до завершения второго прохода (`5 мин`), а `Cleanup`/`Dispose` второго прохода детерминированно вызывают `UnregisterActiveVirtualCopy(node.Id)`.
+3. **Зачистка временной диагностики**:
+   - Удалены временные `[DIAG ...]` логи и вспомогательные структуры `_diagLastSecByName`, `_diagLastOpen`, `IsDiagNoisePath`, `GetDiagProcessName`, `RecordDiagHistory`.

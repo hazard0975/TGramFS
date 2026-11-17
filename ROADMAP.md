@@ -1414,4 +1414,10 @@
       2. Реализовано локально-независимое сопоставление переименованных виртуальных копий по сигналам коллизии/чтения (`TryMatchRenamedVirtualCandidate`, `TryMatchRenamedVirtualFromSignals`) без хардкода суффиксов языка Windows и с жёсткой изоляцией от конфликтов с физическими файлами ПК (`physicalClip.Count == 0`, `alternatePhysicalNames` в `CollectOpenFileHandles`).
       3. Внедрена защита двухпроходной записи мелких виртуальных копий (`_recentTwoPassVirtualCopies` + `IsVirtualCopyPassThrough` в `Open`/`Overwrite`/`Write`/`Cleanup`) с сохранением `[DIAG ...]` на один контрольный тест.
       4. Валидация: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
-
+- [x] **8.125. Продление `[VirtualCopy Read Bypass]` на второй проход записи (`Pass 2`) и зачистка `[DIAG ...]` логов (`WinFspServer.cs`)**:
+    - **Проблема**: По контрольному тесту на 9,53 МБ `.mp3` в `Cleanup` первого прохода (`written=0`) досрочно снимался `[VirtualCopy Read Bypass]`, из-за чего Проводник во втором проходе выкачивал ~8 МБ исходника из Telegram ради отбрасываемых `Write()`.
+    - **Реализовано**:
+      1. Внедрено явное владение `FspNodeContext.OwnsActiveVirtualCopy` и настраиваемый `ExpiresAtUtc` (`ttl`) в `ActiveVirtualCopyInfo`.
+      2. В `Cleanup` первого прохода при регистрации `_recentTwoPassVirtualCopies` (`written == 0`) активная защита чтения источника переносится на `newNodeId` (TTL 20 сек), подхватывается во втором проходе `Open` (`OwnsActiveVirtualCopy = true`) и снимается сразу по завершении/закрытии `Pass 2`.
+      3. Удалены временные диагностические `[DIAG ...]` логи и вспомогательные словари/методы.
+      4. Валидация: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
