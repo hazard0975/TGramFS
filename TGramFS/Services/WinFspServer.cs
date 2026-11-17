@@ -301,6 +301,35 @@ namespace TGramFS.Services
         private static readonly ConcurrentDictionary<string, Node> _activeUploadNodes = new(StringComparer.OrdinalIgnoreCase);
         private static int _nextTempNodeId = 0;
 
+        private const uint NT_FILE_CREATE = 2u;
+        private const uint FILE_READ_DATA = 0x00000001u;
+        private const uint FILE_WRITE_DATA = 0x00000002u;
+        private const uint FILE_APPEND_DATA = 0x00000004u;
+
+        private class RecentVirtualSignal
+        {
+            public Node SourceNode { get; set; } = null!;
+            public string VirtualPath { get; set; } = "";
+            public string ParentPath { get; set; } = "/";
+            public int ProcessId { get; set; }
+            public DateTime TimestampUtc { get; set; }
+            public bool Consumed { get; set; }
+        }
+
+        private class TwoPassVirtualCopyInfo
+        {
+            public int NodeId { get; set; }
+            public int SourceNodeId { get; set; }
+            public long TargetSize { get; set; }
+            public int CreatorPid { get; set; }
+            public DateTime CreatedAtUtc { get; set; }
+        }
+
+        private static readonly object _virtualSignalsLock = new object();
+        private static readonly List<RecentVirtualSignal> _recentVirtualCollisions = new();
+        private static readonly List<RecentVirtualSignal> _recentVirtualReadOpens = new();
+        private static readonly ConcurrentDictionary<string, TwoPassVirtualCopyInfo> _recentTwoPassVirtualCopies = new(StringComparer.OrdinalIgnoreCase);
+
         // Временная диагностика WinFsp для трассировки Create/Open/GetSecurityByName/Cleanup/Close
         private static readonly ConcurrentDictionary<string, string> _diagLastSecByName = new(StringComparer.OrdinalIgnoreCase);
         private static readonly ConcurrentDictionary<string, string> _diagLastOpen = new(StringComparer.OrdinalIgnoreCase);
@@ -334,6 +363,122 @@ namespace TGramFS.Services
         {
             if (map.Count > 512) map.Clear();
             map[cleanPath] = summary;
+        }
+
+        private static void RecordVirtualSignal(List<RecentVirtualSignal> list, string cleanPath, string parentPath, Node sourceNode, int pid)
+        {
+            if (sourceNode.IsDir || string.IsNullOrWhiteSpace(cleanPath))
+                return;
+
+            DateTime now = DateTime.UtcNow;
+            DateTime cutoff = now.AddSeconds(-30);
+            lock (_virtualSignalsLock)
+            {
+                list.RemoveAll(s => s.TimestampUtc < cutoff ||
+                    (s.SourceNode.Id == sourceNode.Id && s.ProcessId == pid && string.Equals(s.VirtualPath, cleanPath, StringComparison.OrdinalIgnoreCase)));
+                if (list.Count >= 64)
+                {
+                    list.RemoveRange(0, list.Count - 48);
+                }
+                list.Add(new RecentVirtualSignal
+                {
+                    SourceNode = sourceNode,
+                    VirtualPath = cleanPath,
+                    ParentPath = parentPath,
+                    ProcessId = pid,
+                    TimestampUtc = now,
+                    Consumed = false
+                });
+            }
+        }
+
+        private static void RecordVirtualCollision(string cleanPath, string parentPath, Node sourceNode, int pid)
+            => RecordVirtualSignal(_recentVirtualCollisions, cleanPath, parentPath, sourceNode, pid);
+
+        private static void RecordVirtualReadOpen(string cleanPath, string parentPath, Node sourceNode, int pid)
+        {
+            if ((sourceNode.TgMessageId ?? 0) > 0)
+            {
+                RecordVirtualSignal(_recentVirtualReadOpens, cleanPath, parentPath, sourceNode, pid);
+            }
+        }
+
+        private static HashSet<string>? GetRecentCollisionNames(string? targetVirtualPath, int callerPid)
+        {
+            if (string.IsNullOrWhiteSpace(targetVirtualPath))
+                return null;
+
+            string targetParent = GetParentPath(targetVirtualPath);
+            DateTime cutoff = DateTime.UtcNow.AddSeconds(-20);
+            HashSet<string>? names = null;
+            lock (_virtualSignalsLock)
+            {
+                foreach (var c in _recentVirtualCollisions)
+                {
+                    if (c.TimestampUtc < cutoff) continue;
+                    if (!string.Equals(c.ParentPath, targetParent, StringComparison.OrdinalIgnoreCase)) continue;
+                    if (callerPid > 0 && c.ProcessId > 0 && c.ProcessId != callerPid) continue;
+                    if (string.Equals(c.VirtualPath, targetVirtualPath, StringComparison.OrdinalIgnoreCase)) continue;
+
+                    names ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    names.Add(c.SourceNode.Name);
+                }
+            }
+            return names;
+        }
+
+        private static void RegisterTwoPassVirtualCopy(string cleanPath, int targetNodeId, int sourceNodeId, long targetSize, int creatorPid)
+        {
+            if (string.IsNullOrWhiteSpace(cleanPath) || targetNodeId <= 0 || targetSize <= 0)
+                return;
+
+            string norm = NormalizePath(cleanPath);
+            DateTime now = DateTime.UtcNow;
+            if (_recentTwoPassVirtualCopies.Count > 256)
+            {
+                DateTime cutoff = now.AddSeconds(-20);
+                foreach (var kvp in _recentTwoPassVirtualCopies)
+                {
+                    if (kvp.Value.CreatedAtUtc < cutoff)
+                    {
+                        _recentTwoPassVirtualCopies.TryRemove(kvp.Key, out _);
+                    }
+                }
+            }
+
+            _recentTwoPassVirtualCopies[norm] = new TwoPassVirtualCopyInfo
+            {
+                NodeId = targetNodeId,
+                SourceNodeId = sourceNodeId,
+                TargetSize = targetSize,
+                CreatorPid = creatorPid,
+                CreatedAtUtc = now
+            };
+        }
+
+        private static bool TryGetTwoPassVirtualCopy(string cleanPath, int nodeId, int openPid, out TwoPassVirtualCopyInfo info)
+        {
+            info = null!;
+            if (string.IsNullOrWhiteSpace(cleanPath) || nodeId <= 0)
+                return false;
+
+            string norm = NormalizePath(cleanPath);
+            if (_recentTwoPassVirtualCopies.TryGetValue(norm, out var candidate))
+            {
+                bool notExpired = (DateTime.UtcNow - candidate.CreatedAtUtc) <= TimeSpan.FromSeconds(15);
+                bool sameNode = candidate.NodeId == nodeId;
+                bool samePid = candidate.CreatorPid <= 0 || openPid <= 4 || candidate.CreatorPid == openPid;
+                if (notExpired && sameNode && samePid)
+                {
+                    info = candidate;
+                    return true;
+                }
+                if (!notExpired)
+                {
+                    _recentTwoPassVirtualCopies.TryRemove(norm, out _);
+                }
+            }
+            return false;
         }
 
         public static void RegisterActiveVirtualCopy(int targetNodeId, int sourceNodeId, int creatorPid)
@@ -624,13 +769,31 @@ namespace TGramFS.Services
                 }
             }
 
+            var openCtx = new FspNodeContext(node) { CreatorProcessId = openPid, VirtualPath = cleanPath };
+            if (cleanPath != "/" && !node.IsDir)
+            {
+                if ((grantedAccess & FILE_READ_DATA) != 0 && (node.TgMessageId ?? 0) > 0)
+                {
+                    RecordVirtualReadOpen(cleanPath, GetParentPath(cleanPath), node, openPid);
+                }
+
+                if ((grantedAccess & (FILE_WRITE_DATA | FILE_APPEND_DATA)) != 0 &&
+                    TryGetTwoPassVirtualCopy(cleanPath, node.Id, openPid, out var twoPassInfo))
+                {
+                    openCtx.IsVirtualCopyPassThrough = true;
+                    openCtx.VirtualCopyPassThroughTargetSize = twoPassInfo.TargetSize;
+                    openCtx.KnownTargetSize = twoPassInfo.TargetSize;
+                    AppLogger.Info("WinFsp", $"[VirtualCopy Pass2] Обнаружен второй проход записи (Open opts=0x{createOptions:X8}, access=0x{grantedAccess:X8}) для '{cleanPath}' (ID {node.Id}, {AppLogger.FormatSizeDetailed(twoPassInfo.TargetSize)}). Повторная отправка в Telegram отключена.");
+                }
+            }
+
             fileNode = node;
-            fileDesc = new FspNodeContext(node) { CreatorProcessId = openPid, VirtualPath = cleanPath };
+            fileDesc = openCtx;
             FillFileInfo(node, out fileInfo);
             normalizedName = fileName;
             if (cleanPath != "/")
             {
-                string okOpenSummary = $"{DateTime.UtcNow:HH:mm:ss.fff} OK pid={openPid} nodeId={node.Id} isDir={node.IsDir} size={node.Size} opts=0x{createOptions:X8} access=0x{grantedAccess:X8} raw='{fileName}'";
+                string okOpenSummary = $"{DateTime.UtcNow:HH:mm:ss.fff} OK pid={openPid} nodeId={node.Id} isDir={node.IsDir} size={node.Size} opts=0x{createOptions:X8} access=0x{grantedAccess:X8} passThrough={openCtx.IsVirtualCopyPassThrough} raw='{fileName}'";
                 RecordDiagHistory(_diagLastOpen, cleanPath, okOpenSummary);
                 if (!IsDiagNoisePath(cleanPath))
                 {
@@ -678,6 +841,7 @@ namespace TGramFS.Services
                 return NT_STATUS_OBJECT_PATH_NOT_FOUND;
             }
 
+            uint createDisposition = (createOptions >> 24) & 0xFF;
             bool isDir = (createOptions & FILE_DIRECTORY_FILE) != 0;
             var diagDbExisting = _repository.GetNodeByPath(cleanPath);
             _activeUploadNodes.TryGetValue(cleanPath, out var diagActiveExisting);
@@ -685,10 +849,25 @@ namespace TGramFS.Services
             _diagLastOpen.TryGetValue(cleanPath, out var diagLastOpen);
 
             AppLogger.Info("WinFsp",
-                $"[DIAG Create] raw='{fileName}', clean='{cleanPath}', isDir={isDir}, opts=0x{createOptions:X8}, access=0x{grantedAccess:X8}, attrs=0x{fileAttributes:X8}, alloc={allocationSize}, secLen={securityDescriptor?.Length ?? -1}, pid={GetDiagProcessName(callerPid)} | " +
+                $"[DIAG Create] raw='{fileName}', clean='{cleanPath}', isDir={isDir}, disp={createDisposition}, opts=0x{createOptions:X8}, access=0x{grantedAccess:X8}, attrs=0x{fileAttributes:X8}, alloc={allocationSize}, secLen={securityDescriptor?.Length ?? -1}, pid={GetDiagProcessName(callerPid)} | " +
                 $"dbExisting={(diagDbExisting != null ? $"ID={diagDbExisting.Id},Dir={diagDbExisting.IsDir},Size={diagDbExisting.Size},Msg={diagDbExisting.TgMessageId?.ToString() ?? "null"},Trash={diagDbExisting.InTrash}" : "null")}, " +
                 $"activeExisting={(diagActiveExisting != null ? $"ID={diagActiveExisting.Id},Size={diagActiveExisting.Size}" : "null")} | " +
                 $"lastSec=[{diagLastSec ?? "none"}], lastOpen=[{diagLastOpen ?? "none"}]");
+
+            if (!isDir && createDisposition == NT_FILE_CREATE && (diagDbExisting != null || diagActiveExisting != null))
+            {
+                if (diagDbExisting != null && !diagDbExisting.IsDir)
+                {
+                    RecordVirtualCollision(cleanPath, parentPath, diagDbExisting, callerPid);
+                }
+
+                AppLogger.Info("WinFsp", $"[Create] Коллизия FILE_CREATE для существующего файла '{cleanPath}' (dbId={diagDbExisting?.Id.ToString() ?? "null"}, actId={diagActiveExisting?.Id.ToString() ?? "null"}, pid={GetDiagProcessName(callerPid)}). Мгновенный возврат NT_STATUS_OBJECT_NAME_COLLISION.");
+                fileNode = null!;
+                fileDesc = null!;
+                fileInfo = default;
+                normalizedName = null!;
+                return NT_STATUS_OBJECT_NAME_COLLISION;
+            }
 
             if (isDir)
             {
@@ -826,6 +1005,28 @@ namespace TGramFS.Services
             var node = (Node)fileNode;
             var ctx = (FspNodeContext)fileDesc;
             long prevSize = node.Size;
+
+            int overwritePid = 0;
+            try { overwritePid = FileSystemBase.GetOperationProcessId(); } catch { }
+            if (overwritePid > 0)
+            {
+                ctx.CreatorProcessId = overwritePid;
+            }
+            int effectivePid = ctx.CreatorProcessId;
+
+            if (ctx.IsVirtualCopyPassThrough)
+            {
+                long targetPassSize = ctx.VirtualCopyPassThroughTargetSize > 0 ? ctx.VirtualCopyPassThroughTargetSize : prevSize;
+                node.Size = targetPassSize;
+                node.UpdatedAt = DateTime.UtcNow;
+                ctx.IsModified = true;
+                ctx.TotalBytesWritten = 0;
+                ctx.KnownTargetSize = targetPassSize;
+                AppLogger.Info("WinFsp", $"[VirtualCopy Pass2 Overwrite] Сохранен проброс второго прохода для '{node.Name}' (ID {node.Id}, {AppLogger.FormatSizeDetailed(targetPassSize)}, alloc={allocationSize}).");
+                FillFileInfo(node, out fileInfo);
+                return STATUS_SUCCESS;
+            }
+
             node.Size = 0;
             node.UpdatedAt = DateTime.UtcNow;
             ctx.Dispose();
@@ -836,14 +1037,6 @@ namespace TGramFS.Services
             ctx.PipeStream = null;
             ctx.UploadTask = null;
             ctx.UploadCts = null;
-
-            int overwritePid = 0;
-            try { overwritePid = FileSystemBase.GetOperationProcessId(); } catch { }
-            if (overwritePid > 0)
-            {
-                ctx.CreatorProcessId = overwritePid;
-            }
-            int effectivePid = ctx.CreatorProcessId;
 
             string fullNodePath = _repository.GetNodeFullPath(node.Id);
             var (virtualSource, originalSource) = ResolveFileSource(node.Name, fullNodePath, effectivePid, _repository, ctx.KnownTargetSize);
@@ -912,13 +1105,18 @@ namespace TGramFS.Services
                 return STATUS_SUCCESS;
             }
 
-            if (ctx.VirtualSourceNode != null)
+            if (ctx.VirtualSourceNode != null || ctx.IsVirtualCopyPassThrough)
             {
-                // Это виртуальный клон! Данные копируются через Telegram ForwardMessages на сервере.
+                // Это виртуальный клон (или второй проход мелкого виртуального клона)!
+                // Данные уже скопированы через Telegram ForwardMessages на сервере;
                 // Проводник пишет считанные байты, мы их подтверждаем без повторной сетевой передачи!
                 bytesTransferred = length;
                 ctx.TotalBytesWritten += length;
                 ctx.IsModified = true;
+                if (ctx.IsVirtualCopyPassThrough && (long)(offset + length) > node.Size)
+                {
+                    node.Size = (long)(offset + length);
+                }
                 FillFileInfo(node, out fileInfo);
                 return STATUS_SUCCESS;
             }
@@ -1470,6 +1668,27 @@ namespace TGramFS.Services
 
                 try
                 {
+                    if (ctx.IsVirtualCopyPassThrough)
+                    {
+                        if (ctx.VirtualCopyPassThroughTargetSize > 0 && node.Size < ctx.VirtualCopyPassThroughTargetSize)
+                        {
+                            node.Size = ctx.VirtualCopyPassThroughTargetSize;
+                        }
+                        if (node.Id > 0)
+                        {
+                            _repository.UpdateNodeTimestamps(node.Id, targetUpdatedAt, targetCreatedAt);
+                        }
+                        _activeUploadNodes.TryRemove(cleanFilePath, out _);
+                        if (ctx.TotalBytesWritten > 0)
+                        {
+                            _recentTwoPassVirtualCopies.TryRemove(NormalizePath(cleanFilePath), out _);
+                        }
+                        MarkSessionFileCompleted(cleanFilePath);
+                        AppLogger.Info("WinFsp", $"[VirtualCopy Pass2] Второй проход записи для '{nodeName}' (ID {node.Id}) подтвержден без дублирования в Telegram (записано: {ctx.TotalBytesWritten}, размер в БД: {AppLogger.FormatSizeDetailed(node.Size)}).");
+                        ctx.Dispose();
+                        return;
+                    }
+
                     if (ctx.VirtualSourceNode != null)
                     {
                         UnregisterActiveVirtualCopy(node.Id);
@@ -1500,6 +1719,11 @@ namespace TGramFS.Services
                                     node.Size = ctx.VirtualSourceNode.Size;
                                     node.UpdatedAt = targetUpdatedAt;
                                     node.CreatedAt = targetCreatedAt;
+
+                                    if (ctx.TotalBytesWritten == 0 && ctx.VirtualSourceNode.Size > 0)
+                                    {
+                                        RegisterTwoPassVirtualCopy(cleanFilePath, node.Id, ctx.VirtualSourceNode.Id, ctx.VirtualSourceNode.Size, ctx.CreatorProcessId);
+                                    }
 
                                     MarkSessionFileCompleted(cleanFilePath);
                                     AppLogger.Info("WinFsp", $"[VirtualCopy] Файл '{nodeName}' успешно сохранен через Telegram ForwardMessages (новый Msg ID: {fwdResult.MessageId}, размер: {AppLogger.FormatSizeDetailed(node.Size)}" +
@@ -1538,6 +1762,11 @@ namespace TGramFS.Services
                             node.InlineData = ctx.VirtualSourceNode.InlineData;
                             node.UpdatedAt = targetUpdatedAt;
                             node.CreatedAt = targetCreatedAt;
+
+                            if (ctx.TotalBytesWritten == 0 && ctx.VirtualSourceNode.Size > 0)
+                            {
+                                RegisterTwoPassVirtualCopy(cleanFilePath, node.Id, ctx.VirtualSourceNode.Id, ctx.VirtualSourceNode.Size, ctx.CreatorProcessId);
+                            }
 
                             MarkSessionFileCompleted(cleanFilePath);
                             AppLogger.Info("WinFsp", $"[VirtualCopy] Файл '{nodeName}' сохранен мгновенно из локальных данных ({AppLogger.FormatSizeDetailed(node.Size)}).");
@@ -1773,6 +2002,19 @@ namespace TGramFS.Services
                 {
                     AppLogger.Info("WinFsp", $"[DIAG Close] nodeId={node?.Id.ToString() ?? "null"}, name='{node?.Name}', isDir={node?.IsDir}, vPath='{ctx.VirtualPath}', cleanupCalled={ctx.CleanupCalled}, isMod={ctx.IsModified}, delOnClose={ctx.DeleteOnClose}, written={ctx.TotalBytesWritten}, pid={GetDiagProcessName(ctx.CreatorProcessId)}");
                 }
+
+                if (node != null && node.Id <= 0 && !ctx.CleanupCalled)
+                {
+                    string vPath = ResolveCleanupVirtualPath(node, ctx, null);
+                    if (!string.IsNullOrWhiteSpace(vPath) && vPath != "/" &&
+                        _activeUploadNodes.TryGetValue(vPath, out var activeNode) &&
+                        (ReferenceEquals(activeNode, node) || activeNode.Id == node.Id))
+                    {
+                        _activeUploadNodes.TryRemove(new KeyValuePair<string, Node>(vPath, activeNode));
+                    }
+                    ReleaseSessionReservation(vPath);
+                }
+
                 ctx.Dispose();
             }
             else if (node != null && node.Id <= 0)
@@ -2485,6 +2727,7 @@ namespace TGramFS.Services
                     cleanVirtualPath,
                     expectedSize,
                     currentClipSeq,
+                    callerPid,
                     repository,
                     isRetryFallback: false);
                 if (clipVirtual != null || clipOriginal != null)
@@ -2496,7 +2739,14 @@ namespace TGramFS.Services
             // Шаг 3: Опрашиваем открытые файловые дескрипторы (Handles) процесса callerPid через ядро Windows.
             // При уже отработанном буфере обмена (например, перенос мышкой после Ctrl+C -> Ctrl+V) этот шаг
             // выполняется ДО повторного обращения к старому буферу обмена.
-            var handleCandidates = CollectOpenFileHandles(targetFileName, includeMountedDrive: true, callerPid: callerPid, targetVirtualPath: cleanVirtualPath, expectedSize: expectedSize);
+            var recentCollidedNames = GetRecentCollisionNames(cleanVirtualPath, callerPid);
+            var handleCandidates = CollectOpenFileHandles(
+                targetFileName,
+                includeMountedDrive: true,
+                callerPid: callerPid,
+                targetVirtualPath: cleanVirtualPath,
+                expectedSize: expectedSize,
+                alternatePhysicalNames: recentCollidedNames);
             AppLogger.Info("WinFsp", $"[DIAG Resolve Handles] target='{targetFileName}', handleCandidates={handleCandidates.Count}" + (handleCandidates.Count > 0 ? $": [{string.Join(" | ", handleCandidates.Take(5))}]" : ""));
             if (handleCandidates.Count > 0)
             {
@@ -2510,6 +2760,21 @@ namespace TGramFS.Services
                         matchedPhysical = CheckCandidate(phys, targetFileName, cleanVirtualPath, expectedSize);
                         if (matchedPhysical != null)
                             break;
+                    }
+
+                    // Если перенос с ПК в TG вызвал переименование (Keep Both: "file (2).ext"), проверяем совпадение с недавней коллизией
+                    if (matchedPhysical == null && recentCollidedNames != null)
+                    {
+                        foreach (var phys in physicalCandidates)
+                        {
+                            string physName = Path.GetFileName(phys);
+                            if (recentCollidedNames.Contains(physName) && File.Exists(phys) && DoesFileSizeMatch(phys, expectedSize))
+                            {
+                                matchedPhysical = VerifyReadable(phys);
+                                if (matchedPhysical != null)
+                                    break;
+                            }
+                        }
                     }
 
                     if (matchedPhysical != null)
@@ -2573,6 +2838,7 @@ namespace TGramFS.Services
                     cleanVirtualPath,
                     expectedSize,
                     currentClipSeq,
+                    callerPid,
                     repository,
                     isRetryFallback: true);
                 if (retryVirtual != null || retryOriginal != null)
@@ -2581,8 +2847,60 @@ namespace TGramFS.Services
                 }
             }
 
+            // Шаг 5: Drag-and-Drop копирование внутри диска Z: с автоматическим переименованием при коллизии (Ctrl + Drag),
+            // выполняемое строго при отсутствии физических файлов-кандидатов на дисках ПК.
+            if (repository != null &&
+                !isRepeatInSameSession &&
+                !handleCandidates.Any(c => !IsCandidateOnMountedDrive(c) && File.Exists(c)))
+            {
+                var dragRenamedVirtual = TryMatchRenamedVirtualFromSignals(cleanVirtualPath, targetFileName, callerPid, expectedSize, repository);
+                if (dragRenamedVirtual != null)
+                {
+                    AppLogger.Info("WinFsp", $"[DragDrop Renamed VirtualCopy] Определен виртуальный источник после коллизии: ID {dragRenamedVirtual.Id} ('{dragRenamedVirtual.Name}') -> '{cleanVirtualPath}'.");
+                    return (dragRenamedVirtual, null);
+                }
+            }
+
             AppLogger.Info("WinFsp", $"[DIAG Resolve Result] target='{targetFileName}', vPath='{cleanVirtualPath}' -> NOT RESOLVED (null, null)");
             return (null, null);
+        }
+
+        private static void UpdateVirtualClipboardSession(List<string> clipboardCandidates, uint currentClipSeq, NodeRepository repository, bool isRetryFallback)
+        {
+            int expectedVirtualFiles = 0;
+            foreach (var vClip in clipboardCandidates)
+            {
+                if (!IsCandidateOnMountedDrive(vClip)) continue;
+                string? vp = GetVirtualPathFromMountedPath(vClip);
+                if (string.IsNullOrEmpty(vp)) continue;
+                var vNode = repository.GetNodeByPath(vp);
+                if (vNode == null) continue;
+                expectedVirtualFiles += vNode.IsDir
+                    ? repository.GetSubtreeNodes(vNode.Id).Count(n => !n.IsDir)
+                    : 1;
+            }
+
+            lock (_sessionLock)
+            {
+                if (_activeSession == null ||
+                    !_activeSession.IsVirtualClipboard ||
+                    _activeSession.ClipboardSequenceNumber != currentClipSeq ||
+                    (isRetryFallback && _activeSession.VirtualRemainingCount <= 0))
+                {
+                    _activeSession = new CopySession
+                    {
+                        ClipboardSequenceNumber = currentClipSeq,
+                        IsFromClipboard = currentClipSeq != 0,
+                        IsVirtualClipboard = true,
+                        VirtualRemainingCount = Math.Max(1, expectedVirtualFiles),
+                        LastActivityUtc = DateTime.UtcNow
+                    };
+                }
+                else
+                {
+                    _activeSession.LastActivityUtc = DateTime.UtcNow;
+                }
+            }
         }
 
         private static (Node? VirtualSource, string? OriginalSource, bool HasFileCandidates) TryMatchFromClipboard(
@@ -2590,6 +2908,7 @@ namespace TGramFS.Services
             string? cleanVirtualPath,
             long expectedSize,
             uint currentClipSeq,
+            int callerPid,
             NodeRepository? repository,
             bool isRetryFallback)
         {
@@ -2598,6 +2917,7 @@ namespace TGramFS.Services
             if (clipboardCandidates.Count > 0)
             {
                 string logTag = isRetryFallback ? "Источник: Повторный буфер обмена" : "Источник: Буфер обмена";
+                var physicalClip = clipboardCandidates.Where(c => !IsCandidateOnMountedDrive(c)).ToList();
 
                 // 2.1 Проверяем виртуальные кандидаты в буфере обмена (диск Z:)
                 if (repository != null)
@@ -2609,49 +2929,28 @@ namespace TGramFS.Services
                             var vMatch = MatchVirtualCandidate(clip, targetFileName, cleanVirtualPath ?? "", repository);
                             if (vMatch != null)
                             {
-                                int expectedVirtualFiles = 0;
-                                foreach (var vClip in clipboardCandidates)
-                                {
-                                    if (!IsCandidateOnMountedDrive(vClip)) continue;
-                                    string? vp = GetVirtualPathFromMountedPath(vClip);
-                                    if (string.IsNullOrEmpty(vp)) continue;
-                                    var vNode = repository.GetNodeByPath(vp);
-                                    if (vNode == null) continue;
-                                    expectedVirtualFiles += vNode.IsDir
-                                        ? repository.GetSubtreeNodes(vNode.Id).Count(n => !n.IsDir)
-                                        : 1;
-                                }
-
-                                lock (_sessionLock)
-                                {
-                                    if (_activeSession == null ||
-                                        !_activeSession.IsVirtualClipboard ||
-                                        _activeSession.ClipboardSequenceNumber != currentClipSeq ||
-                                        (isRetryFallback && _activeSession.VirtualRemainingCount <= 0))
-                                    {
-                                        _activeSession = new CopySession
-                                        {
-                                            ClipboardSequenceNumber = currentClipSeq,
-                                            IsFromClipboard = currentClipSeq != 0,
-                                            IsVirtualClipboard = true,
-                                            VirtualRemainingCount = Math.Max(1, expectedVirtualFiles),
-                                            LastActivityUtc = DateTime.UtcNow
-                                        };
-                                    }
-                                    else
-                                    {
-                                        _activeSession.LastActivityUtc = DateTime.UtcNow;
-                                    }
-                                }
+                                UpdateVirtualClipboardSession(clipboardCandidates, currentClipSeq, repository, isRetryFallback);
                                 AppLogger.Info("WinFsp", $"[{logTag}] Найдено прямое совпадение в буфере обмена Windows (Виртуальная копия): '{clip}'");
                                 return (vMatch, null, true);
                             }
                         }
                     }
+
+                    // 2.1б Копирование внутри диска в ту же папку (или при коллизии имён), когда Windows переименовала файл
+                    // (без хардкода локализованных суффиксов вроде "— копия" / "- Copy" / "(2)"), строго при отсутствии физических файлов в буфере
+                    if (physicalClip.Count == 0 && !string.IsNullOrEmpty(cleanVirtualPath))
+                    {
+                        var renamedMatch = TryMatchRenamedVirtualCandidate(clipboardCandidates, cleanVirtualPath, targetFileName, callerPid, expectedSize, repository);
+                        if (renamedMatch != null)
+                        {
+                            UpdateVirtualClipboardSession(clipboardCandidates, currentClipSeq, repository, isRetryFallback);
+                            AppLogger.Info("WinFsp", $"[{logTag}] Определена переименованная виртуальная копия по факту коллизии/чтения: ID {renamedMatch.Id} ('{renamedMatch.Name}') -> '{cleanVirtualPath}'.");
+                            return (renamedMatch, null, true);
+                        }
+                    }
                 }
 
                 // 2.2 Проверяем физические кандидаты в буфере обмена (диски D:, C: и др.)
-                var physicalClip = clipboardCandidates.Where(c => !IsCandidateOnMountedDrive(c)).ToList();
                 if (physicalClip.Count > 0)
                 {
                     var clipSession = CreateCopySession(physicalClip, currentClipSeq);
@@ -2895,7 +3194,13 @@ namespace TGramFS.Services
         /// Опрашивает открытые файловые дескрипторы через ядро Windows (NtQuerySystemInformation),
         /// не отправляя оконных сообщений и не обращаясь к OLE/COM, что полностью исключает дедлоки.
         /// </summary>
-        private static List<string> CollectOpenFileHandles(string? targetFileName, bool includeMountedDrive = false, int callerPid = 0, string? targetVirtualPath = null, long expectedSize = -1)
+        private static List<string> CollectOpenFileHandles(
+            string? targetFileName,
+            bool includeMountedDrive = false,
+            int callerPid = 0,
+            string? targetVirtualPath = null,
+            long expectedSize = -1,
+            IReadOnlyCollection<string>? alternatePhysicalNames = null)
         {
             var results = new List<string>();
             var dirFallbackResults = new List<string>();
@@ -3069,8 +3374,10 @@ namespace TGramFS.Services
                                                 else if (File.Exists(path))
                                                 {
                                                     string name = Path.GetFileName(path);
-                                                    if (string.IsNullOrEmpty(targetFileName) ||
-                                                        string.Equals(name, targetFileName, StringComparison.OrdinalIgnoreCase))
+                                                    bool nameMatches = string.IsNullOrEmpty(targetFileName) ||
+                                                        string.Equals(name, targetFileName, StringComparison.OrdinalIgnoreCase) ||
+                                                        (alternatePhysicalNames != null && alternatePhysicalNames.Contains(name));
+                                                    if (nameMatches)
                                                     {
                                                         bool sizeOk = DoesFileSizeMatch(path, expectedSize);
 
@@ -3081,7 +3388,8 @@ namespace TGramFS.Services
 
                                                             // Если мы искали конкретный целевой файл и нашли его среди РЕАЛЬНО ОТКРЫТЫХ файлов,
                                                             // МГНОВЕННО прекращаем опрос остальных дескрипторов (Fast-Break)
-                                                            if (!string.IsNullOrEmpty(targetFileName))
+                                                            if (!string.IsNullOrEmpty(targetFileName) &&
+                                                                string.Equals(name, targetFileName, StringComparison.OrdinalIgnoreCase))
                                                             {
                                                                 return results;
                                                             }
@@ -3457,6 +3765,211 @@ namespace TGramFS.Services
             return null;
         }
 
+        private static Node? TryMatchRenamedVirtualCandidate(
+            List<string> clipboardCandidates,
+            string cleanVirtualPath,
+            string targetFileName,
+            int callerPid,
+            long expectedSize,
+            NodeRepository repository)
+        {
+            string targetParentPath = GetParentPath(cleanVirtualPath);
+            string targetExt = Path.GetExtension(targetFileName);
+            string targetBase = Path.GetFileNameWithoutExtension(targetFileName);
+            DateTime cutoff = DateTime.UtcNow.AddSeconds(-20);
+
+            Node? bestNode = null;
+            int bestScore = int.MinValue;
+            RecentVirtualSignal? bestCollision = null;
+            RecentVirtualSignal? bestReadOpen = null;
+
+            foreach (var clip in clipboardCandidates)
+            {
+                if (!IsCandidateOnMountedDrive(clip))
+                    continue;
+
+                string? vPath = GetVirtualPathFromMountedPath(clip);
+                if (string.IsNullOrEmpty(vPath))
+                    continue;
+
+                if (string.Equals(NormalizePath(vPath), NormalizePath(cleanVirtualPath), StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                var candNode = repository.GetNodeByPath(vPath);
+                if (candNode == null || candNode.IsDir || (candNode.TgMessageId ?? 0) <= 0)
+                    continue;
+
+                if (!string.Equals(Path.GetExtension(candNode.Name), targetExt, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                if (!DoesSizeMatch(candNode.Size, expectedSize))
+                    continue;
+
+                RecentVirtualSignal? matchedCollision = null;
+                RecentVirtualSignal? matchedReadOpen = null;
+                lock (_virtualSignalsLock)
+                {
+                    foreach (var c in _recentVirtualCollisions)
+                    {
+                        if (c.TimestampUtc < cutoff) continue;
+                        if (c.SourceNode.Id != candNode.Id) continue;
+                        if (callerPid > 0 && c.ProcessId > 0 && c.ProcessId != callerPid) continue;
+                        if (!string.Equals(c.ParentPath, targetParentPath, StringComparison.OrdinalIgnoreCase)) continue;
+                        if (matchedCollision == null || (!c.Consumed && matchedCollision.Consumed) || c.TimestampUtc > matchedCollision.TimestampUtc)
+                        {
+                            matchedCollision = c;
+                        }
+                    }
+
+                    foreach (var r in _recentVirtualReadOpens)
+                    {
+                        if (r.TimestampUtc < cutoff) continue;
+                        if (r.SourceNode.Id != candNode.Id) continue;
+                        if (callerPid > 0 && r.ProcessId > 0 && r.ProcessId != callerPid) continue;
+                        if (matchedReadOpen == null || (!r.Consumed && matchedReadOpen.Consumed) || r.TimestampUtc > matchedReadOpen.TimestampUtc)
+                        {
+                            matchedReadOpen = r;
+                        }
+                    }
+
+                    // Поддержка повторной вставки (Ctrl+V -> Ctrl+V) в ту же папку, когда Windows проверяет коллизию по исходному имени
+                    // или по уже существующей первой копии в этой папке
+                    if (matchedCollision == null)
+                    {
+                        foreach (var c in _recentVirtualCollisions)
+                        {
+                            if (c.TimestampUtc < cutoff) continue;
+                            if (callerPid > 0 && c.ProcessId > 0 && c.ProcessId != callerPid) continue;
+                            if (!string.Equals(c.ParentPath, targetParentPath, StringComparison.OrdinalIgnoreCase)) continue;
+                            if (!string.Equals(Path.GetExtension(c.SourceNode.Name), targetExt, StringComparison.OrdinalIgnoreCase)) continue;
+                            if (matchedCollision == null || (!c.Consumed && matchedCollision.Consumed))
+                            {
+                                matchedCollision = c;
+                            }
+                        }
+                    }
+                }
+
+                if (matchedCollision == null && matchedReadOpen == null)
+                    continue;
+
+                int score = 0;
+                if (matchedCollision != null) score += matchedCollision.Consumed ? 50 : 250;
+                if (matchedReadOpen != null) score += matchedReadOpen.Consumed ? 30 : 150;
+                if (string.Equals(GetParentPath(vPath), targetParentPath, StringComparison.OrdinalIgnoreCase)) score += 300;
+
+                string candBase = Path.GetFileNameWithoutExtension(candNode.Name);
+                if (!string.IsNullOrEmpty(candBase) && targetBase.StartsWith(candBase, StringComparison.OrdinalIgnoreCase))
+                {
+                    score += 1000 + candBase.Length;
+                }
+
+                if (score > bestScore)
+                {
+                    bestScore = score;
+                    bestNode = candNode;
+                    bestCollision = matchedCollision;
+                    bestReadOpen = matchedReadOpen;
+                }
+            }
+
+            if (bestNode != null)
+            {
+                lock (_virtualSignalsLock)
+                {
+                    if (bestCollision != null) bestCollision.Consumed = true;
+                    if (bestReadOpen != null) bestReadOpen.Consumed = true;
+                }
+            }
+
+            return bestNode;
+        }
+
+        private static Node? TryMatchRenamedVirtualFromSignals(
+            string? cleanVirtualPath,
+            string targetFileName,
+            int callerPid,
+            long expectedSize,
+            NodeRepository repository)
+        {
+            if (string.IsNullOrWhiteSpace(cleanVirtualPath))
+                return null;
+
+            // Защита от конфликта с буфером обмена ПК (Keep Both при копировании с диска ПК)
+            var clipCheck = CollectClipboardCandidates(includeMountedDrive: true);
+            if (clipCheck.Exists(c => !IsCandidateOnMountedDrive(c)))
+                return null;
+
+            string targetParentPath = GetParentPath(cleanVirtualPath);
+            string targetExt = Path.GetExtension(targetFileName);
+            string targetBase = Path.GetFileNameWithoutExtension(targetFileName);
+            DateTime readCutoff = DateTime.UtcNow.AddSeconds(-8);
+            DateTime collisionCutoff = DateTime.UtcNow.AddSeconds(-20);
+
+            Node? bestNode = null;
+            int bestScore = int.MinValue;
+            RecentVirtualSignal? bestReadOpen = null;
+            RecentVirtualSignal? bestCollision = null;
+
+            lock (_virtualSignalsLock)
+            {
+                foreach (var r in _recentVirtualReadOpens)
+                {
+                    if (r.TimestampUtc < readCutoff || r.Consumed) continue;
+                    if (callerPid > 0 && r.ProcessId > 0 && r.ProcessId != callerPid) continue;
+                    if (string.Equals(NormalizePath(r.VirtualPath), NormalizePath(cleanVirtualPath), StringComparison.OrdinalIgnoreCase)) continue;
+                    if (!string.Equals(Path.GetExtension(r.SourceNode.Name), targetExt, StringComparison.OrdinalIgnoreCase)) continue;
+                    if (!DoesSizeMatch(r.SourceNode.Size, expectedSize)) continue;
+
+                    RecentVirtualSignal? matchedCol = null;
+                    foreach (var c in _recentVirtualCollisions)
+                    {
+                        if (c.TimestampUtc < collisionCutoff) continue;
+                        if (c.SourceNode.Id != r.SourceNode.Id) continue;
+                        if (!string.Equals(c.ParentPath, targetParentPath, StringComparison.OrdinalIgnoreCase)) continue;
+                        if (callerPid > 0 && c.ProcessId > 0 && c.ProcessId != callerPid) continue;
+                        matchedCol = c;
+                        break;
+                    }
+
+                    // Для Drag-and-Drop без буфера обмена требуем либо коллизию в той же папке, либо чтение файла из той же папки
+                    if (matchedCol == null && !string.Equals(r.ParentPath, targetParentPath, StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    int score = matchedCol != null ? 500 : 100;
+                    string candBase = Path.GetFileNameWithoutExtension(r.SourceNode.Name);
+                    if (!string.IsNullOrEmpty(candBase) && targetBase.StartsWith(candBase, StringComparison.OrdinalIgnoreCase))
+                    {
+                        score += 1000 + candBase.Length;
+                    }
+
+                    if (score > bestScore)
+                    {
+                        bestScore = score;
+                        bestNode = r.SourceNode;
+                        bestReadOpen = r;
+                        bestCollision = matchedCol;
+                    }
+                }
+
+                if (bestNode != null)
+                {
+                    if (bestReadOpen != null) bestReadOpen.Consumed = true;
+                    if (bestCollision != null) bestCollision.Consumed = true;
+                }
+            }
+
+            if (bestNode == null)
+                return null;
+
+            var fresh = repository.GetNodeById(bestNode.Id);
+            if (fresh != null && !fresh.IsDir && !fresh.InTrash && (fresh.TgMessageId ?? 0) > 0)
+            {
+                return fresh;
+            }
+            return null;
+        }
+
         #endregion
 
         private class FspNodeContext : IDisposable
@@ -3469,6 +3982,8 @@ namespace TGramFS.Services
             // Виртуальный источник для серверного клонирования (Zero-Traffic Copy)
             public Node? VirtualSourceNode { get; set; }
             public Task<FileUploadResult?>? ForwardTask { get; set; }
+            public bool IsVirtualCopyPassThrough { get; set; }
+            public long VirtualCopyPassThroughTargetSize { get; set; }
 
             // Прямая потоковая загрузка без временных файлов на диске (Zero-Temp Direct Streaming)
             public StreamingPipeStream? PipeStream { get; set; }

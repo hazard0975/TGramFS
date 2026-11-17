@@ -1,139 +1,612 @@
-
-[2026-11-17 01:43:02.966] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Music' (/Music) (ID 5), элементов: 0
-[2026-11-17 01:43:09.211] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 2
-[2026-11-17 01:43:09.225] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Новый текстовый документ.txt' (виртуальный путь: '/Music/Новый текстовый документ.txt')...
-[2026-11-17 01:43:09.274] [INFO ] [WinFsp] [Handles DragDrop] Сканирование хэндлов для 1 процессов (PID: 14796, вызывающий процесс: explorer (PID: 14796))...
-[2026-11-17 01:43:09.370] [INFO ] [WinFsp] [Handles DragDrop] В системе обнаружено 114763 дескрипторов ядра (File Type Index: 36).
-[2026-11-17 01:43:09.416] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/Новый текстовый документ.txt' (alloc: 0)
-[2026-11-17 01:43:09.684] [INFO ] [WinFsp] Файл 'Новый текстовый документ.txt' (0 байт) сохранен в базе данных без отправки в Telegram (inline_data).
-[2026-11-17 01:43:09.728] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Music' (/Music) (ID 5), элементов: 1
-[2026-11-17 01:43:11.566] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 2
-[2026-11-17 01:43:14.810] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Music' (/Music) (ID 5), элементов: 1
-[2026-11-17 01:43:26.582] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Новый текстовый документ.txt' (виртуальный путь: '/Music/Новый текстовый документ.txt')...
-[2026-11-17 01:43:26.582] [INFO ] [WinFsp] [Handles DragDrop] Сканирование хэндлов для 1 процессов (PID: 16740, вызывающий процесс: notepad (PID: 16740))...
-[2026-11-17 01:43:26.634] [INFO ] [WinFsp] [Handles DragDrop] В системе обнаружено 118699 дескрипторов ядра (File Type Index: 36).
-[2026-11-17 01:43:26.647] [INFO ] [WinFsp] Отправка файла 'Новый текстовый документ.txt' (6 байт) из памяти в Telegram (Zero-Temp), канал: 4432518768...
-[2026-11-17 01:43:26.661] [INFO ] [TelegramService] Прямая потоковая передача файла 'Новый текстовый документ.txt' (6 байт) в Telegram...
-[2026-11-17 01:43:26.711] [INFO ] [TelegramService] Файл 'Новый текстовый документ.txt' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /Music/Новый текстовый документ_v1.txt
-#latest')...
-[2026-11-17 01:43:26.720] [INFO ] [TrayProgressOverlay] Показ окна прогресса [Upload] для Новый текстовый документ.txt (6/6)
-[2026-11-17 01:43:26.874] [INFO ] [TelegramService] Файл 'Новый текстовый документ.txt' успешно сохранен в Telegram. Message ID: 558
-[2026-11-17 01:43:26.875] [INFO ] [TrayContext] Событие OnUploadCompleted для 'Новый текстовый документ.txt' получено из TelegramService.
-[2026-11-17 01:43:26.876] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для 'Новый текстовый документ.txt'. Запуск _completionTimer...
-[2026-11-17 01:43:27.068] [INFO ] [WinFsp] Файл 'Новый текстовый документ.txt' успешно сохранен в Telegram (Msg ID: 558, дата изменения: 2026-11-16 23:43:26).
-[2026-11-17 01:43:27.954] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 2
-[2026-11-17 01:43:28.282] [INFO ] [TrayProgressOverlay] _completionTimer Tick! _isTransferring=False, _isCompleted=True, Visible=True
-[2026-11-17 01:43:28.285] [INFO ] [TrayProgressOverlay] Оверлей успешно скрыт по завершению таймаута.
-[2026-11-17 01:44:27.067] [INFO ] [DatabaseBackup] Сработал Debounce-таймер резервного копирования (1 мин тишины).
-[2026-11-17 01:44:27.068] [INFO ] [TelegramService] Запрос к Telegram: поиск последней резервной копии базы данных...
-[2026-11-17 01:44:27.132] [INFO ] [TelegramService] Найден файл бэкапа базы в Telegram: Message #64, 'base_2026-11-17_01-42-21.db', 100,0 КБ, дата: 2026-11-17 01:42:22
-[2026-11-17 01:44:27.132] [INFO ] [DatabaseBackup] Запуск резервного копирования базы данных. Причина: 'Автоматический бэкап (1 мин тишины)'...
-[2026-11-17 01:44:27.133] [INFO ] [Database] Создание консистентного снимка базы данных в: D:\Temp\TGramFS\backups\base_2026-11-17_01-44-27.db...
-[2026-11-17 01:44:27.938] [INFO ] [Database] Снимок базы данных успешно создан: D:\Temp\TGramFS\backups\base_2026-11-17_01-44-27.db
-[2026-11-17 01:44:27.940] [INFO ] [TelegramService] Загрузка резервной копии 'base_2026-11-17_01-44-27.db' в Telegram (канал ID: 4439566709)...
-[2026-11-17 01:44:28.139] [INFO ] [TelegramService] Резервная копия 'base_2026-11-17_01-44-27.db' успешно загружена в Telegram. Message ID: 65
-[2026-11-17 01:44:28.160] [INFO ] [DatabaseBackup] Резервная копия базы данных успешно отправлена в Telegram! (Размер: 0,10 МБ).
-[2026-11-17 01:49:03.664] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Music' (/Music) (ID 5), элементов: 1
-[2026-11-17 01:49:08.718] [INFO ] [WinFsp] Открыт каталог: '/Music' (ID 5)
-[2026-11-17 01:49:08.752] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 2
-[2026-11-17 01:49:08.776] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Новый текстовый документ.txt' (виртуальный путь: '/Music/Новый текстовый документ.txt')...
-[2026-11-17 01:49:08.780] [INFO ] [WinFsp] [Handles DragDrop] Сканирование хэндлов для 1 процессов (PID: 14796, вызывающий процесс: explorer (PID: 14796))...
-[2026-11-17 01:49:08.832] [INFO ] [WinFsp] [Handles DragDrop] В системе обнаружено 113586 дескрипторов ядра (File Type Index: 36).
-[2026-11-17 01:49:08.870] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/Новый текстовый документ.txt' (alloc: 0)
-[2026-11-17 01:49:08.871] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Новый текстовый документ.txt' (виртуальный путь: '/Music/Новый текстовый документ.txt')...
-[2026-11-17 01:49:08.871] [INFO ] [WinFsp] [Handles DragDrop] Сканирование хэндлов для 1 процессов (PID: 14796, вызывающий процесс: explorer (PID: 14796))...
-[2026-11-17 01:49:08.911] [INFO ] [WinFsp] [Handles DragDrop] В системе обнаружено 113734 дескрипторов ядра (File Type Index: 36).
-[2026-11-17 01:49:08.946] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/Новый текстовый документ.txt' (alloc: 0)
-[2026-11-17 01:49:08.947] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Новый текстовый документ.txt' (виртуальный путь: '/Music/Новый текстовый документ.txt')...
-[2026-11-17 01:49:08.947] [INFO ] [WinFsp] [Handles DragDrop] Сканирование хэндлов для 1 процессов (PID: 14796, вызывающий процесс: explorer (PID: 14796))...
-[2026-11-17 01:49:08.997] [INFO ] [WinFsp] [Handles DragDrop] В системе обнаружено 113878 дескрипторов ядра (File Type Index: 36).
-[2026-11-17 01:49:09.032] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/Новый текстовый документ.txt' (alloc: 0)
-[2026-11-17 01:49:09.033] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Новый текстовый документ.txt' (виртуальный путь: '/Music/Новый текстовый документ.txt')...
-[2026-11-17 01:49:09.034] [INFO ] [WinFsp] [Handles DragDrop] Сканирование хэндлов для 1 процессов (PID: 14796, вызывающий процесс: explorer (PID: 14796))...
-[2026-11-17 01:49:09.081] [INFO ] [WinFsp] [Handles DragDrop] В системе обнаружено 114011 дескрипторов ядра (File Type Index: 36).
-[2026-11-17 01:49:09.114] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/Новый текстовый документ.txt' (alloc: 0)
-[2026-11-17 01:49:09.115] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Новый текстовый документ.txt' (виртуальный путь: '/Music/Новый текстовый документ.txt')...
-[2026-11-17 01:49:09.115] [INFO ] [WinFsp] [Handles DragDrop] Сканирование хэндлов для 1 процессов (PID: 14796, вызывающий процесс: explorer (PID: 14796))...
-[2026-11-17 01:49:09.154] [INFO ] [WinFsp] [Handles DragDrop] В системе обнаружено 114159 дескрипторов ядра (File Type Index: 36).
-[2026-11-17 01:49:09.188] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/Новый текстовый документ.txt' (alloc: 0)
-[2026-11-17 01:49:09.189] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Новый текстовый документ.txt' (виртуальный путь: '/Music/Новый текстовый документ.txt')...
-[2026-11-17 01:49:09.190] [INFO ] [WinFsp] [Handles DragDrop] Сканирование хэндлов для 1 процессов (PID: 14796, вызывающий процесс: explorer (PID: 14796))...
-[2026-11-17 01:49:09.243] [INFO ] [WinFsp] [Handles DragDrop] В системе обнаружено 114306 дескрипторов ядра (File Type Index: 36).
-[2026-11-17 01:49:09.279] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/Новый текстовый документ.txt' (alloc: 0)
-[2026-11-17 01:49:09.281] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Новый текстовый документ.txt' (виртуальный путь: '/Music/Новый текстовый документ.txt')...
-[2026-11-17 01:49:09.281] [INFO ] [WinFsp] [Handles DragDrop] Сканирование хэндлов для 1 процессов (PID: 14796, вызывающий процесс: explorer (PID: 14796))...
-[2026-11-17 01:49:09.331] [INFO ] [WinFsp] [Handles DragDrop] В системе обнаружено 114454 дескрипторов ядра (File Type Index: 36).
-[2026-11-17 01:49:09.363] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/Новый текстовый документ.txt' (alloc: 0)
-[2026-11-17 01:49:09.365] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Новый текстовый документ.txt' (виртуальный путь: '/Music/Новый текстовый документ.txt')...
-[2026-11-17 01:49:09.365] [INFO ] [WinFsp] [Handles DragDrop] Сканирование хэндлов для 1 процессов (PID: 14796, вызывающий процесс: explorer (PID: 14796))...
-[2026-11-17 01:49:09.405] [INFO ] [WinFsp] [Handles DragDrop] В системе обнаружено 114621 дескрипторов ядра (File Type Index: 36).
-[2026-11-17 01:49:09.424] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/Новый текстовый документ.txt' (alloc: 0)
-[2026-11-17 01:49:09.425] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Новый текстовый документ.txt' (виртуальный путь: '/Music/Новый текстовый документ.txt')...
-[2026-11-17 01:49:09.425] [INFO ] [WinFsp] [Handles DragDrop] Сканирование хэндлов для 1 процессов (PID: 14796, вызывающий процесс: explorer (PID: 14796))...
-[2026-11-17 01:49:09.470] [INFO ] [WinFsp] [Handles DragDrop] В системе обнаружено 114258 дескрипторов ядра (File Type Index: 36).
-[2026-11-17 01:49:09.500] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/Новый текстовый документ.txt' (alloc: 0)
-[2026-11-17 01:49:09.502] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Новый текстовый документ.txt' (виртуальный путь: '/Music/Новый текстовый документ.txt')...
-[2026-11-17 01:49:09.502] [INFO ] [WinFsp] [Handles DragDrop] Сканирование хэндлов для 1 процессов (PID: 14796, вызывающий процесс: explorer (PID: 14796))...
-[2026-11-17 01:49:09.533] [INFO ] [WinFsp] [Handles DragDrop] В системе обнаружено 114415 дескрипторов ядра (File Type Index: 36).
-[2026-11-17 01:49:09.660] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/Новый текстовый документ.txt' (alloc: 0)
-[2026-11-17 01:49:09.662] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Новый текстовый документ.txt' (виртуальный путь: '/Music/Новый текстовый документ.txt')...
-[2026-11-17 01:49:09.662] [INFO ] [WinFsp] [Handles DragDrop] Сканирование хэндлов для 1 процессов (PID: 14796, вызывающий процесс: explorer (PID: 14796))...
-[2026-11-17 01:49:09.698] [INFO ] [WinFsp] [Handles DragDrop] В системе обнаружено 114568 дескрипторов ядра (File Type Index: 36).
-[2026-11-17 01:49:09.784] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/Новый текстовый документ.txt' (alloc: 0)
-[2026-11-17 01:49:09.786] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Новый текстовый документ.txt' (виртуальный путь: '/Music/Новый текстовый документ.txt')...
-[2026-11-17 01:49:09.786] [INFO ] [WinFsp] [Handles DragDrop] Сканирование хэндлов для 1 процессов (PID: 14796, вызывающий процесс: explorer (PID: 14796))...
-[2026-11-17 01:49:09.824] [INFO ] [WinFsp] [Handles DragDrop] В системе обнаружено 114096 дескрипторов ядра (File Type Index: 36).
-[2026-11-17 01:49:09.846] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/Новый текстовый документ.txt' (alloc: 0)
-[2026-11-17 01:49:09.850] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Новый текстовый документ.txt' (виртуальный путь: '/Music/Новый текстовый документ.txt')...
-[2026-11-17 01:49:09.851] [INFO ] [WinFsp] [Handles DragDrop] Сканирование хэндлов для 1 процессов (PID: 14796, вызывающий процесс: explorer (PID: 14796))...
-[2026-11-17 01:49:09.884] [INFO ] [WinFsp] [Handles DragDrop] В системе обнаружено 114240 дескрипторов ядра (File Type Index: 36).
-[2026-11-17 01:49:10.009] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/Новый текстовый документ.txt' (alloc: 0)
-[2026-11-17 01:49:10.010] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Music' (/Music) (ID 5), элементов: 1
-[2026-11-17 01:49:10.011] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Новый текстовый документ.txt' (виртуальный путь: '/Music/Новый текстовый документ.txt')...
-[2026-11-17 01:49:10.012] [INFO ] [WinFsp] [Handles DragDrop] Сканирование хэндлов для 1 процессов (PID: 14796, вызывающий процесс: explorer (PID: 14796))...
-[2026-11-17 01:49:10.061] [INFO ] [WinFsp] [Handles DragDrop] В системе обнаружено 114382 дескрипторов ядра (File Type Index: 36).
-[2026-11-17 01:49:10.141] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/Новый текстовый документ.txt' (alloc: 0)
-[2026-11-17 01:49:10.143] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Новый текстовый документ.txt' (виртуальный путь: '/Music/Новый текстовый документ.txt')...
-[2026-11-17 01:49:10.143] [INFO ] [WinFsp] [Handles DragDrop] Сканирование хэндлов для 1 процессов (PID: 14796, вызывающий процесс: explorer (PID: 14796))...
-[2026-11-17 01:49:10.196] [INFO ] [WinFsp] [Handles DragDrop] В системе обнаружено 114553 дескрипторов ядра (File Type Index: 36).
-[2026-11-17 01:49:10.231] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/Новый текстовый документ.txt' (alloc: 0)
-[2026-11-17 01:49:10.233] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Новый текстовый документ.txt' (виртуальный путь: '/Music/Новый текстовый документ.txt')...
-[2026-11-17 01:49:10.233] [INFO ] [WinFsp] [Handles DragDrop] Сканирование хэндлов для 1 процессов (PID: 14796, вызывающий процесс: explorer (PID: 14796))...
-[2026-11-17 01:49:10.285] [INFO ] [WinFsp] [Handles DragDrop] В системе обнаружено 114712 дескрипторов ядра (File Type Index: 36).
-[2026-11-17 01:49:10.321] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/Новый текстовый документ.txt' (alloc: 0)
-[2026-11-17 01:49:10.322] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Новый текстовый документ.txt' (виртуальный путь: '/Music/Новый текстовый документ.txt')...
-[2026-11-17 01:49:10.323] [INFO ] [WinFsp] [Handles DragDrop] Сканирование хэндлов для 1 процессов (PID: 14796, вызывающий процесс: explorer (PID: 14796))...
-[2026-11-17 01:49:10.376] [INFO ] [WinFsp] [Handles DragDrop] В системе обнаружено 114223 дескрипторов ядра (File Type Index: 36).
-[2026-11-17 01:49:10.411] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/Новый текстовый документ.txt' (alloc: 0)
-[2026-11-17 01:49:10.412] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Новый текстовый документ.txt' (виртуальный путь: '/Music/Новый текстовый документ.txt')...
-[2026-11-17 01:49:10.412] [INFO ] [WinFsp] [Handles DragDrop] Сканирование хэндлов для 1 процессов (PID: 14796, вызывающий процесс: explorer (PID: 14796))...
-[2026-11-17 01:49:10.459] [INFO ] [WinFsp] [Handles DragDrop] В системе обнаружено 114377 дескрипторов ядра (File Type Index: 36).
-[2026-11-17 01:49:10.493] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/Новый текстовый документ.txt' (alloc: 0)
-[2026-11-17 01:49:10.507] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Новый текстовый документ — копия.txt' (виртуальный путь: '/Music/Новый текстовый документ — копия.txt')...
-[2026-11-17 01:49:10.508] [INFO ] [WinFsp] [Handles DragDrop] Сканирование хэндлов для 1 процессов (PID: 14796, вызывающий процесс: explorer (PID: 14796))...
-[2026-11-17 01:49:10.560] [INFO ] [WinFsp] [Handles DragDrop] В системе обнаружено 114539 дескрипторов ядра (File Type Index: 36).
-[2026-11-17 01:49:10.598] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/Music/Новый текстовый документ — копия.txt' (alloc: 0)
-[2026-11-17 01:49:10.600] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 2
-[2026-11-17 01:49:11.327] [INFO ] [WinFsp] Файл 'Новый текстовый документ — копия.txt' (0 байт) сохранен в базе данных без отправки в Telegram (inline_data).
-[2026-11-17 01:49:11.387] [INFO ] [MtprotoWorkerPool] [Воркер #2] Запрос чанка #1/1 для 'Новый текстовый документ.txt' (/Music/Новый текстовый документ.txt) (смещение 0 б, размер 4 096 б) [Остаток 4,00 КБ]...
-[2026-11-17 01:49:11.446] [INFO ] [MtprotoWorkerPool] [Воркер #2] Получен чанк #1/1 для 'Новый текстовый документ.txt' (/Music/Новый текстовый документ.txt) (6 б за 58 мс) [Остаток 0,01 КБ].
-[2026-11-17 01:49:11.446] [INFO ] [TelegramService] [NetworkAudit] Завершено для 'Новый текстовый документ.txt' (/Music/Новый текстовый документ.txt): Размер: 6 б (0,00 МБ) | Из сети TG: 6 б (0,00 МБ) | Из ОЗУ: 0 б (0,00 МБ) | Эффективность сети: 1.00x (Идеально — 0% дублирования)
-[2026-11-17 01:49:11.446] [INFO ] [TrayContext] Событие OnDownloadCompleted для 'Новый текстовый документ.txt' получено из TelegramService.
-[2026-11-17 01:49:11.447] [INFO ] [TrayProgressOverlay] CompleteTransfer [Download] вызван для 'Новый текстовый документ.txt'. Запуск _completionTimer...
-[2026-11-17 01:49:11.540] [INFO ] [WinFsp] Обновлены системные даты для 'Новый текстовый документ — копия.txt' (ID 590): Изменен: 2026-11-16 23:43:26.578, Создан: 2026-11-16 23:49:10.598
-[2026-11-17 01:49:11.542] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Новый текстовый документ — копия.txt' (виртуальный путь: '/Music/Новый текстовый документ — копия.txt')...
-[2026-11-17 01:49:11.543] [INFO ] [WinFsp] [Handles DragDrop] Сканирование хэндлов для 1 процессов (PID: 14796, вызывающий процесс: explorer (PID: 14796))...
-[2026-11-17 01:49:11.596] [INFO ] [WinFsp] [Handles DragDrop] В системе обнаружено 114114 дескрипторов ядра (File Type Index: 36).
-[2026-11-17 01:49:11.635] [INFO ] [WinFsp] Отправка файла 'Новый текстовый документ — копия.txt' (6 байт) из памяти в Telegram (Zero-Temp), канал: 4432518768...
-[2026-11-17 01:49:11.636] [INFO ] [TelegramService] Прямая потоковая передача файла 'Новый текстовый документ — копия.txt' (6 байт) в Telegram...
-[2026-11-17 01:49:11.688] [INFO ] [TelegramService] Файл 'Новый текстовый документ — копия.txt' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /Music/Новый текстовый документ — копия_v1.txt
-#latest')...
-[2026-11-17 01:49:11.690] [INFO ] [TrayProgressOverlay] Остановлен активный _completionTimer для файла Новый текстовый документ — копия.txt
-[2026-11-17 01:49:11.920] [INFO ] [TelegramService] Файл 'Новый текстовый документ — копия.txt' успешно сохранен в Telegram. Message ID: 559
-[2026-11-17 01:49:11.920] [INFO ] [TrayContext] Событие OnUploadCompleted для 'Новый текстовый документ — копия.txt' получено из TelegramService.
-[2026-11-17 01:49:11.920] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для 'Новый текстовый документ — копия.txt'. Запуск _completionTimer...
-[2026-11-17 01:49:12.020] [INFO ] [WinFsp] Файл 'Новый текстовый документ — копия.txt' успешно сохранен в Telegram (Msg ID: 559, дата изменения: 2026-11-16 23:43:26).
-[2026-11-17 01:49:12.268] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Music' (/Music) (ID 5), элементов: 2
-[2026-11-17 01:49:13.328] [INFO ] [TrayProgressOverlay] _completionTimer Tick! _isTransferring=False, _isCompleted=True, Visible=True
-[2026-11-17 01:49:13.333] [INFO ] [TrayProgressOverlay] Оверлей успешно скрыт по завершению таймаута.
-[2026-11-17 01:49:13.751] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 2
+[2026-11-17 16:41:32.908] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:32.908 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:32.908] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:32.908 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:32.909] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:32.909 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:32.909] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:32.909 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:32.910] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:32.910 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:32.910] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:32.910 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:32.910] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:32.910 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:32.910] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:32.910 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:32.911] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:32.911 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:32.911] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:32.911 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:32.911] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:32.911 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:32.911] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:32.911 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:32.911] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:32.911 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:32.912] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:32.911 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:32.912] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:32.912 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:32.912] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:32.912 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:32.912] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:32.912 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:32.912] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:32.912 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:32.913] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:32.913 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:32.913] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:32.913 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:32.913] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:32.913 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:32.913] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:32.913 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:32.940] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:32.940 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:32.941] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:32.941 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:32.941] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:32.941 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:32.941] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:32.941 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:32.942] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:32.942 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:32.942] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:32.942 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:32.942] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:32.942 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:32.943] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:32.943 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:32.943] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:32.943 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:32.943] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:32.943 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:32.944] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:32.944 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:32.944] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:32.944 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:32.944] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:32.944 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:32.944] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:32.944 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:32.945] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:32.945 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:32.945] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:32.945 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:32.945] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:32.945 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:32.945] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:32.945 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:32.972] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:32.972 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:32.973] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:32.973 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:32.973] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:32.973 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:32.974] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:32.974 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:32.974] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:32.974 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:32.975] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:32.975 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:32.975] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:32.975 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:32.975] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:32.975 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:32.976] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:32.976 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:32.976] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:32.976 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:32.976] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:32.976 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:32.976] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:32.976 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:32.977] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:32.977 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:32.977] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:32.977 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:32.977] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:32.977 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:32.977] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:32.977 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:32.978] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:32.978 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:32.978] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:32.978 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:33.006] [DEBUG] [WTelegram] 2>Receiving Updates                                  2026-11-17 14:41:32Z  
+[2026-11-17 16:41:33.018] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:33.018 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.018] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:33.018 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.018] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:33.018 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.019] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:33.019 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.019] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:33.019 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.020] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:33.020 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.020] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:33.020 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.020] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:33.020 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.021] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:33.021 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.021] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:33.021 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:33.021] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:33.021 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:33.021] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:33.021 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:33.022] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:33.022 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:33.022] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:33.022 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:33.022] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:33.022 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:33.022] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:33.022 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:33.023] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:33.023 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:33.023] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:33.023 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:33.023] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:33.023 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.024] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:33.024 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.024] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:33.024 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.024] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:33.024 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.025] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:33.025 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.025] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:33.025 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.025] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:33.025 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.026] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:33.026 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.026] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:33.026 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.026] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:33.026 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:33.026] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:33.026 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:33.026] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:33.026 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:33.027] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:33.027 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:33.027] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:33.027 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:33.027] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:33.027 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:33.027] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:33.027 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:33.028] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:33.028 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:33.028] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:33.028 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:33.028] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:33.028 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.029] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:33.029 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200000 access=0x00000080 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.029] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:33.029 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:33.029] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:33.029 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000021 access=0x00100001 raw='\Music'
+[2026-11-17 16:41:33.030] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:33.030 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:33.030] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:33.030 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200000 access=0x00000080 raw='\Music'
+[2026-11-17 16:41:33.032] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:33.032 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.033] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:33.033 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.033] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:33.033 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.034] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:33.034 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.034] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:33.034 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.035] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:33.035 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.035] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:33.035 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.035] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:33.035 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.035] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:33.035 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.036] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:33.036 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:33.036] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:33.036 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:33.036] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:33.036 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:33.037] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:33.037 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:33.037] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:33.037 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:33.037] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:33.037 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:33.037] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:33.037 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:33.037] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:33.037 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:33.038] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:33.038 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:33.038] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:33.038 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.038] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:33.038 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200000 access=0x00000080 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.039] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:33.039 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:33.039] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:33.039 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000021 access=0x00100001 raw='\Music'
+[2026-11-17 16:41:33.040] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:33.040 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:33.040] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:33.040 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200000 access=0x00000080 raw='\Music'
+[2026-11-17 16:41:33.587] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка/Новая папка' -> 14:41:33.587 OK pid=6556 dbId=599 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка\Новая папка'
+[2026-11-17 16:41:33.587] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка/Новая папка' -> 14:41:33.587 OK pid=6556 nodeId=599 isDir=True size=0 opts=0x01200000 access=0x00000080 raw='\Music\Новая папка\Новая папка'
+[2026-11-17 16:41:33.589] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка/Новая папка' -> 14:41:33.589 OK pid=6556 dbId=599 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка\Новая папка'
+[2026-11-17 16:41:33.589] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка/Новая папка' -> 14:41:33.589 OK pid=6556 nodeId=599 isDir=True size=0 opts=0x01200000 access=0x00000080 raw='\Music\Новая папка\Новая папка'
+[2026-11-17 16:41:33.637] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка/Новая папка' -> 14:41:33.637 OK pid=6556 dbId=599 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка\Новая папка'
+[2026-11-17 16:41:33.637] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка/Новая папка' -> 14:41:33.637 OK pid=6556 nodeId=599 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка\Новая папка'
+[2026-11-17 16:41:33.640] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:33.640 OK pid=6556 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.640] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:33.640 OK pid=6556 nodeId=596 isDir=True size=0 opts=0x01000020 access=0x00100081 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.642] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка' (/Music/Новая папка) (ID 596), элементов: 3
+[2026-11-17 16:41:33.643] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка/Новая папка' -> 14:41:33.643 OK pid=6556 dbId=599 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка\Новая папка'
+[2026-11-17 16:41:33.644] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка/Новая папка' -> 14:41:33.643 OK pid=6556 nodeId=599 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка\Новая папка'
+[2026-11-17 16:41:33.699] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:33.699 OK pid=6556 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.700] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:33.700 OK pid=6556 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.700] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:33.700 OK pid=6556 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.701] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:33.701 OK pid=6556 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.701] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:33.701 OK pid=6556 nodeId=596 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.702] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:33.702 OK pid=6556 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.702] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:33.702 OK pid=6556 nodeId=596 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.703] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:33.703 OK pid=6556 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.703] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:33.703 OK pid=6556 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.704] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:33.704 OK pid=6556 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:33.704] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:33.704 OK pid=6556 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:33.704] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:33.704 OK pid=6556 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:33.704] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:33.704 OK pid=6556 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:33.705] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:33.705 OK pid=6556 nodeId=5 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:33.705] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:33.705 OK pid=6556 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:33.705] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:33.705 OK pid=6556 nodeId=5 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:33.706] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:33.706 OK pid=6556 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:33.706] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:33.706 OK pid=6556 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:33.713] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка/Новая папка' -> 14:41:33.713 OK pid=6556 dbId=599 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка\Новая папка'
+[2026-11-17 16:41:33.713] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка/Новая папка' -> 14:41:33.713 OK pid=6556 nodeId=599 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка\Новая папка'
+[2026-11-17 16:41:33.727] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:33.727 OK pid=6556 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.727] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:33.727 OK pid=6556 nodeId=596 isDir=True size=0 opts=0x01200000 access=0x00000080 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.728] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:33.728 OK pid=6556 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.729] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:33.729 OK pid=6556 nodeId=596 isDir=True size=0 opts=0x01200000 access=0x00000080 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.739] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:33.739 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:33.739] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:33.739 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:33.739] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:33.739 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:33.740] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:33.740 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:33.740] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:33.740 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:33.740] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:33.740 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:33.740] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:33.740 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:33.740] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:33.740 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:33.741] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:33.741 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:33.754] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:33.754 OK pid=6556 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.754] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:33.754 OK pid=6556 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.755] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:33.755 OK pid=6556 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.756] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:33.756 OK pid=6556 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.757] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:33.757 OK pid=6556 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:33.757] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:33.757 OK pid=6556 nodeId=5 isDir=True size=0 opts=0x01000020 access=0x00100081 raw='\Music'
+[2026-11-17 16:41:33.758] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:33.758 OK pid=6556 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.758] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:33.758 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:33.758] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:33.758 OK pid=6556 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.759] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:33.759 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:33.759] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:33.759 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:33.759] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:33.759 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:33.759] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:33.759 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:33.759] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:33.759 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:33.760] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:33.760 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:33.760] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:33.760 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:33.760] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:33.760 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:33.790] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:33.790 OK pid=6556 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:33.791] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:33.791 OK pid=6556 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:33.791] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:33.791 OK pid=6556 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:33.791] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:33.791 OK pid=6556 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:33.791] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:33.791 OK pid=6556 nodeId=5 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:33.791] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:33.791 OK pid=6556 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:33.792] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:33.792 OK pid=6556 nodeId=5 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:33.792] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:33.792 OK pid=6556 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:33.792] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:33.792 OK pid=6556 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:33.796] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:33.796 OK pid=6556 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.796] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:33.796 OK pid=6556 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:33.965] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:33.965 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:34.022] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:34.022 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:34.022] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:34.022 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:34.049] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:34.049 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:34.050] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:34.050 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:34.057] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:34.056 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:34.057] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:34.057 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:34.064] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:34.064 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:34.064] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:34.064 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:34.745] [DEBUG] [WTelegram] 2>Sending   MsgContainer                             2026-11-17 14:41:33Z (svc)
+[2026-11-17 16:41:34.745] [DEBUG] [WTelegram]             → PingDelayDisconnect                    #907D
+[2026-11-17 16:41:34.745] [DEBUG] [WTelegram]             → MsgsAck                               
+[2026-11-17 16:41:34.789] [DEBUG] [WTelegram] 2>Receiving Pong                                     2026-11-17 14:41:33Z (svc) 
+[2026-11-17 16:41:38.271] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:38.271 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:38.272] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:38.272 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200000 access=0x00020000 raw='\Music\Новая папка'
+[2026-11-17 16:41:38.273] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:38.273 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:38.273] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:38.273 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200000 access=0x00020000 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.386] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:40.386 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:40.387] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:40.387 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000020 access=0x00100081 raw='\Music'
+[2026-11-17 16:41:40.388] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Music' (/Music) (ID 5), элементов: 5
+[2026-11-17 16:41:40.390] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка/Новая папка' -> 14:41:40.390 OK pid=19860 dbId=599 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка\Новая папка'
+[2026-11-17 16:41:40.390] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка/Новая папка' -> 14:41:40.390 OK pid=19860 nodeId=599 isDir=True size=0 opts=0x01200000 access=0x00000080 raw='\Music\Новая папка\Новая папка'
+[2026-11-17 16:41:40.391] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка/Новая папка (2)' -> NOT_FOUND (14:41:40.391 NOT_FOUND pid=19860 secInNull=False raw='\Music\Новая папка\Новая папка (2)')
+[2026-11-17 16:41:40.391] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:40.391 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.392] [INFO ] [WinFsp] [DIAG Create] raw='\Music\Новая папка\Новая папка (2)', clean='/Music/Новая папка/Новая папка (2)', isDir=True, opts=0x02200021, access=0x00100001, attrs=0x00000010, alloc=0, secLen=168, pid=explorer(19860) | dbExisting=null, activeExisting=null | lastSec=[14:41:40.391 NOT_FOUND pid=19860 secInNull=False raw='\Music\Новая папка\Новая папка (2)'], lastOpen=[none]
+[2026-11-17 16:41:40.616] [INFO ] [WinFsp] Создан новый каталог: '/Music/Новая папка/Новая папка (2)' (ID 600)
+[2026-11-17 16:41:40.618] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка/Новая папка (2)' -> 14:41:40.618 OK pid=19860 dbId=600 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка\Новая папка (2)'
+[2026-11-17 16:41:40.618] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка/Новая папка (2)' -> 14:41:40.618 OK pid=19860 nodeId=600 isDir=True size=0 opts=0x01000020 access=0x0017019B raw='\Music\Новая папка\Новая папка (2)'
+[2026-11-17 16:41:40.623] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:40.623 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.623] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:40.623 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.624] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:40.624 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.624] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:40.624 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.625] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:40.625 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.625] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:40.625 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.626] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:40.626 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.626] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:40.626 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.627] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:40.627 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.627] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:40.627 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:40.628] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:40.628 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:40.628] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:40.628 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:40.629] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:40.629 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:40.629] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:40.629 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:40.629] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:40.629 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:40.630] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:40.630 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:40.630] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:40.630 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:40.630] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:40.630 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:40.676] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:40.676 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.676] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:40.676 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01000020 access=0x00100081 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.683] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:40.683 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:40.683] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:40.683 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000020 access=0x00100081 raw='\Music'
+[2026-11-17 16:41:40.906] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка/Новая папка (2)' -> 14:41:40.906 OK pid=19860 dbId=600 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка\Новая папка (2)'
+[2026-11-17 16:41:40.906] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка/Новая папка (2)' -> 14:41:40.906 OK pid=19860 nodeId=600 isDir=True size=0 opts=0x01200000 access=0x00000080 raw='\Music\Новая папка\Новая папка (2)'
+[2026-11-17 16:41:40.913] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:40.913 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.913] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 2
+[2026-11-17 16:41:40.914] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:40.914 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.914] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:40.914 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.916] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка/Новая папка (2)' -> 14:41:40.916 OK pid=19860 dbId=600 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка\Новая папка (2)'
+[2026-11-17 16:41:40.917] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка/Новая папка (2)' -> 14:41:40.917 OK pid=19860 nodeId=600 isDir=True size=0 opts=0x01200000 access=0x00000080 raw='\Music\Новая папка\Новая папка (2)'
+[2026-11-17 16:41:40.917] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:40.917 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.918] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:40.918 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.918] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:40.918 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.921] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:40.921 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.922] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:40.922 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.922] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка/Новая папка (2)' -> 14:41:40.922 OK pid=19860 dbId=600 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка\Новая папка (2)'
+[2026-11-17 16:41:40.922] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:40.922 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.922] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка/Новая папка (2)' -> 14:41:40.922 OK pid=19860 nodeId=600 isDir=True size=0 opts=0x01200000 access=0x00000080 raw='\Music\Новая папка\Новая папка (2)'
+[2026-11-17 16:41:40.922] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:40.922 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:40.923] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:40.923 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:40.923] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:40.923 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:40.924] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:40.924 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:40.924] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:40.924 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:40.924] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:40.924 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:40.925] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:40.925 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:40.925] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:40.925 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:40.925] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:40.925 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:40.926] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:40.926 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.926] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:40.926 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.927] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:40.927 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.927] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:40.927 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.927] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:40.927 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200000 access=0x00000080 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.927] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:40.927 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.928] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:40.928 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:40.928] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:40.928 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.928] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:40.928 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000021 access=0x00100001 raw='\Music'
+[2026-11-17 16:41:40.928] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:40.928 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.929] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:40.929 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.930] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:40.930 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:40.930] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:40.930 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200000 access=0x00000080 raw='\Music'
+[2026-11-17 16:41:40.930] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:40.930 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.932] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:40.931 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.932] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:40.932 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:40.933] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:40.933 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:40.934] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:40.934 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:40.937] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:40.937 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:40.937] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:40.937 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:40.940] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:40.939 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:40.940] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:40.940 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:40.941] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:40.941 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:40.941] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:40.941 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:40.942] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:40.942 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:40.942] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:40.942 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.942] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:40.942 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:40.942] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:40.942 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200000 access=0x00000080 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.942] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:40.942 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:40.943] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:40.943 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:40.943] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:40.943 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:40.944] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:40.944 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:40.944] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:40.944 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:40.944] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:40.944 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000021 access=0x00100001 raw='\Music'
+[2026-11-17 16:41:40.944] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:40.944 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:40.945] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:40.945 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:40.946] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:40.945 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:40.946] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:40.946 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:40.946] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:40.946 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200000 access=0x00000080 raw='\Music'
+[2026-11-17 16:41:40.947] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:40.947 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.947] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка/Новая папка (2)' -> 14:41:40.947 OK pid=19860 dbId=600 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка\Новая папка (2)'
+[2026-11-17 16:41:40.948] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:40.947 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.948] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка/Новая папка (2)' -> 14:41:40.948 OK pid=19860 dbId=600 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка\Новая папка (2)'
+[2026-11-17 16:41:40.948] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:40.948 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.948] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка/Новая папка (2)' -> 14:41:40.948 OK pid=19860 nodeId=600 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка\Новая папка (2)'
+[2026-11-17 16:41:40.949] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:40.949 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.950] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка/Новая папка (2)' -> 14:41:40.950 OK pid=19860 dbId=600 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка\Новая папка (2)'
+[2026-11-17 16:41:40.950] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка/Новая папка (2)' -> 14:41:40.950 OK pid=19860 nodeId=600 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music\Новая папка\Новая папка (2)'
+[2026-11-17 16:41:40.950] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:40.950 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.951] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:40.951 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.951] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка/Новая папка (2)' -> 14:41:40.951 OK pid=19860 dbId=600 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка\Новая папка (2)'
+[2026-11-17 16:41:40.951] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:40.951 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.952] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:40.952 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.952] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка/Новая папка (2)' -> 14:41:40.952 OK pid=19860 nodeId=600 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music\Новая папка\Новая папка (2)'
+[2026-11-17 16:41:40.952] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:40.952 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.954] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:40.954 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:40.955] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:40.955 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:40.955] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:40.955 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:40.956] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:40.956 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:40.956] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:40.956 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:40.957] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:40.957 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:40.957] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:40.957 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:40.957] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка/Новая папка (2)' -> 14:41:40.957 OK pid=19860 dbId=600 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка\Новая папка (2)'
+[2026-11-17 16:41:40.958] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:40.958 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:40.958] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:40.958 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:40.959] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка/Новая папка (2)' -> 14:41:40.959 OK pid=19860 nodeId=600 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка\Новая папка (2)'
+[2026-11-17 16:41:40.960] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:40.960 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.961] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:40.961 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.962] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:40.962 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.964] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:40.964 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.965] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:40.965 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.966] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:40.966 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.967] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:40.967 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.968] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:40.968 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.968] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:40.968 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:40.970] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:40.969 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:40.970] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:40.970 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:40.971] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:40.971 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:40.972] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:40.972 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:40.972] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:40.972 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:40.973] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:40.973 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:40.974] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:40.973 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:40.974] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:40.974 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:40.975] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:40.975 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:40.975] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:40.975 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:40.976] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:40.976 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:40.976] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:40.976 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:40.977] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:40.977 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:40.977] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:40.977 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:41.016] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:41.016 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.017] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:41.017 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.017] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:41.017 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.018] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:41.018 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.018] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:41.018 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.019] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:41.019 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.019] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:41.019 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.020] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:41.020 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.020] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:41.020 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.020] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.020 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.021] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.021 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.021] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:41.021 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:41.021] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.021 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.022] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:41.021 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:41.022] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.022 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.022] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:41.022 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:41.022] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.022 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.023] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:41.023 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:41.057] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:41.057 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.057] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:41.057 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.058] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:41.058 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.058] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:41.058 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.058] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:41.058 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.059] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:41.059 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.059] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:41.059 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.059] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:41.059 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.060] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:41.060 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.060] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.060 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.060] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.060 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.060] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:41.060 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:41.061] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.061 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.061] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:41.061 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:41.061] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.061 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.061] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:41.061 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:41.062] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.062 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.062] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:41.062 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:41.077] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.077 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.077] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.077 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.077] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:41.077 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:41.078] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.078 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.078] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:41.078 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:41.078] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.078 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.079] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:41.079 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:41.079] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.079 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.079] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:41.079 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:41.080] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка/Новая папка (2)' -> 14:41:41.080 OK pid=19860 dbId=600 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка\Новая папка (2)'
+[2026-11-17 16:41:41.081] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка/Новая папка (2)' -> 14:41:41.081 OK pid=19860 dbId=600 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка\Новая папка (2)'
+[2026-11-17 16:41:41.081] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка/Новая папка (2)' -> 14:41:41.081 OK pid=19860 nodeId=600 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка\Новая папка (2)'
+[2026-11-17 16:41:41.082] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка/Новая папка (2)' -> 14:41:41.082 OK pid=19860 dbId=600 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка\Новая папка (2)'
+[2026-11-17 16:41:41.082] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка/Новая папка (2)' -> 14:41:41.082 OK pid=19860 nodeId=600 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music\Новая папка\Новая папка (2)'
+[2026-11-17 16:41:41.083] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка/Новая папка (2)' -> 14:41:41.083 OK pid=19860 dbId=600 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка\Новая папка (2)'
+[2026-11-17 16:41:41.083] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка/Новая папка (2)' -> 14:41:41.083 OK pid=19860 nodeId=600 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music\Новая папка\Новая папка (2)'
+[2026-11-17 16:41:41.084] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка/Новая папка (2)' -> 14:41:41.084 OK pid=19860 dbId=600 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка\Новая папка (2)'
+[2026-11-17 16:41:41.085] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка/Новая папка (2)' -> 14:41:41.085 OK pid=19860 nodeId=600 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка\Новая папка (2)'
+[2026-11-17 16:41:41.086] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:41.086 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.086] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:41.086 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.087] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:41.087 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.087] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:41.087 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.088] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:41.087 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.088] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:41.088 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.088] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:41.088 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.089] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:41.089 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.089] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:41.089 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.089] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.089 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.089] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.089 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.090] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:41.090 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:41.090] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.090 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.090] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:41.090 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:41.090] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.090 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.091] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:41.091 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:41.091] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.091 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.091] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:41.091 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:41.091] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.091 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.092] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.092 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.092] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:41.092 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:41.092] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.092 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.092] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:41.092 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:41.119] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:41.119 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.120] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:41.120 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.120] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:41.120 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.121] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:41.121 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.121] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:41.121 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.122] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:41.122 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.122] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:41.122 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.122] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:41.122 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.122] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:41.122 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.123] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.123 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.123] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.123 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.123] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:41.123 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:41.123] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.123 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.124] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:41.124 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:41.124] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.124 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.124] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:41.124 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:41.124] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.124 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.125] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:41.125 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:41.150] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:41.150 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.151] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:41.151 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.151] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:41.151 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.151] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:41.151 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.152] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:41.152 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.152] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:41.152 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.152] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:41.152 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.153] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:41.153 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.153] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:41.153 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.153] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.153 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.153] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.153 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.154] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:41.154 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:41.154] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.154 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.154] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:41.154 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:41.154] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.154 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.155] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:41.155 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:41.155] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.155 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.155] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:41.155 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:41.162] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:41.162 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.163] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:41.163 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.163] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:41.163 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.163] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:41.163 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.164] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:41.164 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.164] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:41.164 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.164] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:41.164 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.164] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:41.164 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.165] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:41.165 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.165] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.165 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.165] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.165 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.165] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:41.165 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:41.166] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.166 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.166] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:41.166 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:41.166] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.166 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.166] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:41.166 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:41.166] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.166 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.167] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:41.167 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:41.167] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:41.167 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.167] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:41.167 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.167] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:41.167 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.168] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:41.168 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.168] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:41.168 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.168] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:41.168 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.169] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:41.169 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.169] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:41.169 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.169] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:41.169 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.170] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.170 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.170] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.170 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.170] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:41.170 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:41.171] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.171 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.171] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:41.171 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:41.171] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.171 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.171] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:41.171 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:41.171] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.171 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.172] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:41.172 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:41.172] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:41.172 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.172] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:41.172 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200000 access=0x00000080 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.173] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.173 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.173] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:41.173 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000021 access=0x00100001 raw='\Music'
+[2026-11-17 16:41:41.174] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.174 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.174] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:41.174 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200000 access=0x00000080 raw='\Music'
+[2026-11-17 16:41:41.190] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:41.190 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.191] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:41.191 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.191] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:41.191 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.192] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:41.191 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.192] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:41.192 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.192] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:41.192 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.193] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:41.193 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.193] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:41.193 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.193] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:41.193 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.194] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.194 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.194] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.194 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.194] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:41.194 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:41.194] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.194 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.195] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:41.195 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:41.195] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.195 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.195] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:41.195 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:41.195] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.195 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.196] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:41.196 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:41.196] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:41.196 OK pid=19860 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.196] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:41.196 OK pid=19860 nodeId=596 isDir=True size=0 opts=0x01200000 access=0x00000080 raw='\Music\Новая папка'
+[2026-11-17 16:41:41.197] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.197 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.197] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:41.197 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000021 access=0x00100001 raw='\Music'
+[2026-11-17 16:41:41.199] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:41.199 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:41.199] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:41.199 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200000 access=0x00000080 raw='\Music'
+[2026-11-17 16:41:42.077] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка/Новая папка (2)' -> 14:41:42.077 OK pid=6556 dbId=600 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка\Новая папка (2)'
+[2026-11-17 16:41:42.077] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка/Новая папка (2)' -> 14:41:42.077 OK pid=6556 nodeId=600 isDir=True size=0 opts=0x01200000 access=0x00000080 raw='\Music\Новая папка\Новая папка (2)'
+[2026-11-17 16:41:42.079] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка/Новая папка (2)' -> 14:41:42.079 OK pid=6556 dbId=600 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка\Новая папка (2)'
+[2026-11-17 16:41:42.079] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка/Новая папка (2)' -> 14:41:42.079 OK pid=6556 nodeId=600 isDir=True size=0 opts=0x01200000 access=0x00000080 raw='\Music\Новая папка\Новая папка (2)'
+[2026-11-17 16:41:42.126] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка/Новая папка (2)' -> 14:41:42.126 OK pid=6556 dbId=600 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка\Новая папка (2)'
+[2026-11-17 16:41:42.127] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка/Новая папка (2)' -> 14:41:42.127 OK pid=6556 nodeId=600 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка\Новая папка (2)'
+[2026-11-17 16:41:42.128] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:42.128 OK pid=6556 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:42.128] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:42.128 OK pid=6556 nodeId=596 isDir=True size=0 opts=0x01000020 access=0x00100081 raw='\Music\Новая папка'
+[2026-11-17 16:41:42.129] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка' (/Music/Новая папка) (ID 596), элементов: 4
+[2026-11-17 16:41:42.131] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка/Новая папка (2)' -> 14:41:42.131 OK pid=6556 dbId=600 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка\Новая папка (2)'
+[2026-11-17 16:41:42.131] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка/Новая папка (2)' -> 14:41:42.131 OK pid=6556 nodeId=600 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка\Новая папка (2)'
+[2026-11-17 16:41:42.163] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:42.162 OK pid=6556 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:42.163] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:42.163 OK pid=6556 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:42.163] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:42.163 OK pid=6556 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:42.164] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:42.164 OK pid=6556 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:42.164] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:42.164 OK pid=6556 nodeId=596 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:42.165] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:42.165 OK pid=6556 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:42.165] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:42.165 OK pid=6556 nodeId=596 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:42.166] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:42.166 OK pid=6556 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:42.166] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:42.166 OK pid=6556 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:42.166] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:42.166 OK pid=6556 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:42.167] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:42.167 OK pid=6556 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:42.167] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:42.167 OK pid=6556 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:42.167] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:42.167 OK pid=6556 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:42.168] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:42.168 OK pid=6556 nodeId=5 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:42.168] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:42.168 OK pid=6556 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:42.168] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:42.168 OK pid=6556 nodeId=5 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:42.170] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:42.170 OK pid=6556 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:42.170] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:42.170 OK pid=6556 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:42.176] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка/Новая папка (2)' -> 14:41:42.176 OK pid=6556 dbId=600 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка\Новая папка (2)'
+[2026-11-17 16:41:42.176] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка/Новая папка (2)' -> 14:41:42.176 OK pid=6556 nodeId=600 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка\Новая папка (2)'
+[2026-11-17 16:41:42.193] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:42.193 OK pid=6556 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:42.194] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:42.194 OK pid=6556 nodeId=596 isDir=True size=0 opts=0x01200000 access=0x00000080 raw='\Music\Новая папка'
+[2026-11-17 16:41:42.194] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:42.194 OK pid=6556 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:42.195] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:42.195 OK pid=6556 nodeId=596 isDir=True size=0 opts=0x01200000 access=0x00000080 raw='\Music\Новая папка'
+[2026-11-17 16:41:42.218] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:42.218 OK pid=6556 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:42.218] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:42.218 OK pid=6556 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:42.218] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:42.218 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:42.218] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:42.218 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:42.219] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:42.219 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:42.219] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:42.219 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:42.219] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:42.219 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:42.219] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:42.219 OK pid=6556 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:42.219] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:42.219 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:42.220] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:42.219 OK pid=6556 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:42.220] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:42.220 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:42.220] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:42.220 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:42.220] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:42.220 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:42.221] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:42.221 OK pid=6556 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:42.221] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:42.221 OK pid=6556 nodeId=5 isDir=True size=0 opts=0x01000020 access=0x00100081 raw='\Music'
+[2026-11-17 16:41:42.223] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:42.223 OK pid=6556 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:42.223] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:42.223 OK pid=6556 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:42.255] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:42.255 OK pid=6556 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:42.255] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:42.255 OK pid=6556 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:42.255] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:42.255 OK pid=6556 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:42.256] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:42.256 OK pid=6556 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:42.256] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:42.256 OK pid=6556 nodeId=5 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:42.256] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:42.256 OK pid=6556 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:42.256] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:42.256 OK pid=6556 nodeId=5 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:42.257] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:42.257 OK pid=6556 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:42.257] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:42.257 OK pid=6556 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:42.264] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music/Новая папка' -> 14:41:42.264 OK pid=6556 dbId=596 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music\Новая папка'
+[2026-11-17 16:41:42.265] [DEBUG] [WinFsp] [DIAG Open] '/Music/Новая папка' -> 14:41:42.265 OK pid=6556 nodeId=596 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music\Новая папка'
+[2026-11-17 16:41:42.394] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:42.394 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:42.403] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:42.403 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:42.403] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:42.403 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:42.412] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:42.412 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:42.429] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:42.428 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000020 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:42.443] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:42.443 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:42.446] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:42.446 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01000010 access=0x00100080 raw='\Music'
+[2026-11-17 16:41:42.452] [DEBUG] [WinFsp] [DIAG GetSecurityByName] '/Music' -> 14:41:42.452 OK pid=19860 dbId=5 actId=null isDir=True size=0 attrs=0x10 secInNull=False secOut=72 raw='\Music'
+[2026-11-17 16:41:42.453] [DEBUG] [WinFsp] [DIAG Open] '/Music' -> 14:41:42.453 OK pid=19860 nodeId=5 isDir=True size=0 opts=0x01200020 access=0x00100080 raw='\Music'

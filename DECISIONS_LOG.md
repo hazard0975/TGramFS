@@ -4075,3 +4075,35 @@ _telegramService.UpdateSettings(_settings);
 3. **Защита дескриптора WinFsp**:
    - Блок удаления в `WinFspServer.Cleanup` обёрнут в `try/catch/finally` с гарантированным `ctx.Dispose()`.
 
+---
+
+## 131. Исправление цикла коллизий `FILE_CREATE`, локально-независимый `[VirtualCopy]` в той же папке и защита двухпроходных мелких файлов (`WinFspServer.cs`)
+
+### Контекст и симптомы:
+При копировании `Ctrl+C -> Ctrl+V` файла внутри одной и той же папки виртуального диска WinFsp (например, `/Music/Test.mp3` или `/Music/Новый текстовый документ.txt` размером 6 байт):
+1. Проводник Windows циклически вызывал `Create` на уже существующем исходном файле **18 раз подряд** (понижая флаги доступа `DesiredAccess`), создавая 18 фиктивных временных узлов в памяти `_activeUploadNodes`, запуская 18 полных сканирований ~116 000 системных дескрипторов (~1.5 сек лага) и возвращая `STATUS_SUCCESS`, который тут же отвергался ядром WinFsp (`Close` с `cleanupCalled=False`).
+2. После того как Проводник разрешал конфликт и создавал переименованную копию (`... — копия.ext`), `[VirtualCopy]` (`ForwardMessages`) не срабатывал, так как `MatchVirtualCandidate` требовал точного совпадения имени файла (`candName == targetFileName`). В результате файл повторно выгружался с расходом интернет-трафика, а для 6-байтного `.txt` Проводник дополнительно выполнял двухпроходную запись (`Create(alloc=0) -> Cleanup(0)` и затем `Open(FILE_OPEN_IF) -> Write -> Cleanup`).
+
+### Первопричины:
+1. В `TelegramWinFspFileSystem.Create` не проверялся старший байт `createDisposition = (createOptions >> 24) & 0xFF`: при `FILE_CREATE` (`2`) на уже существующем файле вместо `NT_STATUS_OBJECT_NAME_COLLISION` возвращался `STATUS_SUCCESS`.
+2. В `TelegramWinFspFileSystem.Close` при закрытии без `Cleanup` (`!ctx.CleanupCalled`) временный узел `node.Id <= 0` не удалялся из `_activeUploadNodes`.
+3. `TryMatchFromClipboard` / `ResolveFileSource` не учитывали переименование копии при коллизии в той же папке.
+4. Отсутствовала защита второго прохода (`Open(FILE_OPEN_IF) -> Write -> Cleanup`) для мелких/0-`alloc` виртуальных копий, у которых `Create` + `ForwardMessages` завершились в первом проходе (`TotalBytesWritten == 0`).
+
+### Принятое решение (`WinFspServer.cs`):
+1. **Мгновенная обработка `FILE_CREATE` коллизий для файлов**:
+   - В `Create` для `!isDir && createDisposition == NT_FILE_CREATE` при наличии существующего узла в БД или `_activeUploadNodes` сразу возвращается `NT_STATUS_OBJECT_NAME_COLLISION` (0 сканирований хэндлов, 0 зомби-узлов), а для реальных файлов БД фиксируется кратковременный сигнал коллизии `RecordVirtualCollision(cleanPath, parentPath, node, callerPid)`.
+   - Поведение для директорий (`isDir == true`) оставлено без изменений для сохранения штатного слияния папок при копировании с ПК и вставки в существующие папки.
+2. **Очистка невызванных временных узлов в `Close`**:
+   - Если `node.Id <= 0 && !ctx.CleanupCalled`, `Close` безопасно снимает совпадающий экземпляр узла из `_activeUploadNodes` и освобождает резерв сессии `ReleaseSessionReservation`.
+3. **Локально-независимый `[VirtualCopy]` при переименовании в той же папке (без хардкода суффиксов)**:
+   - В `Open` при чтении существующего файла (`(grantedAccess & FILE_READ_DATA) != 0 && !node.IsDir && (node.TgMessageId ?? 0) > 0`) фиксируется сигнал `RecordVirtualReadOpen`.
+   - В `TryMatchFromClipboard` (включая повторный `Ctrl+V` через `isRetryFallback`) добавлен шаг `TryMatchRenamedVirtualCandidate`: **строго при отсутствии физических файлов в буфере обмена** (`physicalClip.Count == 0`) виртуальный кандидат из буфера сопоставляется по недавней коллизии в той же родительской папке и/или чтению исходного файла тем же `callerPid`, совпадению расширения, размера и префиксу имени (работает для любых языков Windows: `— копия`, `- Copy`, `(2)` и др.).
+   - В `ResolveFileSource` (Шаг 3 / Шаг 5) для Drag-and-Drop (`Ctrl + Drag`) добавлена защита от ложного срабатывания при сценарии «Оставить оба» с диска ПК: в `CollectOpenFileHandles` передаются имена недавно столкнувшихся файлов (`alternatePhysicalNames`), а при наличии физического файла или физического буфера обмена виртуальное сопоставление блокируется.
+4. **Защита от дублирования при двухпроходном копировании (`_recentTwoPassVirtualCopies` / `IsVirtualCopyPassThrough`)**:
+   - Если в первом проходе `Cleanup` виртуальная копия завершила `ForwardMessages` с `TotalBytesWritten == 0 && VirtualSourceNode.Size > 0`, путь регистрируется в `_recentTwoPassVirtualCopies` (TTL 15 сек, привязка к `NodeId` и `CreatorPid`).
+   - Во втором проходе `Open` с правом записи (`FILE_WRITE_DATA | FILE_APPEND_DATA`) активирует `ctx.IsVirtualCopyPassThrough = true`, благодаря чему `Overwrite`, `Write` и второй `Cleanup` подтверждают байты и обновляют временные метки (`UpdateNodeTimestamps`) без повторной отправки файла в Telegram и без создания лишних версий в `.Trash`.
+5. **Временные диагностические логи (`[DIAG ...]`)**:
+   - По согласованию с пользователем сохранены на один контрольный тест после сборки, с последующей плановой зачисткой.
+
+

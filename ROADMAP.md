@@ -1407,4 +1407,11 @@
       2. В `EnqueuePermanentDeletion` добавлена топологическая сортировка удаляемых ID снизу вверх (`SortNodeIdsBottomUp`), очистка `pending_caption_updates` / `pending_channel_migrations` и чанкинг по 500 ID для `IN (...)` запросов (включая `GetPartsForNodes`).
       3. В `WinFspServer.Cleanup` ветка удаления обёрнута в `try/catch/finally` с гарантированным `ctx.Dispose()`.
       4. Валидация: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
+- [x] **8.124. Исправление цикла коллизий `FILE_CREATE`, локально-независимый `[VirtualCopy]` в той же папке и защита двухпроходных мелких файлов (`WinFspServer.cs`)**:
+    - **Проблема**: При `Ctrl+C -> Ctrl+V` в той же папке диска WinFsp Проводник 18 раз циклически вызывал `Create` на существующем файле (плодя зомби-узлы в `_activeUploadNodes` и запуская 18 сканирований дескрипторов ядра ~1.5 сек), не распознавал переименованную копию (`... — копия.ext`) для `[VirtualCopy]`, а для мелких 2-проходных файлов требовалась защита от дублирующей отправки во втором проходе (`Open(FILE_OPEN_IF) -> Write -> Cleanup`).
+    - **Реализовано**:
+      1. В `Create` для `!isDir && createDisposition == NT_FILE_CREATE` при существовании файла возвращается `NT_STATUS_OBJECT_NAME_COLLISION` с фиксацией сигнала коллизии (поведение `isDir == true` для слияния папок не изменено); в `Close` добавлена очистка `_activeUploadNodes` при `!ctx.CleanupCalled`.
+      2. Реализовано локально-независимое сопоставление переименованных виртуальных копий по сигналам коллизии/чтения (`TryMatchRenamedVirtualCandidate`, `TryMatchRenamedVirtualFromSignals`) без хардкода суффиксов языка Windows и с жёсткой изоляцией от конфликтов с физическими файлами ПК (`physicalClip.Count == 0`, `alternatePhysicalNames` в `CollectOpenFileHandles`).
+      3. Внедрена защита двухпроходной записи мелких виртуальных копий (`_recentTwoPassVirtualCopies` + `IsVirtualCopyPassThrough` в `Open`/`Overwrite`/`Write`/`Cleanup`) с сохранением `[DIAG ...]` на один контрольный тест.
+      4. Валидация: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
 
