@@ -4131,3 +4131,23 @@ _telegramService.UpdateSettings(_settings);
    - Во втором проходе `Open` (при `TryGetTwoPassVirtualCopy`) обновляет `OwnsActiveVirtualCopy = true` и продлевает TTL до завершения второго прохода (`5 мин`), а `Cleanup`/`Dispose` второго прохода детерминированно вызывают `UnregisterActiveVirtualCopy(node.Id)`.
 3. **Зачистка временной диагностики**:
    - Удалены временные `[DIAG ...]` логи и вспомогательные структуры `_diagLastSecByName`, `_diagLastOpen`, `IsDiagNoisePath`, `GetDiagProcessName`, `RecordDiagHistory`.
+
+---
+
+## 133. Защита старой версии `v1` при `Overwrite()` (отложенные даты в `SetBasicInfo` и безопасный откат при отмене) (`WinFspServer.cs`)
+
+### Контекст и выявленные риски:
+При проверке лога `log.MD` на операциях замены существующих файлов («Заменить файл в папке назначения» с ПК и между папками TG) выявились две потенциальные проблемы в ветке `Overwrite()`:
+1. **Порча даты изменения у старой версии `v1`**: Windows вызывает `SetBasicInfo` с датами **нового** файла до завершения `Cleanup()`. Поскольку у заменяемого узла `node.Id > 0` всё ещё указывает на `v1`, `SetBasicInfo` вызывал `_repository.UpdateNodeTimestamps(node.Id, ...)` напрямую по старой записи в SQLite, перетирая дату `v1` до того, как `CreateOrUpdateFile` переносил её в `.Trash`.
+2. **Удаление/обнуление `v1` при отмене перезаписи**: `Overwrite()` сразу выставлял `node.Size = 0` на живом `Node`. При отмене через `CleanupDelete` (`SetDelete`) ветка `if (node.Id <= 0)` пропускала существующий `node.Id > 0`, отправляя оригинал `v1` в `.Trash`; а при ошибке/отмене потока (`OperationCanceledException`) в памяти оставался `node.Size == 0`.
+
+### Принятое решение (`WinFspServer.cs`):
+1. **Снимок состояния перезаписи в `FspNodeContext`**:
+   - Добавлены поля `IsOverwritePending`, `PreOverwriteSize`, `PreOverwriteUpdatedAt`, `PreOverwriteCreatedAt` и метод `RestorePreOverwriteState()`.
+   - В `Overwrite()` (до `node.Size = 0`) фиксируется снимок исходной версии `v1`.
+2. **Отложенная запись дат в `SetBasicInfo()`**:
+   - При `ctx?.IsOverwritePending == true` системные даты обновляются только в памяти на `node` (откуда `Cleanup()` передаёт их в `CreateOrUpdateFile` уже для новой версии `v2`), не затрагивая запись `v1` в SQLite.
+3. **Защита от удаления `v1` и откат состояния в `Cleanup()` / `Close()`**:
+   - В `CleanupDelete` / `DeleteOnClose` при `ctx.IsOverwritePending` отменяется только активная перезапись (`UploadCts`, `PipeStream`, `ActiveVirtualCopy`) с вызовом `ctx.RestorePreOverwriteState()`, без вызова `SoftDeleteNode` в `.Trash`.
+   - На всех ветках ошибки или отмены выгрузки (`ForwardTask`, `PipeStream`, малые файлы) вызывается `ctx.RestorePreOverwriteState()`; при успешном сохранении `CreateOrUpdateFile` флаг `IsOverwritePending` сбрасывается.
+

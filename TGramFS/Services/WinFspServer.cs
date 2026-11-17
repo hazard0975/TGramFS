@@ -957,6 +957,14 @@ namespace TGramFS.Services
                 return STATUS_SUCCESS;
             }
 
+            if (!ctx.IsOverwritePending)
+            {
+                ctx.IsOverwritePending = true;
+                ctx.PreOverwriteSize = prevSize;
+                ctx.PreOverwriteUpdatedAt = node.UpdatedAt;
+                ctx.PreOverwriteCreatedAt = node.CreatedAt;
+            }
+
             node.Size = 0;
             node.UpdatedAt = DateTime.UtcNow;
             ctx.Dispose();
@@ -1228,6 +1236,7 @@ namespace TGramFS.Services
             out FileInfo fileInfo)
         {
             var node = (Node)fileNode;
+            var ctx = fileDesc as FspNodeContext;
             DateTime? newUpdatedAt = null;
             DateTime? newCreatedAt = null;
 
@@ -1244,11 +1253,19 @@ namespace TGramFS.Services
 
             if (newUpdatedAt.HasValue || newCreatedAt.HasValue)
             {
-                if (node.Id > 0)
+                if (node.Id > 0 && ctx?.IsOverwritePending != true)
                 {
                     _repository.UpdateNodeTimestamps(node.Id, newUpdatedAt, newCreatedAt);
+                    AppLogger.Info("WinFsp", $"Обновлены системные даты для '{node.Name}' (ID {node.Id}): Изменен: {node.UpdatedAt:yyyy-MM-dd HH:mm:ss.fff}, Создан: {node.CreatedAt:yyyy-MM-dd HH:mm:ss.fff}");
                 }
-                AppLogger.Info("WinFsp", $"Обновлены системные даты для '{node.Name}' (ID {node.Id}): Изменен: {node.UpdatedAt:yyyy-MM-dd HH:mm:ss.fff}, Создан: {node.CreatedAt:yyyy-MM-dd HH:mm:ss.fff}");
+                else if (ctx?.IsOverwritePending == true)
+                {
+                    AppLogger.Debug("WinFsp", $"[Overwrite] Новые системные даты для '{node.Name}' (ID {node.Id}) отложены в памяти до завершения перезаписи: Изменен: {node.UpdatedAt:yyyy-MM-dd HH:mm:ss.fff}, Создан: {node.CreatedAt:yyyy-MM-dd HH:mm:ss.fff}");
+                }
+                else
+                {
+                    AppLogger.Info("WinFsp", $"Обновлены системные даты для '{node.Name}' (ID {node.Id}): Изменен: {node.UpdatedAt:yyyy-MM-dd HH:mm:ss.fff}, Создан: {node.CreatedAt:yyyy-MM-dd HH:mm:ss.fff}");
+                }
             }
 
             FillFileInfo(node, out fileInfo);
@@ -1452,7 +1469,7 @@ namespace TGramFS.Services
 
             if ((flags & CleanupDelete) != 0 || ctx.DeleteOnClose)
             {
-                if (node.Id <= 0)
+                if (node.Id <= 0 || ctx.IsOverwritePending)
                 {
                     string cleanCancelPath = ResolveCleanupVirtualPath(node, ctx, fileName);
                     _activeUploadNodes.TryRemove(cleanCancelPath, out _);
@@ -1460,8 +1477,23 @@ namespace TGramFS.Services
                     ctx.UploadCts?.Cancel();
                     try { ctx.PipeStream?.Abort(); } catch { }
                     try { ctx.PipeStream?.Dispose(); } catch { }
+                    if (ctx.OwnsActiveVirtualCopy)
+                    {
+                        UnregisterActiveVirtualCopy(node.Id);
+                        ctx.OwnsActiveVirtualCopy = false;
+                    }
+                    bool wasOverwrite = ctx.IsOverwritePending;
+                    if (wasOverwrite)
+                    {
+                        ctx.RestorePreOverwriteState();
+                        ctx.IsModified = false;
+                        ctx.VirtualSourceNode = null;
+                        ctx.ForwardTask = null;
+                    }
                     _telegramService.TriggerUploadCanceled(node.Name);
-                    AppLogger.Info("WinFsp", $"[CleanupDelete] Отменено создание незавершенного файла '{node.Name}'. Удален из памяти без записи в базу и корзину.");
+                    AppLogger.Info("WinFsp", wasOverwrite
+                        ? $"[CleanupDelete] Отменена перезапись существующего файла '{node.Name}' (ID {node.Id}). Прежняя версия сохранена без удаления в корзину."
+                        : $"[CleanupDelete] Отменено создание незавершенного файла '{node.Name}'. Удален из памяти без записи в базу и корзину.");
                     ctx.Dispose();
                     return;
                 }
@@ -1642,6 +1674,7 @@ namespace TGramFS.Services
                                     );
 
                                     if (newNodeId > 0) node.Id = newNodeId;
+                                    ctx.IsOverwritePending = false;
                                     _activeUploadNodes.TryRemove(cleanFilePath, out _);
 
                                     node.TgMessageId = fwdResult.MessageId;
@@ -1667,6 +1700,7 @@ namespace TGramFS.Services
                                 {
                                     UnregisterActiveVirtualCopy(prevActiveTargetId);
                                     ctx.OwnsActiveVirtualCopy = false;
+                                    ctx.RestorePreOverwriteState();
                                     _activeUploadNodes.TryRemove(cleanFilePath, out _);
                                     AppLogger.Warn("WinFsp", $"[VirtualCopy] Форвардинг для '{nodeName}' вернул null. Возможно, исходное сообщение удалено из Telegram.");
                                 }
@@ -1675,6 +1709,7 @@ namespace TGramFS.Services
                             {
                                 UnregisterActiveVirtualCopy(prevActiveTargetId);
                                 ctx.OwnsActiveVirtualCopy = false;
+                                ctx.RestorePreOverwriteState();
                                 _activeUploadNodes.TryRemove(cleanFilePath, out _);
                                 AppLogger.Error("WinFsp", $"[VirtualCopy] Ошибка завершения ForwardTask для '{nodeName}': {ex.Message}", ex);
                             }
@@ -1694,6 +1729,7 @@ namespace TGramFS.Services
                             );
 
                             if (newNodeId > 0) node.Id = newNodeId;
+                            ctx.IsOverwritePending = false;
                             _activeUploadNodes.TryRemove(cleanFilePath, out _);
 
                             node.Size = ctx.VirtualSourceNode.Size;
@@ -1749,6 +1785,7 @@ namespace TGramFS.Services
                                 );
 
                                 if (newNodeId > 0) node.Id = newNodeId;
+                                ctx.IsOverwritePending = false;
                                 _activeUploadNodes.TryRemove(cleanFilePath, out _);
 
                                 node.TgMessageId = uploadResult.MessageId;
@@ -1766,11 +1803,13 @@ namespace TGramFS.Services
                             }
                             else
                             {
+                                ctx.RestorePreOverwriteState();
                                 _activeUploadNodes.TryRemove(cleanFilePath, out _);
                             }
                         }
                         catch (Exception ex)
                         {
+                            ctx.RestorePreOverwriteState();
                             _activeUploadNodes.TryRemove(cleanFilePath, out _);
                             bool isCancelled = ex is OperationCanceledException ||
                                                ex.InnerException is OperationCanceledException ||
@@ -1817,6 +1856,7 @@ namespace TGramFS.Services
                                 );
 
                                 if (newNodeId > 0) node.Id = newNodeId;
+                                ctx.IsOverwritePending = false;
                                 _activeUploadNodes.TryRemove(cleanFilePath, out _);
 
                                 node.Size = finalLength;
@@ -1898,6 +1938,7 @@ namespace TGramFS.Services
                                     );
 
                                     if (newNodeId > 0) node.Id = newNodeId;
+                                    ctx.IsOverwritePending = false;
                                     _activeUploadNodes.TryRemove(cleanFilePath, out _);
 
                                     node.Size = finalLength;
@@ -1916,12 +1957,14 @@ namespace TGramFS.Services
                                 }
                                 else
                                 {
+                                    ctx.RestorePreOverwriteState();
                                     _activeUploadNodes.TryRemove(cleanFilePath, out _);
                                 }
                             }
                         }
                         catch (Exception ex)
                         {
+                            ctx.RestorePreOverwriteState();
                             _activeUploadNodes.TryRemove(cleanFilePath, out _);
                             AppLogger.Error("WinFsp", $"Ошибка загрузки '{nodeName}' в Telegram: {ex.Message}", ex);
                         }
@@ -1949,6 +1992,11 @@ namespace TGramFS.Services
                         _activeUploadNodes.TryRemove(new KeyValuePair<string, Node>(vPath, activeNode));
                     }
                     ReleaseSessionReservation(vPath);
+                }
+
+                if (!ctx.CleanupCalled && ctx.IsOverwritePending)
+                {
+                    ctx.RestorePreOverwriteState();
                 }
 
                 ctx.Dispose();
@@ -3916,7 +3964,22 @@ namespace TGramFS.Services
             public string? VirtualPath { get; set; }
             public AudioMetadataResult? PendingAudioMeta { get; set; }
 
+            // Снимок состояния существующего файла при Overwrite (защита v1 в БД и откат при отмене)
+            public bool IsOverwritePending { get; set; }
+            public long PreOverwriteSize { get; set; } = -1;
+            public DateTime PreOverwriteUpdatedAt { get; set; }
+            public DateTime PreOverwriteCreatedAt { get; set; }
+
             public FspNodeContext(Node node) => Node = node;
+
+            public void RestorePreOverwriteState()
+            {
+                if (!IsOverwritePending) return;
+                if (PreOverwriteSize >= 0) Node.Size = PreOverwriteSize;
+                Node.UpdatedAt = PreOverwriteUpdatedAt;
+                Node.CreatedAt = PreOverwriteCreatedAt;
+                IsOverwritePending = false;
+            }
 
             public void Dispose()
             {

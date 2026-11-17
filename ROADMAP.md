@@ -1421,3 +1421,10 @@
       2. В `Cleanup` первого прохода при регистрации `_recentTwoPassVirtualCopies` (`written == 0`) активная защита чтения источника переносится на `newNodeId` (TTL 20 сек), подхватывается во втором проходе `Open` (`OwnsActiveVirtualCopy = true`) и снимается сразу по завершении/закрытии `Pass 2`.
       3. Удалены временные диагностические `[DIAG ...]` логи и вспомогательные словари/методы.
       4. Валидация: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
+- [x] **8.126. Защита старой версии `v1` при замене файла `Overwrite()` (`WinFspServer.cs`)**:
+    - **Проблема**: При перезаписи существующего файла (`Overwrite()`) вызов `SetBasicInfo` обновлял в SQLite даты **старой** версии `v1` датами нового файла до её переноса в `.Trash` в `Cleanup()`, а при отмене перезаписи посередине `node.Size` оставался `0` и при `CleanupDelete` оригинал `v1` (`node.Id > 0`) мог уйти в корзину.
+    - **Реализовано**:
+      1. В `FspNodeContext` добавлен снимок до перезаписи (`IsOverwritePending`, `PreOverwriteSize`, `PreOverwriteUpdatedAt`, `PreOverwriteCreatedAt`, `RestorePreOverwriteState()`), заполняемый в `Overwrite()`.
+      2. В `SetBasicInfo()` при `IsOverwritePending == true` обновление дат откладывается в памяти до финализации новой версии `v2` в `CreateOrUpdateFile` без изменения строки `v1` в SQLite.
+      3. В `Cleanup()` (`CleanupDelete` и ветки отмены/ошибок `ForwardTask`, `PipeStream`, малых файлов) и `Close()` добавлен безопасный откат состояния `v1` без перемещения прежней версии в `.Trash`.
+      4. Валидация: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
