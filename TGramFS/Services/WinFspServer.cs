@@ -301,6 +301,41 @@ namespace TGramFS.Services
         private static readonly ConcurrentDictionary<string, Node> _activeUploadNodes = new(StringComparer.OrdinalIgnoreCase);
         private static int _nextTempNodeId = 0;
 
+        // Временная диагностика WinFsp для трассировки Create/Open/GetSecurityByName/Cleanup/Close
+        private static readonly ConcurrentDictionary<string, string> _diagLastSecByName = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly ConcurrentDictionary<string, string> _diagLastOpen = new(StringComparer.OrdinalIgnoreCase);
+
+        private static bool IsDiagNoisePath(string cleanPath)
+        {
+            if (string.IsNullOrEmpty(cleanPath) || cleanPath == "/" || cleanPath.Contains(':'))
+                return true;
+            string name = GetFileName(cleanPath);
+            return string.Equals(name, "desktop.ini", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(name, "autorun.inf", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(name, "thumbs.db", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(name, "folder.jpg", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(name, "folder.gif", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string GetDiagProcessName(int pid)
+        {
+            if (pid <= 0) return pid.ToString();
+            try
+            {
+                return $"{Process.GetProcessById(pid).ProcessName}({pid})";
+            }
+            catch
+            {
+                return pid.ToString();
+            }
+        }
+
+        private static void RecordDiagHistory(ConcurrentDictionary<string, string> map, string cleanPath, string summary)
+        {
+            if (map.Count > 512) map.Clear();
+            map[cleanPath] = summary;
+        }
+
         public static void RegisterActiveVirtualCopy(int targetNodeId, int sourceNodeId, int creatorPid)
         {
             _activeVirtualCopies[targetNodeId] = new ActiveVirtualCopyInfo
@@ -477,6 +512,7 @@ namespace TGramFS.Services
             out uint fileAttributes,
             ref byte[] securityDescriptor)
         {
+            bool inputSecWasNull = securityDescriptor == null;
             securityDescriptor = DefaultSecurityDescriptor;
             string cleanPath = NormalizePath(fileName);
             if (cleanPath.Contains(":")) // Alternate Data Stream (:Zone.Identifier и др.)
@@ -491,19 +527,36 @@ namespace TGramFS.Services
                 return STATUS_SUCCESS;
             }
 
-            var node = _repository.GetNodeByPath(cleanPath);
-            if (node == null && _activeUploadNodes.TryGetValue(cleanPath, out var activeNode))
+            var dbNode = _repository.GetNodeByPath(cleanPath);
+            Node? activeNode = null;
+            var node = dbNode;
+            if (node == null && _activeUploadNodes.TryGetValue(cleanPath, out activeNode))
             {
                 node = activeNode;
             }
 
+            int secPid = 0;
+            try { secPid = FileSystemBase.GetOperationProcessId(); } catch { }
+
             if (node == null)
             {
                 fileAttributes = 0;
+                string missSummary = $"{DateTime.UtcNow:HH:mm:ss.fff} NOT_FOUND pid={secPid} secInNull={inputSecWasNull} raw='{fileName}'";
+                RecordDiagHistory(_diagLastSecByName, cleanPath, missSummary);
+                if (!IsDiagNoisePath(cleanPath))
+                {
+                    AppLogger.Debug("WinFsp", $"[DIAG GetSecurityByName] '{cleanPath}' -> NOT_FOUND ({missSummary})");
+                }
                 return NT_STATUS_OBJECT_NAME_NOT_FOUND;
             }
 
             fileAttributes = node.IsDir ? (uint)FileAttributes.Directory : (uint)FileAttributes.Normal;
+            string hitSummary = $"{DateTime.UtcNow:HH:mm:ss.fff} OK pid={secPid} dbId={dbNode?.Id.ToString() ?? "null"} actId={activeNode?.Id.ToString() ?? "null"} isDir={node.IsDir} size={node.Size} attrs=0x{fileAttributes:X} secInNull={inputSecWasNull} secOut={securityDescriptor?.Length ?? 0} raw='{fileName}'";
+            RecordDiagHistory(_diagLastSecByName, cleanPath, hitSummary);
+            if (!IsDiagNoisePath(cleanPath))
+            {
+                AppLogger.Debug("WinFsp", $"[DIAG GetSecurityByName] '{cleanPath}' -> {hitSummary}");
+            }
             return STATUS_SUCCESS;
         }
 
@@ -526,6 +579,9 @@ namespace TGramFS.Services
                 return NT_STATUS_OBJECT_NAME_NOT_FOUND;
             }
 
+            int openPid = 0;
+            try { openPid = FileSystemBase.GetOperationProcessId(); } catch { }
+
             Node? node;
             if (cleanPath == "/")
             {
@@ -545,8 +601,11 @@ namespace TGramFS.Services
                 node = _repository.GetNodeByPath(cleanPath);
                 if (node == null)
                 {
-                    if (_activeUploadNodes.ContainsKey(cleanPath))
+                    if (_activeUploadNodes.TryGetValue(cleanPath, out var activeOpenNode))
                     {
+                        string shareSummary = $"{DateTime.UtcNow:HH:mm:ss.fff} SHARING_VIOLATION pid={openPid} actId={activeOpenNode.Id} opts=0x{createOptions:X8} access=0x{grantedAccess:X8} raw='{fileName}'";
+                        RecordDiagHistory(_diagLastOpen, cleanPath, shareSummary);
+                        AppLogger.Info("WinFsp", $"[DIAG Open] '{cleanPath}' -> {shareSummary}");
                         fileNode = null!;
                         fileDesc = null!;
                         fileInfo = default;
@@ -554,7 +613,9 @@ namespace TGramFS.Services
                         return NT_STATUS_SHARING_VIOLATION;
                     }
 
-                    AppLogger.Warn("WinFsp", $"[Open NOT FOUND] Проводник пытается открыть элемент '{fileName}' (path: '{cleanPath}'), но узел равен NULL.");
+                    string missOpenSummary = $"{DateTime.UtcNow:HH:mm:ss.fff} NOT_FOUND pid={openPid} opts=0x{createOptions:X8} access=0x{grantedAccess:X8} raw='{fileName}'";
+                    RecordDiagHistory(_diagLastOpen, cleanPath, missOpenSummary);
+                    AppLogger.Warn("WinFsp", $"[Open NOT FOUND] Проводник пытается открыть элемент '{fileName}' (path: '{cleanPath}', pid={openPid}, opts=0x{createOptions:X8}, access=0x{grantedAccess:X8}), но узел равен NULL.");
                     fileNode = null!;
                     fileDesc = null!;
                     fileInfo = default;
@@ -563,13 +624,19 @@ namespace TGramFS.Services
                 }
             }
 
-            int openPid = 0;
-            try { openPid = FileSystemBase.GetOperationProcessId(); } catch { }
-
             fileNode = node;
             fileDesc = new FspNodeContext(node) { CreatorProcessId = openPid, VirtualPath = cleanPath };
             FillFileInfo(node, out fileInfo);
             normalizedName = fileName;
+            if (cleanPath != "/")
+            {
+                string okOpenSummary = $"{DateTime.UtcNow:HH:mm:ss.fff} OK pid={openPid} nodeId={node.Id} isDir={node.IsDir} size={node.Size} opts=0x{createOptions:X8} access=0x{grantedAccess:X8} raw='{fileName}'";
+                RecordDiagHistory(_diagLastOpen, cleanPath, okOpenSummary);
+                if (!IsDiagNoisePath(cleanPath))
+                {
+                    AppLogger.Debug("WinFsp", $"[DIAG Open] '{cleanPath}' -> {okOpenSummary}");
+                }
+            }
             return STATUS_SUCCESS;
         }
 
@@ -595,11 +662,15 @@ namespace TGramFS.Services
                 return NT_STATUS_OBJECT_NAME_NOT_FOUND;
             }
 
+            int callerPid = 0;
+            try { callerPid = FileSystemBase.GetOperationProcessId(); } catch { }
+
             string parentPath = GetParentPath(cleanPath);
             string itemName = GetFileName(cleanPath);
             var parentNode = parentPath == "/" ? _repository.GetRootNode() : _repository.GetNodeByPath(parentPath);
             if (parentNode == null)
             {
+                AppLogger.Info("WinFsp", $"[DIAG Create PATH_NOT_FOUND] raw='{fileName}', clean='{cleanPath}', parent='{parentPath}', pid={GetDiagProcessName(callerPid)}, opts=0x{createOptions:X8}");
                 fileNode = null!;
                 fileDesc = null!;
                 fileInfo = default;
@@ -608,9 +679,20 @@ namespace TGramFS.Services
             }
 
             bool isDir = (createOptions & FILE_DIRECTORY_FILE) != 0;
+            var diagDbExisting = _repository.GetNodeByPath(cleanPath);
+            _activeUploadNodes.TryGetValue(cleanPath, out var diagActiveExisting);
+            _diagLastSecByName.TryGetValue(cleanPath, out var diagLastSec);
+            _diagLastOpen.TryGetValue(cleanPath, out var diagLastOpen);
+
+            AppLogger.Info("WinFsp",
+                $"[DIAG Create] raw='{fileName}', clean='{cleanPath}', isDir={isDir}, opts=0x{createOptions:X8}, access=0x{grantedAccess:X8}, attrs=0x{fileAttributes:X8}, alloc={allocationSize}, secLen={securityDescriptor?.Length ?? -1}, pid={GetDiagProcessName(callerPid)} | " +
+                $"dbExisting={(diagDbExisting != null ? $"ID={diagDbExisting.Id},Dir={diagDbExisting.IsDir},Size={diagDbExisting.Size},Msg={diagDbExisting.TgMessageId?.ToString() ?? "null"},Trash={diagDbExisting.InTrash}" : "null")}, " +
+                $"activeExisting={(diagActiveExisting != null ? $"ID={diagActiveExisting.Id},Size={diagActiveExisting.Size}" : "null")} | " +
+                $"lastSec=[{diagLastSec ?? "none"}], lastOpen=[{diagLastOpen ?? "none"}]");
+
             if (isDir)
             {
-                bool existed = _repository.GetNodeByPath(cleanPath) != null;
+                bool existed = diagDbExisting != null;
                 var dirNode = _repository.EnsureDirectoryPathExists(cleanPath);
                 if (dirNode == null)
                 {
@@ -622,7 +704,7 @@ namespace TGramFS.Services
                 }
 
                 fileNode = dirNode;
-                fileDesc = new FspNodeContext(dirNode);
+                fileDesc = new FspNodeContext(dirNode) { CreatorProcessId = callerPid, VirtualPath = cleanPath };
                 FillFileInfo(dirNode, out fileInfo);
                 normalizedName = fileName;
                 if (existed)
@@ -637,9 +719,6 @@ namespace TGramFS.Services
             }
             else
             {
-                int callerPid = 0;
-                try { callerPid = FileSystemBase.GetOperationProcessId(); } catch { }
-
                 long expectedSize = allocationSize > 0 ? (long)allocationSize : -1;
                 var (virtualSource, originalSource) = ResolveFileSource(itemName, cleanPath, callerPid, _repository, expectedSize);
                 if (virtualSource != null)
@@ -746,6 +825,7 @@ namespace TGramFS.Services
         {
             var node = (Node)fileNode;
             var ctx = (FspNodeContext)fileDesc;
+            long prevSize = node.Size;
             node.Size = 0;
             node.UpdatedAt = DateTime.UtcNow;
             ctx.Dispose();
@@ -767,6 +847,7 @@ namespace TGramFS.Services
 
             string fullNodePath = _repository.GetNodeFullPath(node.Id);
             var (virtualSource, originalSource) = ResolveFileSource(node.Name, fullNodePath, effectivePid, _repository, ctx.KnownTargetSize);
+            AppLogger.Info("WinFsp", $"[DIAG Overwrite] nodeId={node.Id}, name='{node.Name}', path='{fullNodePath}', prevSize={prevSize}, alloc={allocationSize}, attrs=0x{fileAttributes:X}, replaceAttrs={replaceFileAttributes}, pid={GetDiagProcessName(effectivePid)}, virtSrc={virtualSource?.Id.ToString() ?? "null"}, origSrc='{originalSource ?? "null"}'");
             if (virtualSource != null)
             {
                 ctx.VirtualSourceNode = virtualSource;
@@ -1239,6 +1320,12 @@ namespace TGramFS.Services
         {
             var node = (Node)fileNode;
             var ctx = (FspNodeContext)fileDesc;
+            ctx.CleanupCalled = true;
+
+            if (node.Id <= 0 || ctx.IsModified || (flags & CleanupDelete) != 0 || ctx.DeleteOnClose)
+            {
+                AppLogger.Info("WinFsp", $"[DIAG Cleanup] raw='{fileName}', vPath='{ctx.VirtualPath}', nodeId={node.Id}, name='{node.Name}', isDir={node.IsDir}, flags=0x{flags:X}, isMod={ctx.IsModified}, delOnClose={ctx.DeleteOnClose}, written={ctx.TotalBytesWritten}, nodeSize={node.Size}, virtSrc={ctx.VirtualSourceNode?.Id.ToString() ?? "null"}, pid={GetDiagProcessName(ctx.CreatorProcessId)}");
+            }
 
             if ((flags & CleanupDelete) != 0 || ctx.DeleteOnClose)
             {
@@ -1679,9 +1766,18 @@ namespace TGramFS.Services
 
         public override void Close(object fileNode, object fileDesc)
         {
+            var node = fileNode as Node;
             if (fileDesc is FspNodeContext ctx)
             {
+                if ((node != null && node.Id <= 0) || !ctx.CleanupCalled || ctx.IsModified || ctx.DeleteOnClose)
+                {
+                    AppLogger.Info("WinFsp", $"[DIAG Close] nodeId={node?.Id.ToString() ?? "null"}, name='{node?.Name}', isDir={node?.IsDir}, vPath='{ctx.VirtualPath}', cleanupCalled={ctx.CleanupCalled}, isMod={ctx.IsModified}, delOnClose={ctx.DeleteOnClose}, written={ctx.TotalBytesWritten}, pid={GetDiagProcessName(ctx.CreatorProcessId)}");
+                }
                 ctx.Dispose();
+            }
+            else if (node != null && node.Id <= 0)
+            {
+                AppLogger.Info("WinFsp", $"[DIAG Close] nodeId={node.Id}, name='{node.Name}' (no FspNodeContext)");
             }
         }
 
@@ -2305,11 +2401,13 @@ namespace TGramFS.Services
             bool hasActiveClipboardSessionForCurrentSeq = false;
             bool hasActiveVirtualClipboardBatch = false;
             bool isSessionMissing = false;
+            string diagSessionState = "null";
 
             lock (_sessionLock)
             {
                 if (_activeSession != null)
                 {
+                    diagSessionState = $"clip={_activeSession.IsFromClipboard},virtClip={_activeSession.IsVirtualClipboard},seq={_activeSession.ClipboardSequenceNumber},vRem={_activeSession.VirtualRemainingCount},pend={_activeSession.PendingFiles.Count},init={_activeSession.InitialCount},consumedV={_activeSession.IsVirtualFileConsumed(cleanVirtualPath)},ageMs={(int)(DateTime.UtcNow - _activeSession.LastActivityUtc).TotalMilliseconds}";
                     if (_activeSession.IsExpired(TimeSpan.FromSeconds(20)))
                     {
                         if (_activeSession.IsFromClipboard && _activeSession.ClipboardSequenceNumber != 0)
@@ -2376,6 +2474,8 @@ namespace TGramFS.Services
                 !hasActiveClipboardSessionForCurrentSeq &&
                 (isSessionMissing || hasNewClipboardSequence || hasActiveVirtualClipboardBatch);
 
+            AppLogger.Info("WinFsp", $"[DIAG Resolve] target='{targetFileName}', vPath='{cleanVirtualPath}', pid={GetDiagProcessName(callerPid)}, expSize={expectedSize}, clipSeq={currentClipSeq}, consumedSeq={_consumedClipboardSeq}, checkFreshClip={shouldCheckFreshClipboardFirst}, flags(missing={isSessionMissing},newSeq={hasNewClipboardSequence},repeat={isRepeatInSameSession},clipCons={isClipboardAlreadyConsumed},actClip={hasActiveClipboardSessionForCurrentSeq},virtBatch={hasActiveVirtualClipboardBatch}), session=[{diagSessionState}]");
+
             // Шаг 2: Проверяем свежий системный буфер обмена Windows (Ctrl+C / Ctrl+V, CF_HDROP),
             // только если текущий ClipboardSequenceNumber ещё не отработан предыдущей операцией.
             if (shouldCheckFreshClipboardFirst)
@@ -2397,6 +2497,7 @@ namespace TGramFS.Services
             // При уже отработанном буфере обмена (например, перенос мышкой после Ctrl+C -> Ctrl+V) этот шаг
             // выполняется ДО повторного обращения к старому буферу обмена.
             var handleCandidates = CollectOpenFileHandles(targetFileName, includeMountedDrive: true, callerPid: callerPid, targetVirtualPath: cleanVirtualPath, expectedSize: expectedSize);
+            AppLogger.Info("WinFsp", $"[DIAG Resolve Handles] target='{targetFileName}', handleCandidates={handleCandidates.Count}" + (handleCandidates.Count > 0 ? $": [{string.Join(" | ", handleCandidates.Take(5))}]" : ""));
             if (handleCandidates.Count > 0)
             {
                 // Шаг 3.1: Для дескрипторов Drag-and-Drop / бэкаперов: приоритет у физических файлов
@@ -2480,6 +2581,7 @@ namespace TGramFS.Services
                 }
             }
 
+            AppLogger.Info("WinFsp", $"[DIAG Resolve Result] target='{targetFileName}', vPath='{cleanVirtualPath}' -> NOT RESOLVED (null, null)");
             return (null, null);
         }
 
@@ -2492,6 +2594,7 @@ namespace TGramFS.Services
             bool isRetryFallback)
         {
             var clipboardCandidates = CollectClipboardCandidates(includeMountedDrive: true);
+            AppLogger.Info("WinFsp", $"[DIAG Clipboard] retry={isRetryFallback}, clipSeq={currentClipSeq}, target='{targetFileName}', vPath='{cleanVirtualPath}', mount='{WinFspServer.ActiveMountPoint}', count={clipboardCandidates.Count}" + (clipboardCandidates.Count > 0 ? $": [{string.Join(" | ", clipboardCandidates.Take(5))}]" : ""));
             if (clipboardCandidates.Count > 0)
             {
                 string logTag = isRetryFallback ? "Источник: Повторный буфер обмена" : "Источник: Буфер обмена";
@@ -3288,12 +3391,17 @@ namespace TGramFS.Services
         private static Node? MatchVirtualCandidate(string candidatePath, string targetFileName, string targetVirtualPath, NodeRepository repository)
         {
             string? vPath = GetVirtualPathFromMountedPath(candidatePath);
-            if (string.IsNullOrEmpty(vPath)) return null;
+            if (string.IsNullOrEmpty(vPath))
+            {
+                AppLogger.Info("WinFsp", $"[DIAG VirtualCand] cand='{candidatePath}' -> vPath=null (mount='{WinFspServer.ActiveMountPoint}')");
+                return null;
+            }
 
             // КРИТИЧЕСКИ: Целевой файл не может быть источником для самого себя!
             if (!string.IsNullOrEmpty(targetVirtualPath) &&
                 string.Equals(NormalizePath(vPath), NormalizePath(targetVirtualPath), StringComparison.OrdinalIgnoreCase))
             {
+                AppLogger.Info("WinFsp", $"[DIAG VirtualCand] cand='{candidatePath}' (vPath='{vPath}') == target='{targetVirtualPath}' -> SKIP (self)");
                 return null;
             }
 
@@ -3302,7 +3410,12 @@ namespace TGramFS.Services
             if (string.Equals(candName, targetFileName, StringComparison.OrdinalIgnoreCase))
             {
                 var node = repository.GetNodeByPath(vPath);
-                if (node != null && !node.IsDir && (node.TgMessageId ?? 0) > 0) return node;
+                if (node != null && !node.IsDir && (node.TgMessageId ?? 0) > 0)
+                {
+                    AppLogger.Info("WinFsp", $"[DIAG VirtualCand] cand='{candidatePath}' -> MATCH file ID={node.Id}, MsgId={node.TgMessageId}");
+                    return node;
+                }
+                AppLogger.Info("WinFsp", $"[DIAG VirtualCand] cand='{candidatePath}' name matches '{targetFileName}', but node={(node == null ? "null" : $"ID={node.Id},IsDir={node.IsDir},MsgId={node.TgMessageId}")}");
             }
 
             // 2. Если кандидат - папка (копировалось дерево папок)
@@ -3340,6 +3453,7 @@ namespace TGramFS.Services
                 }
             }
 
+            AppLogger.Info("WinFsp", $"[DIAG VirtualCand] cand='{candidatePath}' (vPath='{vPath}', candName='{candName}') != targetName='{targetFileName}' -> NO_MATCH");
             return null;
         }
 
@@ -3350,6 +3464,7 @@ namespace TGramFS.Services
             public Node Node { get; set; }
             public bool IsModified { get; set; }
             public bool DeleteOnClose { get; set; }
+            public bool CleanupCalled { get; set; }
 
             // Виртуальный источник для серверного клонирования (Zero-Traffic Copy)
             public Node? VirtualSourceNode { get; set; }
