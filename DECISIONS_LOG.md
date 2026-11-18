@@ -4151,3 +4151,23 @@ _telegramService.UpdateSettings(_settings);
    - В `CleanupDelete` / `DeleteOnClose` при `ctx.IsOverwritePending` отменяется только активная перезапись (`UploadCts`, `PipeStream`, `ActiveVirtualCopy`) с вызовом `ctx.RestorePreOverwriteState()`, без вызова `SoftDeleteNode` в `.Trash`.
    - На всех ветках ошибки или отмены выгрузки (`ForwardTask`, `PipeStream`, малые файлы) вызывается `ctx.RestorePreOverwriteState()`; при успешном сохранении `CreateOrUpdateFile` флаг `IsOverwritePending` сбрасывается.
 
+---
+
+## 134. Атомарность и корзинные подписи для составных файлов (`> 2 ГБ` / `> 4 ГБ`, `node_parts`) (`NodeRepository.cs`, `TelegramService.cs`, `WinFspServer.cs`)
+
+### Контекст и выявленные проблемы:
+При аудите пути многотомных файлов (`node_parts`) на операциях замены и виртуального копирования (`VirtualCopy`) были выявлены 3 недоработки:
+1. **Неполное обновление подписей при замене многотомника в `CreateOrUpdateFile()`**: при переносе старой версии `v1` в `.Trash` подпись ставилась только мастер-сообщению (`Часть 1`) без суффикса `[Часть 1 из N, total=... ГБ]` и без `channel_id`, а дочерние части `Часть 2..N` не получали пометки `🗑️` и `#trash` в Telegram.
+2. **Проглатывание ошибок дочерних частей в `ForwardFileAsync()`**: при сбое пересылки любой дочерней части (`Part 1..N-1`) исключение только логировалось, а метод всё равно возвращал неполный `FileUploadResult`, что могло сохранить битый составной файл в БД и вытеснить целый `v1` в `.Trash`.
+3. **Отсутствие отмены `ForwardFileAsync()`**: в `ForwardFileAsync` не передавался `CancellationToken`, из-за чего при отмене копирования/замены составного файла внутри TG оставшиеся части продолжали досылаться в канал.
+
+### Принятое решение:
+1. **`NodeRepository.CreateOrUpdateFile()`**:
+   - Перед постановкой подписей в `pending_caption_updates` загружаются все `node_parts` уходящего в `.Trash` узла `existingNode.Id` (и заблаговременно до транзакции вычисляется `oldPathWithVersion`).
+   - Для мастер-сообщения добавляется формат `[Часть 1 из N, total=... ГБ]` и `channel_id`, а для каждой дочерней части `Part 1..N-1` — отдельная корзинная подпись `🗑️ ↳ ... [Часть K из N]\nID: ...\n#trash` с её `channel_id`.
+2. **`TelegramService.ForwardFileAsync()`**:
+   - Добавлен параметр `CancellationToken cancellationToken = default` с проверками перед пересылкой превью, мастер-сообщения и каждой дочерней части (включая передачу токена в `EnsureFloodWaitDelayAsync` и `EnsurePacingDelayAsync`).
+   - При сбое, невалидном `childNewMsgId`, `FloodWait` или отмене любой части пересылка прерывается, возвращается `null`, а уже пересланные в целевой чат/канал сообщения асинхронно удаляются через `DeleteBatchWithBisectAsync`.
+3. **`WinFspServer.cs`**:
+   - В `Create()` и `Overwrite()` при запуске `ForwardTask` создаётся `UploadCts`, его токен передаётся в `ForwardFileAsync`; в `Cleanup()` после завершения `ForwardTask` `UploadCts` освобождается.
+

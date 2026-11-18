@@ -873,13 +873,16 @@ namespace TGramFS.Services
                         string fullPathWithVersion = $"{parentFullPath}/{nameNoExt}_v{nextVersion}{ext}";
 
                         AppLogger.Info("WinFsp", $"[VirtualCopy] Запуск мгновенного форвардинга сообщения #{virtualSource.TgMessageId.Value} в Telegram ({sourceChannelId} -> {targetChannelId})...");
+                        vCtx.UploadCts = new CancellationTokenSource();
+                        var fwdToken = vCtx.UploadCts.Token;
                         vCtx.ForwardTask = Task.Run(() => _telegramService.ForwardFileAsync(
                             virtualSource.TgMessageId.Value,
                             virtualSource.TgPreviewMessageId,
                             sourceChannelId,
                             targetChannelId,
                             fullPathWithVersion,
-                            vNode.Id
+                            vNode.Id,
+                            cancellationToken: fwdToken
                         ));
                     }
 
@@ -997,13 +1000,16 @@ namespace TGramFS.Services
                     string nameNoExt = Path.GetFileNameWithoutExtension(node.Name);
                     string fullPathWithVersion = $"{parentFullPath}/{nameNoExt}_v{nextVersion}{ext}";
 
+                    ctx.UploadCts = new CancellationTokenSource();
+                    var fwdToken = ctx.UploadCts.Token;
                     ctx.ForwardTask = Task.Run(() => _telegramService.ForwardFileAsync(
                         virtualSource.TgMessageId.Value,
                         virtualSource.TgPreviewMessageId,
                         sourceChannelId,
                         targetChannelId,
                         fullPathWithVersion,
-                        node.Id
+                        node.Id,
+                        cancellationToken: fwdToken
                     ));
                 }
             }
@@ -1712,6 +1718,11 @@ namespace TGramFS.Services
                                 ctx.RestorePreOverwriteState();
                                 _activeUploadNodes.TryRemove(cleanFilePath, out _);
                                 AppLogger.Error("WinFsp", $"[VirtualCopy] Ошибка завершения ForwardTask для '{nodeName}': {ex.Message}", ex);
+                            }
+                            finally
+                            {
+                                try { ctx.UploadCts?.Dispose(); } catch { }
+                                ctx.UploadCts = null;
                             }
                         }
                         else

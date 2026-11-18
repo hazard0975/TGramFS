@@ -1446,9 +1446,35 @@ namespace TGramFS.Database
 
                     // Версионирование: Отправляем старый в корзину, создаем новый с версией + 1
                     int targetTrashParentId = EnsureTrashHierarchyForParent(parentId);
-                    
+                    string oldPathWithVersion = GetNodeFullPathWithVersion(existingNode.Id);
+
                     using (var transaction = connection.BeginTransaction())
                     {
+                        var oldParts = new List<NodePart>();
+                        using (var partsCmd = connection.CreateCommand())
+                        {
+                            partsCmd.Transaction = transaction;
+                            partsCmd.CommandText = @"
+                                SELECT id, node_id, part_index, part_size, tg_message_id, tg_channel_id
+                                FROM node_parts
+                                WHERE node_id = @nodeId
+                                ORDER BY part_index ASC;";
+                            partsCmd.Parameters.AddWithValue("@nodeId", existingNode.Id);
+                            using var reader = partsCmd.ExecuteReader();
+                            while (reader.Read())
+                            {
+                                oldParts.Add(new NodePart
+                                {
+                                    Id = reader.GetInt32(0),
+                                    NodeId = reader.GetInt32(1),
+                                    PartIndex = reader.GetInt32(2),
+                                    PartSize = reader.GetInt64(3),
+                                    TgMessageId = reader.GetInt32(4),
+                                    TgChannelId = reader.GetInt64(5)
+                                });
+                            }
+                        }
+
                         using (var updateCmd = connection.CreateCommand())
                         {
                             updateCmd.Transaction = transaction;
@@ -1508,26 +1534,63 @@ namespace TGramFS.Database
                             SaveNodePartsInternal(connection, targetNodeId, parts, transaction);
                         }
 
-                        // Старая версия отправляется в корзину: обновляем её подпись в Telegram на #trash (для документа и фото-превью)
-                        string oldPathWithVersion = GetNodeFullPathWithVersion(existingNode.Id);
+                        // Старая версия отправляется в корзину: обновляем её подпись в Telegram на #trash (мастер, дочерние части и фото-превью)
+                        long? existingEffectiveChannelId = existingNode.TgChannelId ?? effectiveTgChannelId;
 
                         if (existingNode.TgMessageId.HasValue && existingNode.TgMessageId.Value > 1)
                         {
-                            string trashCaption = FormatTelegramCaption(oldPathWithVersion, existingNode.TgMessageId.Value, isLatest: false);
+                            string masterTrashPath = oldPathWithVersion;
+                            if (oldParts.Count > 1)
+                            {
+                                long oldTotalSize = existingNode.Size > 0 ? existingNode.Size : oldParts.Sum(p => p.PartSize);
+                                double oldTotalGb = (double)oldTotalSize / (1024.0 * 1024.0 * 1024.0);
+                                masterTrashPath = $"{oldPathWithVersion} [Часть 1 из {oldParts.Count}, total={oldTotalGb:F2} ГБ]";
+                            }
+                            string trashCaption = FormatTelegramCaption(masterTrashPath, existingNode.TgMessageId.Value, isLatest: false);
                             using (var captionCmd = connection.CreateCommand())
                             {
                                 captionCmd.Transaction = transaction;
                                 captionCmd.CommandText = @"
-                                    INSERT INTO pending_caption_updates (node_id, tg_message_id, new_caption)
-                                    VALUES (@nodeId, @tgMessageId, @newCaption)
+                                    INSERT INTO pending_caption_updates (node_id, tg_message_id, new_caption, channel_id)
+                                    VALUES (@nodeId, @tgMessageId, @newCaption, @channelId)
                                     ON CONFLICT(tg_message_id) DO UPDATE SET
                                         new_caption = excluded.new_caption,
+                                        channel_id = COALESCE(excluded.channel_id, pending_caption_updates.channel_id),
                                         status = 0;
                                 ";
                                 captionCmd.Parameters.AddWithValue("@nodeId", existingNode.Id);
                                 captionCmd.Parameters.AddWithValue("@tgMessageId", existingNode.TgMessageId.Value);
                                 captionCmd.Parameters.AddWithValue("@newCaption", trashCaption);
+                                captionCmd.Parameters.AddWithValue("@channelId", (object?)existingEffectiveChannelId ?? DBNull.Value);
                                 captionCmd.ExecuteNonQuery();
+                            }
+                        }
+
+                        if (oldParts.Count > 1)
+                        {
+                            foreach (var part in oldParts.Where(p => p.PartIndex > 0))
+                            {
+                                if (part.TgMessageId <= 1) continue;
+                                int partDisplayNum = part.PartIndex + 1;
+                                string childTrashCaption = $"🗑️ ↳ {oldPathWithVersion} [Часть {partDisplayNum} из {oldParts.Count}]\nID: {part.TgMessageId}\n#trash";
+                                long effectivePartChannelId = part.TgChannelId > 0 ? part.TgChannelId : (existingEffectiveChannelId ?? 0);
+                                using (var captionCmd = connection.CreateCommand())
+                                {
+                                    captionCmd.Transaction = transaction;
+                                    captionCmd.CommandText = @"
+                                        INSERT INTO pending_caption_updates (node_id, tg_message_id, new_caption, channel_id)
+                                        VALUES (@nodeId, @tgMessageId, @newCaption, @channelId)
+                                        ON CONFLICT(tg_message_id) DO UPDATE SET
+                                            new_caption = excluded.new_caption,
+                                            channel_id = COALESCE(excluded.channel_id, pending_caption_updates.channel_id),
+                                            status = 0;
+                                    ";
+                                    captionCmd.Parameters.AddWithValue("@nodeId", existingNode.Id);
+                                    captionCmd.Parameters.AddWithValue("@tgMessageId", part.TgMessageId);
+                                    captionCmd.Parameters.AddWithValue("@newCaption", childTrashCaption);
+                                    captionCmd.Parameters.AddWithValue("@channelId", effectivePartChannelId > 0 ? (object)effectivePartChannelId : DBNull.Value);
+                                    captionCmd.ExecuteNonQuery();
+                                }
                             }
                         }
 
@@ -1538,15 +1601,17 @@ namespace TGramFS.Database
                             {
                                 captionCmd.Transaction = transaction;
                                 captionCmd.CommandText = @"
-                                    INSERT INTO pending_caption_updates (node_id, tg_message_id, new_caption)
-                                    VALUES (@nodeId, @tgMessageId, @newCaption)
+                                    INSERT INTO pending_caption_updates (node_id, tg_message_id, new_caption, channel_id)
+                                    VALUES (@nodeId, @tgMessageId, @newCaption, @channelId)
                                     ON CONFLICT(tg_message_id) DO UPDATE SET
                                         new_caption = excluded.new_caption,
+                                        channel_id = COALESCE(excluded.channel_id, pending_caption_updates.channel_id),
                                         status = 0;
                                 ";
                                 captionCmd.Parameters.AddWithValue("@nodeId", existingNode.Id);
                                 captionCmd.Parameters.AddWithValue("@tgMessageId", existingNode.TgPreviewMessageId.Value);
                                 captionCmd.Parameters.AddWithValue("@newCaption", trashPreviewCaption);
+                                captionCmd.Parameters.AddWithValue("@channelId", (object?)existingEffectiveChannelId ?? DBNull.Value);
                                 captionCmd.ExecuteNonQuery();
                             }
                         }

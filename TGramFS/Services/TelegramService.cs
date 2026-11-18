@@ -3138,7 +3138,8 @@ namespace TGramFS.Services
             long? targetChannelId = null,
             string? newCaption = null,
             int targetNodeId = 0,
-            List<Models.NodePart>? sourceParts = null)
+            List<Models.NodePart>? sourceParts = null,
+            CancellationToken cancellationToken = default)
         {
             if (_client == null || !IsAuthorized || sourceMessageId <= 0)
             {
@@ -3146,12 +3147,36 @@ namespace TGramFS.Services
                 return null;
             }
 
+            TL.InputPeer? targetPeer = null;
+            var forwardedMsgIds = new List<int>();
+
+            void ScheduleForwardedCleanup()
+            {
+                if (forwardedMsgIds.Count == 0 || targetPeer == null) return;
+                int[] idsToDelete = forwardedMsgIds.Where(id => id > 0).Distinct().ToArray();
+                if (idsToDelete.Length == 0) return;
+                bool isChannel = targetPeer is TL.InputPeerChannel;
+                var cleanupPeer = targetPeer;
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await DeleteBatchWithBisectAsync(cleanupPeer, isChannel, idsToDelete);
+                    }
+                    catch (Exception delEx)
+                    {
+                        AppLogger.Warn("TelegramService", $"[ForwardFileAsync] Не удалось очистить незавершенные пересланные сообщения [{string.Join(", ", idsToDelete)}]: {delEx.Message}");
+                    }
+                });
+            }
+
             try
             {
-                await EnsureFloodWaitDelayAsync();
+                cancellationToken.ThrowIfCancellationRequested();
+                await EnsureFloodWaitDelayAsync(cancellationToken);
 
                 var sourcePeer = await GetStoragePeerAsync(sourceChannelId);
-                var targetPeer = await GetStoragePeerAsync(targetChannelId);
+                targetPeer = await GetStoragePeerAsync(targetChannelId);
                 long effectiveTargetChannelId = targetChannelId ?? (targetPeer is TL.InputPeerChannel tipc ? tipc.channel_id : 0);
 
                 int? newPreviewId = null;
@@ -3160,6 +3185,7 @@ namespace TGramFS.Services
                 // 1. Форвардим превью (если есть)
                 if (sourcePreviewMessageId.HasValue && sourcePreviewMessageId.Value > 0)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     try
                     {
                         var fwdPreviewReq = new TL.Methods.Messages_ForwardMessages
@@ -3173,13 +3199,23 @@ namespace TGramFS.Services
 
                         var previewUpdates = await _client.Invoke(fwdPreviewReq);
                         newPreviewId = ExtractMessageIdFromUpdates(previewUpdates);
-                        await EnsurePacingDelayAsync();
+                        if (newPreviewId.HasValue && newPreviewId.Value > 0)
+                        {
+                            forwardedMsgIds.Add(newPreviewId.Value);
+                        }
+                        await EnsurePacingDelayAsync(cancellationToken);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        throw;
                     }
                     catch (Exception ex)
                     {
                         AppLogger.Warn("TelegramService", $"[ForwardFileAsync] Не удалось переслать превью #{sourcePreviewMessageId}: {ex.Message}");
                     }
                 }
+
+                cancellationToken.ThrowIfCancellationRequested();
 
                 // 2. Форвардим основной файл (мастер-сообщение)
                 var fwdReq = new TL.Methods.Messages_ForwardMessages
@@ -3197,8 +3233,12 @@ namespace TGramFS.Services
                 if (newMsgId <= 0)
                 {
                     AppLogger.Warn("TelegramService", $"[ForwardFileAsync] Сообщение #{sourceMessageId} переслано, но не удалось извлечь новый MessageId.");
+                    ScheduleForwardedCleanup();
                     return null;
                 }
+
+                forwardedMsgIds.Add(newMsgId);
+                cancellationToken.ThrowIfCancellationRequested();
 
                 AppLogger.Info("TelegramService", $"[ForwardFileAsync] Файл (Msg #{sourceMessageId}) успешно скопирован в Telegram! Новый Msg #{newMsgId}" +
                     (newPreviewId.HasValue ? $", превью #{newPreviewId}" : "") +
@@ -3213,8 +3253,6 @@ namespace TGramFS.Services
                     AppLogger.Info("TelegramService", $"[ForwardFileAsync] Обнаружен составной файл ({partsToForward.Count} частей). Начинаем пересылку связанных частей...");
                     newParts = new List<Models.NodePart>();
 
-
-
                     // Первая часть (Part 0) привязана к master newMsgId
                     var firstPart = partsToForward.FirstOrDefault(p => p.PartIndex == 0);
                     newParts.Add(new Models.NodePart(
@@ -3225,47 +3263,45 @@ namespace TGramFS.Services
                         effectiveTargetChannelId
                     ));
 
-                    // Форвардим все остальные части (Part 1 .. N-1)
+                    // Форвардим все остальные части (Part 1 .. N-1); сбой или отмена любой части прерывает всю операцию
                     foreach (var childPart in partsToForward.Where(p => p.PartIndex > 0).OrderBy(p => p.PartIndex))
                     {
-                        try
+                        cancellationToken.ThrowIfCancellationRequested();
+                        await EnsureFloodWaitDelayAsync(cancellationToken);
+                        await EnsurePacingDelayAsync(cancellationToken);
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        var fwdChildReq = new TL.Methods.Messages_ForwardMessages
                         {
-                            await EnsureFloodWaitDelayAsync();
-                            await EnsurePacingDelayAsync();
+                            from_peer = sourcePeer,
+                            to_peer = targetPeer,
+                            id = new int[] { childPart.TgMessageId },
+                            random_id = new long[] { Random.Shared.NextInt64() },
+                            flags = TL.Methods.Messages_ForwardMessages.Flags.drop_author
+                        };
 
-                            var fwdChildReq = new TL.Methods.Messages_ForwardMessages
-                            {
-                                from_peer = sourcePeer,
-                                to_peer = targetPeer,
-                                id = new int[] { childPart.TgMessageId },
-                                random_id = new long[] { Random.Shared.NextInt64() },
-                                flags = TL.Methods.Messages_ForwardMessages.Flags.drop_author
-                            };
+                        var childUpdates = await _client.Invoke(fwdChildReq);
+                        int childNewMsgId = ExtractMessageIdFromUpdates(childUpdates);
 
-                            var childUpdates = await _client.Invoke(fwdChildReq);
-                            int childNewMsgId = ExtractMessageIdFromUpdates(childUpdates);
-
-                            if (childNewMsgId > 0)
-                            {
-                                newParts.Add(new Models.NodePart(
-                                    targetNodeId,
-                                    childPart.PartIndex,
-                                    childPart.PartSize,
-                                    childNewMsgId,
-                                    effectiveTargetChannelId
-                                ));
-                                AppLogger.Info("TelegramService", $"[ForwardFileAsync] Дочерняя часть #{childPart.PartIndex} (исходный Msg #{childPart.TgMessageId}) скопирована -> новый Msg #{childNewMsgId}.");
-                            }
-                            else
-                            {
-                                AppLogger.Warn("TelegramService", $"[ForwardFileAsync] Не удалось получить новый MessageId для дочерней части #{childPart.PartIndex}.");
-                            }
-                        }
-                        catch (Exception ex)
+                        if (childNewMsgId <= 0)
                         {
-                            AppLogger.Error("TelegramService", $"[ForwardFileAsync] Ошибка пересылки дочерней части #{childPart.PartIndex} (Msg #{childPart.TgMessageId}): {ex.Message}", ex);
+                            AppLogger.Error("TelegramService", $"[ForwardFileAsync] Не удалось получить новый MessageId для дочерней части #{childPart.PartIndex} (исходный Msg #{childPart.TgMessageId}). Прерываем копирование составного файла и очищаем уже пересланные части.");
+                            ScheduleForwardedCleanup();
+                            return null;
                         }
+
+                        forwardedMsgIds.Add(childNewMsgId);
+                        newParts.Add(new Models.NodePart(
+                            targetNodeId,
+                            childPart.PartIndex,
+                            childPart.PartSize,
+                            childNewMsgId,
+                            effectiveTargetChannelId
+                        ));
+                        AppLogger.Info("TelegramService", $"[ForwardFileAsync] Дочерняя часть #{childPart.PartIndex} (исходный Msg #{childPart.TgMessageId}) скопирована -> новый Msg #{childNewMsgId}.");
                     }
+
+                    cancellationToken.ThrowIfCancellationRequested();
                 }
 
                 // 4. Если задана новая подпись, планируем её стандартизированное обновление через очередь
@@ -3306,15 +3342,23 @@ namespace TGramFS.Services
 
                 return new FileUploadResult(newMsgId, newPreviewId, newParts);
             }
+            catch (OperationCanceledException)
+            {
+                AppLogger.Info("TelegramService", $"[ForwardFileAsync] Пересылка сообщения #{sourceMessageId} отменена пользователем. Очистка пересланных частей...");
+                ScheduleForwardedCleanup();
+                return null;
+            }
             catch (TL.RpcException rpcEx) when (rpcEx.Code == 420) // FLOOD_WAIT_X
             {
                 TriggerGlobalFloodWait(rpcEx.X);
                 AppLogger.Warn("TelegramService", $"[ForwardFileAsync] FloodWait: пауза {rpcEx.X} секунд.");
+                ScheduleForwardedCleanup();
                 return null;
             }
             catch (Exception ex)
             {
                 AppLogger.Error("TelegramService", $"[ForwardFileAsync] Ошибка пересылки сообщения #{sourceMessageId}: {ex.Message}", ex);
+                ScheduleForwardedCleanup();
                 return null;
             }
         }

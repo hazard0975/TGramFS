@@ -1428,3 +1428,10 @@
       2. В `SetBasicInfo()` при `IsOverwritePending == true` обновление дат откладывается в памяти до финализации новой версии `v2` в `CreateOrUpdateFile` без изменения строки `v1` в SQLite.
       3. В `Cleanup()` (`CleanupDelete` и ветки отмены/ошибок `ForwardTask`, `PipeStream`, малых файлов) и `Close()` добавлен безопасный откат состояния `v1` без перемещения прежней версии в `.Trash`.
       4. Валидация: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
+- [x] **8.127. Атомарность `ForwardFileAsync()` и корзинные подписи дочерних частей для файлов `> 2 ГБ` / `> 4 ГБ` (`NodeRepository.cs`, `TelegramService.cs`, `WinFspServer.cs`)**:
+    - **Проблема**: При замене составного файла (`node_parts`) в `CreateOrUpdateFile()` дочерние части `v1` не получали подпись `#trash` и у мастера отсутствовал размер/номер части и `channel_id`; при `VirtualCopy` в `ForwardFileAsync()` сбой дочерней части проглатывался с возвратом битого результата, а отмена не прерывала пересылку оставшихся частей.
+    - **Реализовано**:
+      1. В `NodeRepository.CreateOrUpdateFile()` добавлено чтение `node_parts` уходящего в корзину `v1` и постановка в `pending_caption_updates` подписей `#trash` с `channel_id` для мастер-части (`[Часть 1 из N, total=... ГБ]`), всех дочерних частей `2..N` и превью.
+      2. В `TelegramService.ForwardFileAsync()` добавлен `CancellationToken`; сбой или отмена любой части прерывает операцию, возвращает `null` и очищает уже пересланные сообщения в целевом канале через `DeleteBatchWithBisectAsync`.
+      3. В `WinFspServer.cs` (`Create`, `Overwrite`, `Cleanup`) `UploadCts` привязан к `ForwardTask` для мгновенной отмены пересылки при `CleanupDelete`.
+      4. Валидация: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
