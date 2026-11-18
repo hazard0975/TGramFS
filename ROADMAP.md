@@ -1435,3 +1435,10 @@
       2. В `TelegramService.ForwardFileAsync()` добавлен `CancellationToken`; сбой или отмена любой части прерывает операцию, возвращает `null` и очищает уже пересланные сообщения в целевом канале через `DeleteBatchWithBisectAsync`.
       3. В `WinFspServer.cs` (`Create`, `Overwrite`, `Cleanup`) `UploadCts` привязан к `ForwardTask` для мгновенной отмены пересылки при `CleanupDelete`.
       4. Валидация: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
+- [x] **8.128. Защита от 0-байтного 1-го прохода при перезаписи файла `Overwrite()` (`WinFspServer.cs`)**:
+    - **Проблема**: В редком 2-проходном сценарии Windows Explorer (`18:36:09` в `log.MD`) Проход 1 вызывает `Overwrite(alloc=0)` и сразу закрывает хэндл с `0` байт до открытия Прохода 2 через `Open(FILE_WRITE_DATA) -> Write`. Текущий `Cleanup` отправлял `v1` в `.Trash` и создавал 0-байтную заглушку до старта закачки, а Проход 2 через `Open` не имел флага `IsOverwritePending`.
+    - **Реализовано**:
+      1. В `FspNodeContext` добавлен флаг `ExplicitTruncateToZero` (устанавливается в `SetFileSize` при `!setAllocationSize && newSize == 0`), чтобы не нарушать легитимное усечение/копирование реальных `0`-байтных файлов.
+      2. В `WinFspServer.Cleanup` при `IsOverwritePending && finalLength == 0 && TotalBytesWritten == 0 && !ExplicitTruncateToZero` и известном непустом источнике (`KnownTargetSize > 0` или `FileInfo(OriginalSourcePath).Length > 0`) 0-байтный коммит пропускается с вызовом `RestorePreOverwriteState()`.
+      3. Внедрена передача защиты в Проход 2 через `_pendingTwoPassOverwrites` (TTL `20 сек`): `Open()` с правами записи `(FILE_WRITE_DATA | FILE_APPEND_DATA)` активирует `IsOverwritePending = true`, снимает слепок `PreOverwrite*` от `v1` и переносит `OriginalSourcePath`.
+      4. Валидация: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).

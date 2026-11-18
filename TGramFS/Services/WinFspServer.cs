@@ -446,6 +446,99 @@ namespace TGramFS.Services
             return false;
         }
 
+        private class PendingTwoPassOverwriteInfo
+        {
+            public int NodeId { get; set; }
+            public int CreatorPid { get; set; }
+            public string? OriginalSourcePath { get; set; }
+            public DateTime CreatedAtUtc { get; set; }
+        }
+
+        private static readonly ConcurrentDictionary<string, PendingTwoPassOverwriteInfo> _pendingTwoPassOverwrites = new(StringComparer.OrdinalIgnoreCase);
+
+        private static void RegisterPendingTwoPassOverwrite(string cleanPath, int nodeId, int creatorPid, string? originalSourcePath)
+        {
+            if (string.IsNullOrWhiteSpace(cleanPath) || nodeId <= 0)
+                return;
+
+            string norm = NormalizePath(cleanPath);
+            DateTime now = DateTime.UtcNow;
+            if (_pendingTwoPassOverwrites.Count > 256)
+            {
+                DateTime cutoff = now.AddSeconds(-25);
+                foreach (var kvp in _pendingTwoPassOverwrites)
+                {
+                    if (kvp.Value.CreatedAtUtc < cutoff)
+                    {
+                        _pendingTwoPassOverwrites.TryRemove(kvp.Key, out _);
+                    }
+                }
+            }
+
+            _pendingTwoPassOverwrites[norm] = new PendingTwoPassOverwriteInfo
+            {
+                NodeId = nodeId,
+                CreatorPid = creatorPid,
+                OriginalSourcePath = originalSourcePath,
+                CreatedAtUtc = now
+            };
+        }
+
+        private static bool TryConsumePendingTwoPassOverwrite(string cleanPath, int nodeId, int openPid, out PendingTwoPassOverwriteInfo info)
+        {
+            info = null!;
+            if (string.IsNullOrWhiteSpace(cleanPath) || nodeId <= 0)
+                return false;
+
+            string norm = NormalizePath(cleanPath);
+            if (_pendingTwoPassOverwrites.TryGetValue(norm, out var candidate))
+            {
+                bool notExpired = (DateTime.UtcNow - candidate.CreatedAtUtc) <= TimeSpan.FromSeconds(20);
+                bool sameNode = candidate.NodeId == nodeId;
+                bool samePid = candidate.CreatorPid <= 0 || openPid <= 4 || candidate.CreatorPid == openPid;
+                if (notExpired && sameNode && samePid)
+                {
+                    if (_pendingTwoPassOverwrites.TryRemove(norm, out var removed))
+                    {
+                        info = removed;
+                        return true;
+                    }
+                    info = candidate;
+                    return true;
+                }
+                if (!notExpired)
+                {
+                    _pendingTwoPassOverwrites.TryRemove(norm, out _);
+                }
+            }
+            return false;
+        }
+
+        private static void ClearPendingTwoPassOverwrite(string? cleanPath)
+        {
+            if (string.IsNullOrWhiteSpace(cleanPath))
+                return;
+
+            _pendingTwoPassOverwrites.TryRemove(NormalizePath(cleanPath), out _);
+        }
+
+        private static long GetSafeLocalFileLength(string? filePath)
+        {
+            if (string.IsNullOrWhiteSpace(filePath))
+                return 0;
+
+            try
+            {
+                if (File.Exists(filePath))
+                {
+                    return new System.IO.FileInfo(filePath).Length;
+                }
+            }
+            catch { }
+
+            return 0;
+        }
+
         public static void RegisterActiveVirtualCopy(int targetNodeId, int sourceNodeId, int creatorPid, TimeSpan? ttl = null)
         {
             var effectiveTtl = ttl ?? TimeSpan.FromMinutes(2);
@@ -732,6 +825,21 @@ namespace TGramFS.Services
                     }
                     AppLogger.Info("WinFsp", $"[VirtualCopy Pass2] Обнаружен второй проход записи (Open opts=0x{createOptions:X8}, access=0x{grantedAccess:X8}) для '{cleanPath}' (ID {node.Id}, {AppLogger.FormatSizeDetailed(twoPassInfo.TargetSize)}). Повторная отправка в Telegram отключена.");
                 }
+                else if ((grantedAccess & (FILE_WRITE_DATA | FILE_APPEND_DATA)) != 0 &&
+                         TryConsumePendingTwoPassOverwrite(cleanPath, node.Id, openPid, out var twoPassOverwrite))
+                {
+                    openCtx.IsOverwritePending = true;
+                    openCtx.PreOverwriteSize = node.Size;
+                    openCtx.PreOverwriteUpdatedAt = node.UpdatedAt;
+                    openCtx.PreOverwriteCreatedAt = node.CreatedAt;
+                    if (string.IsNullOrEmpty(openCtx.OriginalSourcePath) &&
+                        !string.IsNullOrEmpty(twoPassOverwrite.OriginalSourcePath) &&
+                        File.Exists(twoPassOverwrite.OriginalSourcePath))
+                    {
+                        openCtx.OriginalSourcePath = twoPassOverwrite.OriginalSourcePath;
+                    }
+                    AppLogger.Debug("WinFsp", $"[Overwrite Pass2] Активирован второй проход перезаписи (Open opts=0x{createOptions:X8}, access=0x{grantedAccess:X8}) для '{cleanPath}' (ID {node.Id}). Защита v1 и отложенные даты сохранены.");
+                }
             }
 
             fileNode = node;
@@ -972,6 +1080,7 @@ namespace TGramFS.Services
             node.UpdatedAt = DateTime.UtcNow;
             ctx.Dispose();
             ctx.IsModified = true;
+            ctx.ExplicitTruncateToZero = false;
             ctx.KnownTargetSize = allocationSize > 0 ? (long)allocationSize : -1;
             ctx.TotalBytesWritten = 0;
             ctx.IsUploadStarted = false;
@@ -980,6 +1089,8 @@ namespace TGramFS.Services
             ctx.UploadCts = null;
 
             string fullNodePath = _repository.GetNodeFullPath(node.Id);
+            ClearPendingTwoPassOverwrite(!string.IsNullOrWhiteSpace(ctx.VirtualPath) ? ctx.VirtualPath : fullNodePath);
+            AppLogger.Debug("WinFsp", $"[Overwrite] Перезапись '{node.Name}' (ID {node.Id}, prevSize={prevSize}, alloc={allocationSize}, pid={effectivePid}).");
             var (virtualSource, originalSource) = ResolveFileSource(node.Name, fullNodePath, effectivePid, _repository, ctx.KnownTargetSize);
             if (virtualSource != null)
             {
@@ -1199,6 +1310,7 @@ namespace TGramFS.Services
             }
 
             ctx.IsModified = true;
+            ctx.ExplicitTruncateToZero = false;
             if ((long)(offset + length) > node.Size)
             {
                 node.Size = (long)(offset + length);
@@ -1221,11 +1333,13 @@ namespace TGramFS.Services
             {
                 node.Size = (long)newSize;
                 ctx.KnownTargetSize = (long)newSize;
+                ctx.ExplicitTruncateToZero = newSize == 0;
                 ctx.IsModified = true;
             }
             else if (ctx.KnownTargetSize <= 0 && newSize > 0)
             {
                 ctx.KnownTargetSize = (long)newSize;
+                ctx.ExplicitTruncateToZero = false;
             }
             FillFileInfo(node, out fileInfo);
             return STATUS_SUCCESS;
@@ -1852,6 +1966,23 @@ namespace TGramFS.Services
 
                         try
                         {
+                            if (finalLength == 0 &&
+                                ctx.IsOverwritePending &&
+                                ctx.TotalBytesWritten == 0 &&
+                                !ctx.ExplicitTruncateToZero)
+                            {
+                                long sourceDiskSize = GetSafeLocalFileLength(ctx.OriginalSourcePath);
+                                if (ctx.KnownTargetSize > 0 || sourceDiskSize > 0)
+                                {
+                                    long expectedTargetSize = Math.Max(ctx.KnownTargetSize, sourceDiskSize);
+                                    ctx.RestorePreOverwriteState();
+                                    _activeUploadNodes.TryRemove(cleanFilePath, out _);
+                                    RegisterPendingTwoPassOverwrite(cleanFilePath, node.Id, ctx.CreatorProcessId, ctx.OriginalSourcePath);
+                                    AppLogger.Info("WinFsp", $"[Overwrite Pass1] Пропущено 0-байтное закрытие при перезаписи '{nodeName}' (ID {node.Id}, ожидаемый размер источника: {AppLogger.FormatSizeDetailed(expectedTargetSize)}). Прежняя версия v1 оставлена на месте до 2-го прохода записи.");
+                                    return;
+                                }
+                            }
+
                             if (finalLength <= 1)
                             {
                                 byte[]? inlineBytes = finalLength == 1 ? fileBytes : null;
@@ -1985,6 +2116,10 @@ namespace TGramFS.Services
                 {
                     _activeUploadNodes.TryRemove(cleanFilePath, out _);
                 }
+            }
+            else if (ctx.IsOverwritePending)
+            {
+                ctx.RestorePreOverwriteState();
             }
         }
 
@@ -3977,6 +4112,7 @@ namespace TGramFS.Services
 
             // Снимок состояния существующего файла при Overwrite (защита v1 в БД и откат при отмене)
             public bool IsOverwritePending { get; set; }
+            public bool ExplicitTruncateToZero { get; set; }
             public long PreOverwriteSize { get; set; } = -1;
             public DateTime PreOverwriteUpdatedAt { get; set; }
             public DateTime PreOverwriteCreatedAt { get; set; }
@@ -3990,6 +4126,7 @@ namespace TGramFS.Services
                 Node.UpdatedAt = PreOverwriteUpdatedAt;
                 Node.CreatedAt = PreOverwriteCreatedAt;
                 IsOverwritePending = false;
+                ExplicitTruncateToZero = false;
             }
 
             public void Dispose()

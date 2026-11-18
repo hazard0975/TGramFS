@@ -4171,3 +4171,25 @@ _telegramService.UpdateSettings(_settings);
 3. **`WinFspServer.cs`**:
    - В `Create()` и `Overwrite()` при запуске `ForwardTask` создаётся `UploadCts`, его токен передаётся в `ForwardFileAsync`; в `Cleanup()` после завершения `ForwardTask` `UploadCts` освобождается.
 
+---
+
+## 135. Защита от преждевременного удаления `v1` в `.Trash` при 0-байтном 1-м проходе `Overwrite()` (`WinFspServer.cs`)
+
+### Контекст и симптомы:
+При анализе `log.MD` (событие `18:36:09.494–18:36:09.981`) было зафиксировано, что Windows Explorer в отдельных сценариях выполняет перезапись существующего файла в два прохода:
+1. Проход 1: `Open -> Overwrite(allocationSize = 0) -> Cleanup` (без единого вызова `Write`, `TotalBytesWritten == 0`), несмотря на то что `ResolveFileSource` уже нашёл локальный исходник размером `26 588 121` байт.
+2. Проход 2 (через `12 мс`): `Open(FILE_WRITE_DATA) -> SetFileSize -> Write` полной версии файла.
+
+На Проходе 1 ветка `Вариант 2` (`finalLength <= 1`) в `WinFspServer.Cleanup` принимала `node.Size == 0` за реальную перезапись пустым файлом и вызывала `CreateOrUpdateFile(..., size: 0)`, преждевременно отправляя живую версию `v1` в `.Trash` ещё до начала загрузки. Кроме того, при последующем Проходе 2 через обычный `Open()` без повторного `Overwrite()` у нового контекста `openCtx.IsOverwritePending` по умолчанию было `false`.
+
+### Принятое решение (`WinFspServer.cs`):
+1. **Идентификация 0-байтного Прохода 1 без поломки легитимного обнуления**:
+   - В `FspNodeContext` добавлен флаг `ExplicitTruncateToZero` (выставляется только в `SetFileSize` при `!setAllocationSize && newSize == 0` и сбрасывается при `Overwrite` или записи `> 0` байт).
+   - В `WinFspServer.Cleanup` (ветка `Вариант 2`) 0-байтное закрытие считается Проходом 1 и пропускается **только** если `ctx.IsOverwritePending == true`, `finalLength == 0 && ctx.TotalBytesWritten == 0 && !ctx.ExplicitTruncateToZero` и при этом известен непустой целевой размер (`ctx.KnownTargetSize > 0 || GetSafeLocalFileLength(ctx.OriginalSourcePath) > 0`).
+   - В этом случае `CreateOrUpdateFile(size: 0)` не вызывается, а `ctx.RestorePreOverwriteState()` оставляет `v1` в SQLite нетронутым; реальное копирование пустых файлов (`0` байт) и усечение (`SetLength(0)` / `type nul >`) продолжают работать штатно.
+2. **Передача защиты перезаписи в Проход 2 (`_pendingTwoPassOverwrites`)**:
+   - На Проходе 1 регистрируется `PendingTwoPassOverwriteInfo` (TTL `20 сек`, привязка к нормализованному пути, `NodeId`, `CreatorPid` и `OriginalSourcePath`).
+   - В `Open()` при открытии того же узла с флагами записи (`FILE_WRITE_DATA | FILE_APPEND_DATA`) и совпадении `NodeId`/`CreatorPid` (обычные потоки чтения не перехватываются) активируются `IsOverwritePending = true`, снимок `PreOverwrite*` от `v1` и перенос `OriginalSourcePath`. Благодаря этому `SetBasicInfo` и возможная отмена (`CleanupDelete`) на Проходе 2 также защищают `v1`.
+3. **Диагностика**:
+   - В `Overwrite()` добавлен `Debug`-лог параметров входа (`prevSize`, `alloc`, `pid`), а в `Cleanup()` / `Open()` — логи срабатывания `[Overwrite Pass1]` и `[Overwrite Pass2]`.
+
