@@ -783,19 +783,25 @@ namespace TGramFS.UI
             Action updateBackupStatusText = () =>
             {
                 string statusText = "Статус: ";
+                int lastMsgId = _configManager.CurrentSettings?.Database?.Backup?.LastSyncedBackupMessageId ?? 0;
+                var details = new List<string>(2);
+
                 if (_backupService != null)
                 {
                     if (_backupService.HasConflict)
                     {
                         statusText += "⚠️ Конфликт синхронизации";
+                        if (lastMsgId > 0) details.Add($"последний ID {lastMsgId}");
                     }
                     else if (_backupService.HasUnsavedChanges)
                     {
                         statusText += "Есть локальные изменения";
+                        if (lastMsgId > 0) details.Add($"последний ID {lastMsgId}");
                     }
                     else
                     {
                         statusText += "Синхронизировано";
+                        if (lastMsgId > 0) details.Add($"ID {lastMsgId}");
                     }
 
                     if (_backupService.LastBackupTimeUtc.HasValue)
@@ -804,13 +810,20 @@ namespace TGramFS.UI
                         string timeStr = localTime.Date == DateTime.Today
                             ? localTime.ToString("HH:mm:ss")
                             : localTime.ToString("dd.MM HH:mm");
-                        statusText += $" (бэкап в {timeStr})";
+                        details.Add($"бэкап в {timeStr}");
                     }
                 }
                 else
                 {
                     statusText += "Активен";
+                    if (lastMsgId > 0) details.Add($"ID {lastMsgId}");
                 }
+
+                if (details.Count > 0)
+                {
+                    statusText += $" ({string.Join(", ", details)})";
+                }
+
                 _lblBackupStatus.Text = statusText;
             };
             updateBackupStatusText();
@@ -912,7 +925,7 @@ namespace TGramFS.UI
                     var backupInfo = await _backupService.GetLatestBackupInfoAsync();
                     if (!backupInfo.Found || backupInfo.Document == null)
                     {
-                        MessageBox.Show("В канале Telegram не найдено резервных копий базы данных (#db_backup).", "Резервная копия не найдена", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        MessageBox.Show("В канале Telegram не найдено резервных копий базы данных.", "Резервная копия не найдена", MessageBoxButtons.OK, MessageBoxIcon.Information);
                         return;
                     }
 
@@ -1701,6 +1714,12 @@ namespace TGramFS.UI
             _settings.Database.Backup.BackupOnExit = _chkBackupOnExit.Checked;
             _settings.Database.Backup.CheckForRemoteOnStartup = _chkCheckOnStartup.Checked;
             _settings.Database.Backup.RemoteCheckIntervalMinutes = (int)_numRemoteCheckInterval.Value;
+            // Не затираем LastSyncedBackupMessageId, если он успел обновиться в фоне пока окно настроек было открыто
+            var latestConfig = _configManager.CurrentSettings;
+            if (latestConfig?.Database?.Backup != null)
+            {
+                _settings.Database.Backup.LastSyncedBackupMessageId = latestConfig.Database.Backup.LastSyncedBackupMessageId;
+            }
 
             if (_chkContextMenu.Checked)
             {

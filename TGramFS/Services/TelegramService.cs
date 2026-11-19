@@ -3051,8 +3051,7 @@ namespace TGramFS.Services
                         fileName = fnAttr.file_name;
                     }
 
-                    bool isDbBackup = (!string.IsNullOrEmpty(fileName) && fileName.StartsWith("base_") && fileName.EndsWith(".db"))
-                                      || (msg.message != null && msg.message.Contains("#db_backup"));
+                    bool isDbBackup = !string.IsNullOrEmpty(fileName) && fileName.StartsWith("base_") && fileName.EndsWith(".db");
 
                     if (isDbBackup)
                     {
@@ -3062,7 +3061,7 @@ namespace TGramFS.Services
                 }
             }
 
-            AppLogger.Info("TelegramService", "В последних 20 сообщениях канала бэкапов файл резервной копии (#db_backup / base_*.db) не найден.");
+            AppLogger.Info("TelegramService", "В последних 20 сообщениях канала бэкапов файл резервной копии (base_*.db) не найден.");
             return null;
         }
 

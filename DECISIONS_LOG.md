@@ -4193,3 +4193,24 @@ _telegramService.UpdateSettings(_settings);
 3. **Диагностика**:
    - В `Overwrite()` добавлен `Debug`-лог параметров входа (`prevSize`, `alloc`, `pid`), а в `Cleanup()` / `Open()` — логи срабатывания `[Overwrite Pass1]` и `[Overwrite Pass2]`.
 
+---
+
+## 136. Отображение Message ID бэкапа в окне настроек, удаление хэштега `#db_backup` и защита `LastSyncedBackupMessageId` при сохранении (`AuthSettingsForm.cs`, `DatabaseBackupService.cs`, `TelegramService.cs`)
+
+### Контекст и цель:
+1. В окне настроек на вкладке «База» статус синхронизации показывал состояние и время бэкапа в текущей сессии, но не отображал `Message ID` последнего синхронизированного бэкапа (`LastSyncedBackupMessageId` из `appsettings.json`), что затрудняло быструю сверку с каналом бэкапов в Telegram (особенно сразу после запуска приложения).
+2. Хэштег `#db_backup` в выделенном приватном канале резервных копий оказался избыточным, а в поиске использовался как дублирующий признак поверх маски имени файла `base_*.db`.
+3. В ходе аудита `AuthSettingsForm.SaveAllSettings()` был выявлен риск перезатирания `LastSyncedBackupMessageId`: форма загружала `_settings` один раз при открытии, поэтому фоновый бэкап или синхронизация, прошедшие при открытом окне настроек, могли быть затёрты старым значением при нажатии кнопки «Сохранить».
+
+### Принятое решение:
+1. **Отображение Message ID в `_lblBackupStatus` (`AuthSettingsForm.cs`)**:
+   - Читается актуальный `LastSyncedBackupMessageId` из `_configManager.CurrentSettings` (если `> 0`).
+   - При статусе `Синхронизировано` отображается `(ID <N>)` или `(ID <N>, бэкап в <время>)`, если бэкап выполнялся в текущей сессии.
+   - При статусах `Есть локальные изменения` и `⚠️ Конфликт синхронизации` ID уточняется как `(последний ID <N>)` (с временем, если оно есть), чтобы не путать его с ещё не выгруженными изменениями.
+   - От идеи доредактировать подпись самого сообщения в Telegram (`Messages_EditMessage`) для вписывания ID внутрь текста поста сознательно отказались, чтобы не добавлять лишний сетевой RPC-запрос и риск `FLOOD_WAIT` при каждом бэкапе.
+2. **Удаление хэштега `#db_backup`**:
+   - `DatabaseBackupService.PerformBackupAsync`: удалена строка `#db_backup` из подписи карточки бэкапа.
+   - `TelegramService.GetLatestBackupDocumentAsync`: поиск последнего бэкапа выполняется строго по маске имени файла `base_*.db`; упоминание `#db_backup` удалено из кода и логов.
+   - `AuthSettingsForm.cs`: удалено упоминание `(#db_backup)` из диалога отсутствия бэкапов.
+3. **Защита от затирания `LastSyncedBackupMessageId` (`AuthSettingsForm.SaveAllSettings`)**:
+   - Перед вызовом `_configManager.Save(_settings)` форма подтягивает свежее значение `LastSyncedBackupMessageId` из `_configManager.CurrentSettings`.

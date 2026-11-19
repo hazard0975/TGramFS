@@ -300,8 +300,7 @@ namespace TGramFS.Services
                     $"💻 Устройство: {Environment.MachineName}\n" +
                     $"📁 Всего узлов: {stats.totalNodes:N0} (файлов: {stats.filesCount:N0}, папок: {stats.foldersCount:N0})\n" +
                     $"📦 Размер базы: {sizeMb:F2} МБ\n" +
-                    $"🏷️ Причина: {triggerReason}\n" +
-                    $"#db_backup";
+                    $"🏷️ Причина: {triggerReason}";
 
                 // 4. Загрузка в Telegram канал
                 (int MessageId, long ChannelId) uploadResult;
