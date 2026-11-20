@@ -161,6 +161,11 @@ namespace TGramFS.UI
                 AppLogger.Info("TrayContext", $"Событие OnDownloadCompleted для '{fileName}' получено из TelegramService.");
                 _progressOverlay.CompleteTransfer(fileName, TransferDirection.Download);
             };
+
+            _telegramService.OnFloodWaitDetected += (waitSeconds, isUploadStopped, fileName, isDownload) =>
+            {
+                _progressOverlay.ShowFloodWait(waitSeconds, isUploadStopped, fileName, isDownload);
+            };
         }
 
         private void BuildContextMenu()

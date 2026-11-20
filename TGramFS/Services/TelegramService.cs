@@ -540,12 +540,20 @@ namespace TGramFS.Services
         /// </summary>
         public event Action<string>? OnDownloadCompleted;
 
+        /// <summary>
+        /// Событие фиксации FLOOD_WAIT (осталось секунд, остановлена ли отправка, имя файла, операция скачивания).
+        /// </summary>
+        public event Action<int, bool, string?, bool>? OnFloodWaitDetected;
+
         private CancellationTokenSource? _reconnectWaitCts;
         private readonly object _reconnectWaitLock = new();
         private DateTime _lastSuccessfulTrafficTime = DateTime.MinValue;
+        private static TelegramService? _activeInstance;
+        private static string? _activeUploadFileName;
 
         public TelegramService(ConfigManager configManager, NodeRepository? repository = null)
         {
+            _activeInstance = this;
             _configManager = configManager;
             _repository = repository;
             _currentSettings = _configManager.Load();
@@ -619,7 +627,11 @@ namespace TGramFS.Services
                 {
                     if (Volatile.Read(ref _activeUploadPipelineCount) > 0)
                     {
-                        RegisterUploadFloodWait(waitSeconds, "WTelegram");
+                        RegisterUploadFloodWait(waitSeconds, "WTelegram", _activeUploadFileName);
+                    }
+                    else if (IsAuthorized)
+                    {
+                        NotifyFloodWaitBanner(waitSeconds, isUploadStopped: false, fileName: null, isDownload: true);
                     }
                 }
             }
@@ -2246,11 +2258,16 @@ namespace TGramFS.Services
             }
             AdaptPacingDelay(20);
             AppLogger.Warn("TelegramService", $"Получен FLOOD_WAIT на {seconds} сек от серверов Telegram. Сквозная пауза до {_globalFloodWaitUntil:HH:mm:ss}. Пейсинг адаптирован до {_globalPacingDelayMs} мс.");
+            if (_activeInstance?.IsAuthorized == true && seconds > 0)
+            {
+                NotifyFloodWaitBanner(seconds, isUploadStopped: false, fileName: null, isDownload: true);
+            }
         }
 
         // Изолированный адаптивный пейсинг исходящих сообщений при загрузке файлов в Telegram.
-        // Стартует с 0 мс (без замедления при отсутствии флуда), полностью отделен от _globalPacingDelayMs скачивания.
-        // Откат: -25 мс через 90 сек чистой работы; при касании границы (флуд в пределах интервала после снижения) интервал удваивается (90 -> 180 -> 300 сек).
+        // Стартует с 0 мс; при первом FLOOD_WAIT выставляется 150 мс, далее +50 мс за каждый новый эпизод (потолок 2000 мс).
+        // При FLOOD_WAIT > 60 сек выставляется жёсткая блокировка новых отправок (_uploadHardStopUntilUtc) до истечения таймера Telegram.
+        // Откат: -25 мс через 90 сек чистой работы; при касании границы интервал удваивается (90 -> 180 -> 300 сек).
         // При простое >= 5 мин между отправками задержка и интервал сбрасываются к 0 мс / 90 сек.
         private static readonly Regex FloodWaitLogRegex = new(@"FLOOD_(?:PREMIUM_)?WAIT_(\d+)", RegexOptions.Compiled);
         private static readonly object _uploadPacingLock = new();
@@ -2258,9 +2275,13 @@ namespace TGramFS.Services
         private static int _uploadCleanSendsSinceLastChange = 0;
         private static int _uploadDecayIntervalSeconds = UploadPacingBaseDecayIntervalSeconds;
         private static DateTime _lastUploadFloodDetectedUtc = DateTime.MinValue;
+        private static DateTime _uploadActiveFloodUntilUtc = DateTime.MinValue;
+        private static DateTime _uploadHardStopUntilUtc = DateTime.MinValue;
         private static DateTime _uploadLastPacingChangeUtc = DateTime.MinValue;
         private static DateTime _uploadLastDecayAttemptUtc = DateTime.MinValue;
         private static DateTime _lastUploadActivityFinishedUtc = DateTime.MinValue;
+        private static DateTime _lastFloodBannerNotifyUtc = DateTime.MinValue;
+        private const int UploadPacingInitialFloodDelayMs = 150;
         private const int UploadPacingStepMs = 50;
         private const int UploadPacingMaxDelayMs = 2000;
         private const int UploadPacingDecayStepMs = 25;
@@ -2268,6 +2289,53 @@ namespace TGramFS.Services
         private const int UploadPacingMaxDecayIntervalSeconds = 300;
         private const int UploadPacingIdleResetMinutes = 5;
         private const int UploadFloodDedupWindowMs = 1500;
+        private const int UploadHardStopThresholdSeconds = 60;
+
+        private static void NotifyFloodWaitBanner(int waitSeconds, bool isUploadStopped, string? fileName, bool isDownload)
+        {
+            var instance = _activeInstance;
+            if (instance == null || waitSeconds <= 0) return;
+
+            var now = DateTime.UtcNow;
+            lock (_uploadPacingLock)
+            {
+                if (!isUploadStopped && (now - _lastFloodBannerNotifyUtc).TotalMilliseconds < 800)
+                {
+                    return;
+                }
+                _lastFloodBannerNotifyUtc = now;
+            }
+
+            instance.OnFloodWaitDetected?.Invoke(waitSeconds, isUploadStopped, fileName, isDownload);
+        }
+
+        private static bool TryGetRemainingUploadHardStopSeconds(out int remainingSeconds, out DateTime hardStopUntilUtc)
+        {
+            lock (_uploadPacingLock)
+            {
+                var now = DateTime.UtcNow;
+                if (_uploadHardStopUntilUtc > now)
+                {
+                    remainingSeconds = Math.Max(1, (int)Math.Ceiling((_uploadHardStopUntilUtc - now).TotalSeconds));
+                    hardStopUntilUtc = _uploadHardStopUntilUtc;
+                    return true;
+                }
+            }
+
+            remainingSeconds = 0;
+            hardStopUntilUtc = DateTime.MinValue;
+            return false;
+        }
+
+        private static void ThrowIfUploadHardStopped(string fileName)
+        {
+            if (TryGetRemainingUploadHardStopSeconds(out int remainingSec, out DateTime hardStopUntilUtc))
+            {
+                AppLogger.Warn("TelegramService", $"[Upload HardStop] Отправка '{fileName}' прекращена без обращения к Telegram: активен FLOOD_WAIT (осталось {remainingSec} сек, до {hardStopUntilUtc.ToLocalTime():HH:mm:ss}).");
+                NotifyFloodWaitBanner(remainingSec, isUploadStopped: true, fileName, isDownload: false);
+                throw new InvalidOperationException($"Отправка остановлена из-за FLOOD_WAIT Telegram (осталось {remainingSec} сек, до {hardStopUntilUtc.ToLocalTime():HH:mm:ss}).");
+            }
+        }
 
         private static void ResetUploadPacingIfIdle()
         {
@@ -2321,7 +2389,7 @@ namespace TGramFS.Services
             }
         }
 
-        private static void RegisterUploadFloodWait(int waitSeconds, string source)
+        private static void RegisterUploadFloodWait(int waitSeconds, string source, string? fileName = null)
         {
             int previousDelay;
             int updatedDelay;
@@ -2329,6 +2397,8 @@ namespace TGramFS.Services
             int updatedInterval;
             bool wasDeduplicated;
             bool touchedBoundary = false;
+            bool triggeredHardStop = false;
+            DateTime hardStopUntilLocal = DateTime.MinValue;
 
             lock (_uploadPacingLock)
             {
@@ -2337,7 +2407,26 @@ namespace TGramFS.Services
                 previousInterval = _uploadDecayIntervalSeconds;
                 updatedInterval = _uploadDecayIntervalSeconds;
 
-                if ((now - _lastUploadFloodDetectedUtc).TotalMilliseconds < UploadFloodDedupWindowMs)
+                var candidateFloodUntil = now.AddSeconds(Math.Max(1, waitSeconds));
+                bool isSameActiveFlood = now < _uploadActiveFloodUntilUtc &&
+                                         candidateFloodUntil <= _uploadActiveFloodUntilUtc.AddSeconds(2);
+
+                if (candidateFloodUntil > _uploadActiveFloodUntilUtc)
+                {
+                    _uploadActiveFloodUntilUtc = candidateFloodUntil;
+                }
+
+                if (waitSeconds > UploadHardStopThresholdSeconds)
+                {
+                    if (candidateFloodUntil > _uploadHardStopUntilUtc)
+                    {
+                        _uploadHardStopUntilUtc = candidateFloodUntil;
+                    }
+                    triggeredHardStop = true;
+                    hardStopUntilLocal = _uploadHardStopUntilUtc.ToLocalTime();
+                }
+
+                if (isSameActiveFlood || (now - _lastUploadFloodDetectedUtc).TotalMilliseconds < UploadFloodDedupWindowMs)
                 {
                     wasDeduplicated = true;
                     previousDelay = _uploadPacingDelayMs;
@@ -2349,7 +2438,9 @@ namespace TGramFS.Services
                     _lastUploadFloodDetectedUtc = now;
                     _uploadLastPacingChangeUtc = now;
                     previousDelay = _uploadPacingDelayMs;
-                    updatedDelay = Math.Min(UploadPacingMaxDelayMs, _uploadPacingDelayMs + UploadPacingStepMs);
+                    updatedDelay = previousDelay == 0
+                        ? UploadPacingInitialFloodDelayMs
+                        : Math.Min(UploadPacingMaxDelayMs, previousDelay + UploadPacingStepMs);
                     _uploadPacingDelayMs = updatedDelay;
 
                     // Анти-пила: если флуд вернулся в пределах окна после недавнего снижения — удваиваем интервал отката (90 -> 180 -> 300 сек)
@@ -2369,8 +2460,13 @@ namespace TGramFS.Services
                 string boundaryNote = touchedBoundary
                     ? $" Интервал снижения увеличен: {previousInterval} -> {updatedInterval} сек."
                     : string.Empty;
-                AppLogger.Warn("TelegramService", $"[Upload Pacing] Зафиксирован FLOOD_WAIT_{waitSeconds} ({waitSeconds} сек, источник: {source}). Адаптивная пауза отправки увеличена: {previousDelay} -> {updatedDelay} мс.{boundaryNote}");
+                string hardStopNote = triggeredHardStop
+                    ? $" Отправка приостановлена до {hardStopUntilLocal:HH:mm:ss}."
+                    : string.Empty;
+                AppLogger.Warn("TelegramService", $"[Upload Pacing] Зафиксирован FLOOD_WAIT_{waitSeconds} ({waitSeconds} сек, источник: {source}). Адаптивная пауза отправки увеличена: {previousDelay} -> {updatedDelay} мс.{boundaryNote}{hardStopNote}");
             }
+
+            NotifyFloodWaitBanner(waitSeconds, isUploadStopped: waitSeconds > UploadHardStopThresholdSeconds || TryGetRemainingUploadHardStopSeconds(out _, out _), fileName ?? _activeUploadFileName, isDownload: false);
         }
 
         private static void NotifyUploadMessageSucceeded()
@@ -2465,12 +2561,22 @@ namespace TGramFS.Services
 
             try
             {
+                if (length < 0 || length > 1)
+                {
+                    ThrowIfUploadHardStopped(effectiveFileName);
+                }
+
                 await _uploadSemaphore.WaitAsync(cancellationToken);
                 uploadSlotAcquired = true;
+                _activeUploadFileName = effectiveFileName;
                 Interlocked.Increment(ref _activeUploadPipelineCount);
                 ResetUploadPacingIfIdle();
 
                 cancellationToken.ThrowIfCancellationRequested();
+                if (length < 0 || length > 1)
+                {
+                    ThrowIfUploadHardStopped(effectiveFileName);
+                }
                 await EnsureFloodWaitDelayAsync();
 
                 if (_client == null || !IsAuthorized)
@@ -2529,6 +2635,7 @@ namespace TGramFS.Services
                     return null;
                 }
 
+                ThrowIfUploadHardStopped(effectiveFileName);
                 didAttemptNetworkUpload = true;
                 long fileLength = uploadStream.Length;
                 byte[]? galleryPhotoBytes = null;
@@ -2875,7 +2982,7 @@ namespace TGramFS.Services
             }
             catch (TL.RpcException rpcEx) when (rpcEx.Code == 420)
             {
-                RegisterUploadFloodWait(rpcEx.X, $"отправка '{effectiveFileName}'");
+                RegisterUploadFloodWait(rpcEx.X, $"отправка '{effectiveFileName}'", effectiveFileName);
                 AppLogger.Error("TelegramService", $"Получен FLOOD_WAIT_{rpcEx.X} ({rpcEx.X} сек) при отправке файла '{effectiveFileName}' в Telegram.", rpcEx);
                 throw;
             }
@@ -2913,6 +3020,7 @@ namespace TGramFS.Services
                 if (uploadSlotAcquired)
                 {
                     Interlocked.Decrement(ref _activeUploadPipelineCount);
+                    _activeUploadFileName = null;
                     _uploadSemaphore.Release();
                 }
                 Interlocked.Decrement(ref _pendingUploadsCount);
@@ -2960,6 +3068,7 @@ namespace TGramFS.Services
                 for (int i = 0; i < partCount; i++)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
+                    ThrowIfUploadHardStopped(effectiveFileName);
                     await EnsureFloodWaitDelayAsync();
 
                     long currentPartLength = (i == partCount - 1)
@@ -3137,6 +3246,7 @@ namespace TGramFS.Services
                                       cancellationToken.IsCancellationRequested ||
                                       (ex is IOException ioEx && ioEx.Message.Contains("отменен"));
 
+                int floodDelayForCleanupSeconds = 0;
                 if (isCancellation)
                 {
                     AppLogger.Info("TelegramService", $"[BigFile Chunking] Загрузка файла '{effectiveFileName}' отменена пользователем. Очистка загруженных частей...");
@@ -3144,7 +3254,11 @@ namespace TGramFS.Services
                 }
                 else if (ex is TL.RpcException rpcEx && rpcEx.Code == 420)
                 {
-                    RegisterUploadFloodWait(rpcEx.X, $"отправка многотомного файла '{effectiveFileName}'");
+                    RegisterUploadFloodWait(rpcEx.X, $"отправка многотомного файла '{effectiveFileName}'", effectiveFileName);
+                    if (rpcEx.X > UploadHardStopThresholdSeconds)
+                    {
+                        floodDelayForCleanupSeconds = rpcEx.X + 1;
+                    }
                     AppLogger.Error("TelegramService", $"[BigFile Chunking] Получен FLOOD_WAIT_{rpcEx.X} ({rpcEx.X} сек) при отправке части файла '{effectiveFileName}'. Очистка загруженных частей...", ex);
                 }
                 else
@@ -3159,6 +3273,10 @@ namespace TGramFS.Services
                     {
                         try
                         {
+                            if (floodDelayForCleanupSeconds > 0)
+                            {
+                                await Task.Delay(TimeSpan.FromSeconds(floodDelayForCleanupSeconds));
+                            }
                             if (_client != null)
                             {
                                 var storagePeer = await GetStoragePeerAsync(targetChannelId);
