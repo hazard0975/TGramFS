@@ -4214,3 +4214,31 @@ _telegramService.UpdateSettings(_settings);
    - `AuthSettingsForm.cs`: удалено упоминание `(#db_backup)` из диалога отсутствия бэкапов.
 3. **Защита от затирания `LastSyncedBackupMessageId` (`AuthSettingsForm.SaveAllSettings`)**:
    - Перед вызовом `_configManager.Save(_settings)` форма подтягивает свежее значение `LastSyncedBackupMessageId` из `_configManager.CurrentSettings`.
+
+---
+
+## 137. Изолированный адаптивный пейсинг отправки файлов и отслеживание всех `FLOOD_WAIT_<N>` (`TelegramService.cs`)
+
+### Контекст и симптомы:
+При анализе полного лога массовой синхронизации (`log.MD`, `11 321` строк, `Create Synchronicity`) выявилась типовая картина эскалации лимитов Telegram при потоковой отправке сотен мелких файлов подряд:
+1. Начиная с `02:16:25` `WTelegramClient` получил серию из **23 коротких флудов** (`FLOOD_WAIT_3` .. `FLOOD_WAIT_9`), которые пережидались внутри `WTelegramClient` (при пороге `FloodRetryThreshold = 60 сек`) без какого-либо снижения темпа отправки последующих файлов.
+2. Далее последовала серия `FLOOD_WAIT_211 -> 46` на `.gif` (`document/image/gif`) и в итоге глобальный `FLOOD_WAIT_2916`.
+3. В `AppLogger` при `RpcException (Code == 420)` выводилось обезличенное `ex.Message == "FLOOD_WAIT_X"` без фактического времени ожидания (`rpcEx.X` секунд).
+
+### Первопричины:
+1. `HandleWTelegramLog` не отслеживал строки `[WTelegram] → RpcError 420 FLOOD_WAIT_<N>`, поэтому все флуды `<= 60 сек` оставались невидимыми для сервиса выгрузки.
+2. В `UploadFileAsync` и `UploadMultiPartFileAsync` отсутствовал адаптивный интервал между исходящими вызовами `SendMessageAsync` (превью + документ) и `Messages_EditMessage` (обновление финальной подписи с `ID`).
+3. Использование существующего `_globalPacingDelayMs` (который только увеличивается и отвечает за `Upload_GetFile`) привело бы к нежелательному замедлению последующего скачивания и стриминга видео в той же сессии.
+
+### Принятое решение (`TelegramService.cs`):
+1. **Изоляция контура отправки от контура скачивания**:
+   - Введено отдельное состояние `_uploadPacingDelayMs` (стартует с `0 мс`, чтобы не тормозить штатную выгрузку и крупные файлы до первого флуда), полностью независимое от `_globalPacingDelayMs`.
+   - Отслеживается флаг активного слота выгрузки `_activeUploadPipelineCount` (внутри `_uploadSemaphore`), чтобы фоновые флуды чтения/удаления вне активной отправки не изменяли задержку выгрузки.
+2. **Сквозной перехват всех `FLOOD_WAIT_<N>` (и `<= 60`, и `> 60` сек)**:
+   - В `HandleWTelegramLog` добавлен разбор `FLOOD_(?:PREMIUM_)?WAIT_(\d+)`; дополнительно `catch (TL.RpcException rpcEx) when (rpcEx.Code == 420)` в `UploadFileAsync`, `UploadMultiPartFileAsync` и `Messages_EditMessage` логирует точное количество секунд (`FLOOD_WAIT_{rpcEx.X}`) и регистрирует событие через `RegisterUploadFloodWait`.
+   - При каждом уникальном событии (окно дедупликации `1500 мс`, чтобы не задваивать один сбой по логу и исключению) пауза увеличивается на `+50 мс` (до потолка `2000 мс`).
+3. **Фактическая пауза `EnsureUploadMessagePacingAsync` и плавный откат**:
+   - Пауза `Task.Delay(_uploadPacingDelayMs)` применяется перед каждым `SendMessageAsync` (включая превью галереи, основной файл, аудио/видео и части многотомника) и `Messages_EditMessage`, что реально раздвигает серию мелких RPC.
+   - После `20` последовательных чистых отправок без `FLOOD_WAIT` задержка автоматически снижается на `-25 мс` обратно к `0 мс`.
+4. **Сознательно отложено (до проверки результата на практике)**:
+   - Блокирующее ожидание `rpcEx.X` секунд прямо внутри `UploadFileAsync` (с ретраем) и UI-уведомления в трее (`TrayContext` / `TrayProgressOverlay`) пока не внедрялись — сперва проверяется, достаточно ли ранней адаптации темпа, чтобы не доводить до крупных `FLOOD_WAIT`.

@@ -1442,3 +1442,10 @@
       2. В `WinFspServer.Cleanup` при `IsOverwritePending && finalLength == 0 && TotalBytesWritten == 0 && !ExplicitTruncateToZero` и известном непустом источнике (`KnownTargetSize > 0` или `FileInfo(OriginalSourcePath).Length > 0`) 0-байтный коммит пропускается с вызовом `RestorePreOverwriteState()`.
       3. Внедрена передача защиты в Проход 2 через `_pendingTwoPassOverwrites` (TTL `20 сек`): `Open()` с правами записи `(FILE_WRITE_DATA | FILE_APPEND_DATA)` активирует `IsOverwritePending = true`, снимает слепок `PreOverwrite*` от `v1` и переносит `OriginalSourcePath`.
       4. Валидация: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
+- [x] **8.129. Изолированный адаптивный пейсинг отправки файлов и точное логирование `FLOOD_WAIT_<N>` (`TelegramService.cs`)**:
+    - **Проблема**: При массовой пакетной загрузке мелких файлов (`Create Synchronicity`) `WTelegramClient` молча пережидал короткие `FLOOD_WAIT_3..9` (`<= 60 сек`), не сбавляя темп исходящих `SendMessageAsync` / `Messages_EditMessage`, что приводило к эскалации до `FLOOD_WAIT_211` и `FLOOD_WAIT_2916`; кроме того, при `RpcException (420)` в лог попадало обезличенное сообщение `FLOOD_WAIT_X` без точного числа секунд, а привязать пейсинг к `_globalPacingDelayMs` было нельзя, чтобы не замедлять скачивание и стриминг.
+    - **Реализовано**:
+      1. В `TelegramService.cs` добавлен полностью изолированный от `_globalPacingDelayMs` адаптивный пейсинг отправки (`_uploadPacingDelayMs`, старт `0 мс`, шаг `+50 мс`, потолок `2000 мс`, окно дедупликации `1500 мс`, плавный откат `-25 мс` каждые `20` чистых отправок).
+      2. В `HandleWTelegramLog` добавлен перехват всех `FLOOD_WAIT_<N>` (как `<= 60 сек`, так и `> 60 сек`) строго при активном слоте загрузки (`_activeUploadPipelineCount > 0`).
+      3. Внедрена пауза `EnsureUploadMessagePacingAsync` перед каждым `SendMessageAsync` (превью, медиа/документ, тома) и `Messages_EditMessage` в `UploadFileAsync` и `UploadMultiPartFileAsync`, а также логирование точных секунд `FLOOD_WAIT_{rpcEx.X}` при `RpcException (420)`.
+      4. Валидация: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).

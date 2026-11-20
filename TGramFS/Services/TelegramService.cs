@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using TGramFS.Config;
@@ -125,6 +126,7 @@ namespace TGramFS.Services
         // Предотвращает конкуренцию за полосу пропускания, мерцание оверлея и FLOOD_WAIT
         private readonly SemaphoreSlim _uploadSemaphore = new SemaphoreSlim(1, 1);
         private int _pendingUploadsCount = 0;
+        private int _activeUploadPipelineCount = 0;
 
         /// <summary>
         /// Количество файлов в очереди на отправку в Telegram (включая текущий передаваемый).
@@ -608,6 +610,18 @@ namespace TGramFS.Services
             if (!string.IsNullOrEmpty(str) && (str.Contains("Pong") || str.Contains("RpcResult") || str.Contains("Connected to DC") || str.Contains("Receiving Updates")))
             {
                 _lastSuccessfulTrafficTime = DateTime.UtcNow;
+            }
+
+            if (!string.IsNullOrEmpty(str) && str.Contains("FLOOD_", StringComparison.Ordinal))
+            {
+                var match = FloodWaitLogRegex.Match(str);
+                if (match.Success && int.TryParse(match.Groups[1].Value, out int waitSeconds) && waitSeconds > 0)
+                {
+                    if (Volatile.Read(ref _activeUploadPipelineCount) > 0)
+                    {
+                        RegisterUploadFloodWait(waitSeconds, "WTelegram");
+                    }
+                }
             }
 
             if (level == 2 && !string.IsNullOrEmpty(str) && str.Contains("Connected to DC", StringComparison.OrdinalIgnoreCase))
@@ -2234,6 +2248,97 @@ namespace TGramFS.Services
             AppLogger.Warn("TelegramService", $"Получен FLOOD_WAIT на {seconds} сек от серверов Telegram. Сквозная пауза до {_globalFloodWaitUntil:HH:mm:ss}. Пейсинг адаптирован до {_globalPacingDelayMs} мс.");
         }
 
+        // Изолированный адаптивный пейсинг исходящих сообщений при загрузке файлов в Telegram.
+        // Стартует с 0 мс (без замедления при отсутствии флуда), полностью отделен от _globalPacingDelayMs скачивания.
+        private static readonly Regex FloodWaitLogRegex = new(@"FLOOD_(?:PREMIUM_)?WAIT_(\d+)", RegexOptions.Compiled);
+        private static readonly object _uploadPacingLock = new();
+        private static int _uploadPacingDelayMs = 0;
+        private static int _uploadCleanSendStreak = 0;
+        private static DateTime _lastUploadFloodDetectedUtc = DateTime.MinValue;
+        private const int UploadPacingStepMs = 50;
+        private const int UploadPacingMaxDelayMs = 2000;
+        private const int UploadPacingDecayStepMs = 25;
+        private const int UploadPacingDecayStreakThreshold = 20;
+        private const int UploadFloodDedupWindowMs = 1500;
+
+        private static async Task EnsureUploadMessagePacingAsync(CancellationToken cancellationToken = default)
+        {
+            int delayMs;
+            lock (_uploadPacingLock)
+            {
+                delayMs = _uploadPacingDelayMs;
+            }
+
+            if (delayMs > 0)
+            {
+                await Task.Delay(delayMs, cancellationToken);
+            }
+        }
+
+        private static void RegisterUploadFloodWait(int waitSeconds, string source)
+        {
+            int previousDelay;
+            int updatedDelay;
+            bool wasDeduplicated;
+
+            lock (_uploadPacingLock)
+            {
+                var now = DateTime.UtcNow;
+                _uploadCleanSendStreak = 0;
+
+                if ((now - _lastUploadFloodDetectedUtc).TotalMilliseconds < UploadFloodDedupWindowMs)
+                {
+                    wasDeduplicated = true;
+                    previousDelay = _uploadPacingDelayMs;
+                    updatedDelay = _uploadPacingDelayMs;
+                }
+                else
+                {
+                    wasDeduplicated = false;
+                    _lastUploadFloodDetectedUtc = now;
+                    previousDelay = _uploadPacingDelayMs;
+                    updatedDelay = Math.Min(UploadPacingMaxDelayMs, _uploadPacingDelayMs + UploadPacingStepMs);
+                    _uploadPacingDelayMs = updatedDelay;
+                }
+            }
+
+            if (!wasDeduplicated)
+            {
+                AppLogger.Warn("TelegramService", $"[Upload Pacing] Зафиксирован FLOOD_WAIT_{waitSeconds} ({waitSeconds} сек, источник: {source}). Адаптивная пауза отправки увеличена: {previousDelay} -> {updatedDelay} мс.");
+            }
+        }
+
+        private static void NotifyUploadMessageSucceeded()
+        {
+            int previousDelay = 0;
+            int updatedDelay = 0;
+            bool decayed = false;
+
+            lock (_uploadPacingLock)
+            {
+                if (_uploadPacingDelayMs <= 0)
+                {
+                    _uploadCleanSendStreak = 0;
+                    return;
+                }
+
+                _uploadCleanSendStreak++;
+                if (_uploadCleanSendStreak >= UploadPacingDecayStreakThreshold)
+                {
+                    _uploadCleanSendStreak = 0;
+                    previousDelay = _uploadPacingDelayMs;
+                    updatedDelay = Math.Max(0, _uploadPacingDelayMs - UploadPacingDecayStepMs);
+                    _uploadPacingDelayMs = updatedDelay;
+                    decayed = updatedDelay != previousDelay;
+                }
+            }
+
+            if (decayed)
+            {
+                AppLogger.Info("TelegramService", $"[Upload Pacing] {UploadPacingDecayStreakThreshold} чистых отправок без FLOOD_WAIT: адаптивная пауза снижена {previousDelay} -> {updatedDelay} мс.");
+            }
+        }
+
 
         /// <summary>
         /// Потоковая прямая загрузка файла в приватный канал-хранилище через WTelegramClient.
@@ -2254,7 +2359,8 @@ namespace TGramFS.Services
             CancellationToken cancellationToken = default)
         {
             Interlocked.Increment(ref _pendingUploadsCount);
-            await _uploadSemaphore.WaitAsync(cancellationToken);
+            bool uploadSlotAcquired = false;
+            bool uploadHitFlood = false;
             string effectiveFileName = !string.IsNullOrEmpty(displayFileName) ? displayFileName : fileName;
             string rawCaptionPath = !string.IsNullOrEmpty(caption) ? caption : effectiveFileName;
             string effectiveCaption = rawCaptionPath.StartsWith("🟢") || rawCaptionPath.StartsWith("🗑️")
@@ -2266,6 +2372,10 @@ namespace TGramFS.Services
 
             try
             {
+                await _uploadSemaphore.WaitAsync(cancellationToken);
+                uploadSlotAcquired = true;
+                Interlocked.Increment(ref _activeUploadPipelineCount);
+
                 cancellationToken.ThrowIfCancellationRequested();
                 await EnsureFloodWaitDelayAsync();
 
@@ -2441,6 +2551,7 @@ namespace TGramFS.Services
 
                     try
                     {
+                        await EnsureUploadMessagePacingAsync(cancellationToken);
                         message = await _client.SendMessageAsync(peer, effectiveCaption, mediaDoc);
                     }
                     catch (TL.RpcException rpcEx) when (rpcEx.Code == 400 && (rpcEx.Message.Contains("CHANNEL_INVALID") || rpcEx.Message.Contains("CHANNEL_PRIVATE")))
@@ -2448,6 +2559,7 @@ namespace TGramFS.Services
                         AppLogger.Warn("TelegramService", "Канал недоступен по сохраненному хэшу. Сброс хэша и повторный поиск...");
                         InvalidateStoragePeer();
                         peer = await GetStoragePeerAsync(targetChannelId);
+                        await EnsureUploadMessagePacingAsync(cancellationToken);
                         message = await _client.SendMessageAsync(peer, effectiveCaption, mediaDoc);
                     }
                 }
@@ -2497,6 +2609,7 @@ namespace TGramFS.Services
 
                     try
                     {
+                        await EnsureUploadMessagePacingAsync(cancellationToken);
                         message = await _client.SendMessageAsync(peer, effectiveCaption, mediaDoc);
                     }
                     catch (TL.RpcException rpcEx) when (rpcEx.Code == 400 && (rpcEx.Message.Contains("CHANNEL_INVALID") || rpcEx.Message.Contains("CHANNEL_PRIVATE")))
@@ -2504,6 +2617,7 @@ namespace TGramFS.Services
                         AppLogger.Warn("TelegramService", "Канал недоступен по сохраненному хэшу. Сброс хэша и повторный поиск...");
                         InvalidateStoragePeer();
                         peer = await GetStoragePeerAsync(targetChannelId);
+                        await EnsureUploadMessagePacingAsync(cancellationToken);
                         message = await _client.SendMessageAsync(peer, effectiveCaption, mediaDoc);
                     }
                 }
@@ -2518,6 +2632,7 @@ namespace TGramFS.Services
                             using var photoMs = new MemoryStream(galleryPhotoBytes, false);
                             var photoInput = await _client.UploadFileAsync(photoMs, previewFileName);
                             var photoMedia = new TL.InputMediaUploadedPhoto { file = photoInput };
+                            await EnsureUploadMessagePacingAsync(cancellationToken);
                             photoMessage = await _client.SendMessageAsync(peer, effectiveCaption, photoMedia);
                             AppLogger.Info("TelegramService", $"Фото-превью для галереи успешно опубликовано в Telegram (Message ID: {photoMessage.ID}, имя: '{previewFileName}').");
                         }
@@ -2528,7 +2643,12 @@ namespace TGramFS.Services
                             using var photoMs = new MemoryStream(galleryPhotoBytes, false);
                             var photoInput = await _client.UploadFileAsync(photoMs, previewFileName);
                             var photoMedia = new TL.InputMediaUploadedPhoto { file = photoInput };
+                            await EnsureUploadMessagePacingAsync(cancellationToken);
                             photoMessage = await _client.SendMessageAsync(peer, effectiveCaption, photoMedia);
+                        }
+                        catch (TL.RpcException rpcEx) when (rpcEx.Code == 420)
+                        {
+                            throw;
                         }
                         catch (Exception ex)
                         {
@@ -2569,6 +2689,7 @@ namespace TGramFS.Services
 
                     try
                     {
+                        await EnsureUploadMessagePacingAsync(cancellationToken);
                         message = await _client.SendMessageAsync(peer, docCaption, mediaDoc, reply_to_msg_id: replyToId);
                     }
                     catch (TL.RpcException rpcEx) when (rpcEx.Code == 400 && (rpcEx.Message.Contains("CHANNEL_INVALID") || rpcEx.Message.Contains("CHANNEL_PRIVATE")))
@@ -2576,6 +2697,7 @@ namespace TGramFS.Services
                         AppLogger.Warn("TelegramService", "Канал недоступен по сохраненному хэшу. Сброс хэша и повторный поиск...");
                         InvalidateStoragePeer();
                         peer = await GetStoragePeerAsync(targetChannelId);
+                        await EnsureUploadMessagePacingAsync(cancellationToken);
                         message = await _client.SendMessageAsync(peer, docCaption, mediaDoc, reply_to_msg_id: replyToId);
                     }
 
@@ -2594,7 +2716,14 @@ namespace TGramFS.Services
                                     id = message.ID,
                                     message = finalizedCaption
                                 };
+                                await EnsureUploadMessagePacingAsync(cancellationToken);
                                 await _client.Invoke(editReq);
+                            }
+                            catch (TL.RpcException rpcEx) when (rpcEx.Code == 420)
+                            {
+                                uploadHitFlood = true;
+                                RegisterUploadFloodWait(rpcEx.X, $"обновление подписи #{message.ID}");
+                                AppLogger.Warn("TelegramService", $"Получен FLOOD_WAIT_{rpcEx.X} ({rpcEx.X} сек) при обновлении финальной подписи с ID для #{message.ID}.");
                             }
                             catch (Exception ex)
                             {
@@ -2602,6 +2731,7 @@ namespace TGramFS.Services
                             }
                         }
 
+                        if (!uploadHitFlood) NotifyUploadMessageSucceeded();
                         AppLogger.Info("TelegramService", $"Файл '{effectiveFileName}' успешно сохранен в Telegram. Message ID: {message.ID}" + (photoMessage != null ? $", Preview ID: {photoMessage.ID}" : ""));
                         OnUploadCompleted?.Invoke(effectiveFileName);
                         return new FileUploadResult(message.ID, photoMessage?.ID);
@@ -2622,7 +2752,14 @@ namespace TGramFS.Services
                                 id = message.ID,
                                 message = finalizedCaption
                             };
+                            await EnsureUploadMessagePacingAsync(cancellationToken);
                             await _client.Invoke(editReq);
+                        }
+                        catch (TL.RpcException rpcEx) when (rpcEx.Code == 420)
+                        {
+                            uploadHitFlood = true;
+                            RegisterUploadFloodWait(rpcEx.X, $"обновление подписи #{message.ID}");
+                            AppLogger.Warn("TelegramService", $"Получен FLOOD_WAIT_{rpcEx.X} ({rpcEx.X} сек) при обновлении финальной подписи с ID для #{message.ID}.");
                         }
                         catch (Exception ex)
                         {
@@ -2630,14 +2767,22 @@ namespace TGramFS.Services
                         }
                     }
 
+                    if (!uploadHitFlood) NotifyUploadMessageSucceeded();
                     AppLogger.Info("TelegramService", $"Файл '{effectiveFileName}' успешно сохранен в Telegram. Message ID: {message.ID}");
                     OnUploadCompleted?.Invoke(effectiveFileName);
                     return new FileUploadResult(message.ID);
                 }
 
+                if (!uploadHitFlood) NotifyUploadMessageSucceeded();
                 AppLogger.Warn("TelegramService", "Сообщение отправлено, но ID не определен, возвращаем 1.");
                 OnUploadCompleted?.Invoke(effectiveFileName);
                 return new FileUploadResult(1);
+            }
+            catch (TL.RpcException rpcEx) when (rpcEx.Code == 420)
+            {
+                RegisterUploadFloodWait(rpcEx.X, $"отправка '{effectiveFileName}'");
+                AppLogger.Error("TelegramService", $"Получен FLOOD_WAIT_{rpcEx.X} ({rpcEx.X} сек) при отправке файла '{effectiveFileName}' в Telegram.", rpcEx);
+                throw;
             }
             catch (Exception ex) when (ex is OperationCanceledException || ex is ObjectDisposedException || cancellationToken.IsCancellationRequested || (ex is IOException ioEx && ioEx.Message.Contains("отменен")))
             {
@@ -2666,7 +2811,11 @@ namespace TGramFS.Services
                     try { uploadStream.Dispose(); } catch { }
                 }
 
-                _uploadSemaphore.Release();
+                if (uploadSlotAcquired)
+                {
+                    Interlocked.Decrement(ref _activeUploadPipelineCount);
+                    _uploadSemaphore.Release();
+                }
                 Interlocked.Decrement(ref _pendingUploadsCount);
             }
         }
@@ -2705,6 +2854,7 @@ namespace TGramFS.Services
             var parts = new List<Models.NodePart>();
             int masterMessageId = 0;
             long channelId = targetChannelId ?? (peer is TL.InputPeerChannel ipc ? ipc.channel_id : 0);
+            bool uploadHitFlood = false;
 
             try
             {
@@ -2785,12 +2935,14 @@ namespace TGramFS.Services
                         partCaption = NodeRepository.FormatTelegramCaption(masterCaptionPath, null, isLatest: true);
                         try
                         {
+                            await EnsureUploadMessagePacingAsync(cancellationToken);
                             message = await _client.SendMessageAsync(peer, partCaption, mediaDoc);
                         }
                         catch (TL.RpcException rpcEx) when (rpcEx.Code == 400 && (rpcEx.Message.Contains("CHANNEL_INVALID") || rpcEx.Message.Contains("CHANNEL_PRIVATE")))
                         {
                             InvalidateStoragePeer();
                             peer = await GetStoragePeerAsync(targetChannelId);
+                            await EnsureUploadMessagePacingAsync(cancellationToken);
                             message = await _client.SendMessageAsync(peer, partCaption, mediaDoc);
                         }
 
@@ -2809,7 +2961,14 @@ namespace TGramFS.Services
                                     id = masterMessageId,
                                     message = finalizedCaption
                                 };
+                                await EnsureUploadMessagePacingAsync(cancellationToken);
                                 await _client.Invoke(editReq);
+                            }
+                            catch (TL.RpcException rpcEx) when (rpcEx.Code == 420)
+                            {
+                                uploadHitFlood = true;
+                                RegisterUploadFloodWait(rpcEx.X, $"обновление подписи #{masterMessageId}");
+                                AppLogger.Warn("TelegramService", $"[BigFile Chunking] Получен FLOOD_WAIT_{rpcEx.X} ({rpcEx.X} сек) при обновлении подписи для #{masterMessageId}.");
                             }
                             catch (Exception ex)
                             {
@@ -2823,12 +2982,14 @@ namespace TGramFS.Services
                         partCaption = $"↳ {childCaptionPath}";
                         try
                         {
+                            await EnsureUploadMessagePacingAsync(cancellationToken);
                             message = await _client.SendMessageAsync(peer, partCaption, mediaDoc, reply_to_msg_id: masterMessageId);
                         }
                         catch (TL.RpcException rpcEx) when (rpcEx.Code == 400 && (rpcEx.Message.Contains("CHANNEL_INVALID") || rpcEx.Message.Contains("CHANNEL_PRIVATE")))
                         {
                             InvalidateStoragePeer();
                             peer = await GetStoragePeerAsync(targetChannelId);
+                            await EnsureUploadMessagePacingAsync(cancellationToken);
                             message = await _client.SendMessageAsync(peer, partCaption, mediaDoc, reply_to_msg_id: masterMessageId);
                         }
 
@@ -2846,7 +3007,14 @@ namespace TGramFS.Services
                                     id = message.ID,
                                     message = finalizedChildCaption
                                 };
+                                await EnsureUploadMessagePacingAsync(cancellationToken);
                                 await _client.Invoke(editReq);
+                            }
+                            catch (TL.RpcException rpcEx) when (rpcEx.Code == 420)
+                            {
+                                uploadHitFlood = true;
+                                RegisterUploadFloodWait(rpcEx.X, $"обновление подписи #{message.ID}");
+                                AppLogger.Warn("TelegramService", $"[BigFile Chunking] Получен FLOOD_WAIT_{rpcEx.X} ({rpcEx.X} сек) при обновлении подписи дочерней части #{message.ID}.");
                             }
                             catch (Exception ex)
                             {
@@ -2858,6 +3026,7 @@ namespace TGramFS.Services
                     parts.Add(new Models.NodePart(0, i, currentPartLength, message.ID, channelId));
                 }
 
+                if (!uploadHitFlood) NotifyUploadMessageSucceeded();
                 AppLogger.Info("TelegramService", $"[BigFile Chunking] Все {parts.Count} частей для '{effectiveFileName}' успешно загружены в Telegram!");
                 OnUploadCompleted?.Invoke(effectiveFileName);
                 return new FileUploadResult(masterMessageId, null, parts);
@@ -2873,6 +3042,11 @@ namespace TGramFS.Services
                 {
                     AppLogger.Info("TelegramService", $"[BigFile Chunking] Загрузка файла '{effectiveFileName}' отменена пользователем. Очистка загруженных частей...");
                     TriggerUploadCanceled(effectiveFileName);
+                }
+                else if (ex is TL.RpcException rpcEx && rpcEx.Code == 420)
+                {
+                    RegisterUploadFloodWait(rpcEx.X, $"отправка многотомного файла '{effectiveFileName}'");
+                    AppLogger.Error("TelegramService", $"[BigFile Chunking] Получен FLOOD_WAIT_{rpcEx.X} ({rpcEx.X} сек) при отправке части файла '{effectiveFileName}'. Очистка загруженных частей...", ex);
                 }
                 else
                 {
