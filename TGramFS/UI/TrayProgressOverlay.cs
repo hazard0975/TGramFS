@@ -134,6 +134,7 @@ namespace TGramFS.UI
         private readonly SynchronizationContext? _syncContext;
 
         public bool AutoShowOverlay { get; set; } = true;
+        public event Action? OnFloodCountdownExpired;
 
         private TransferDirection _direction = TransferDirection.Upload;
         private string _currentFileName = string.Empty;
@@ -278,11 +279,11 @@ namespace TGramFS.UI
             }
         }
 
-        public void ShowFloodWait(int waitSeconds, bool isUploadStopped, string? fileName, bool isDownload)
+        public void ShowFloodWait(int waitSeconds, bool isUploadStopped, string? fileName, bool isDownload, int? initialSeconds = null)
         {
             if (_syncContext != null && SynchronizationContext.Current != _syncContext)
             {
-                _syncContext.Post(_ => ShowFloodWait(waitSeconds, isUploadStopped, fileName, isDownload), null);
+                _syncContext.Post(_ => ShowFloodWait(waitSeconds, isUploadStopped, fileName, isDownload, initialSeconds), null);
                 return;
             }
 
@@ -290,10 +291,14 @@ namespace TGramFS.UI
 
             var now = DateTime.UtcNow;
             var candidateUntil = now.AddSeconds(waitSeconds);
-            if (!_isFloodWait || candidateUntil > _floodWaitUntilUtc)
+            if (!_isFloodWait || candidateUntil > _floodWaitUntilUtc.AddSeconds(1))
             {
                 _floodWaitUntilUtc = candidateUntil;
-                _floodInitialSeconds = Math.Max(1, waitSeconds);
+                _floodInitialSeconds = Math.Max(waitSeconds, initialSeconds ?? waitSeconds);
+            }
+            else if (initialSeconds.HasValue && initialSeconds.Value > _floodInitialSeconds)
+            {
+                _floodInitialSeconds = initialSeconds.Value;
             }
 
             _isFloodWait = true;
@@ -354,6 +359,7 @@ namespace TGramFS.UI
                 _floodWaitUntilUtc = DateTime.MinValue;
                 _floodFileName = string.Empty;
                 _floodCountdownTimer.Stop();
+                OnFloodCountdownExpired?.Invoke();
 
                 if (!_isTransferring)
                 {

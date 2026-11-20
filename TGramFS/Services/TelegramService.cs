@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -567,6 +568,7 @@ namespace TGramFS.Services
             StartCaptionQueueWorker();
             StartDeletionQueueWorker();
             StartChannelMigrationQueueWorker();
+            LoadPersistedFloodState();
         }
 
         private void WakeUpReconnectWait(string reason)
@@ -631,6 +633,7 @@ namespace TGramFS.Services
                     }
                     else if (IsAuthorized)
                     {
+                        RecordFloodStateAndPersist(waitSeconds, isUploadStopped: false, fileName: null, isDownload: true);
                         NotifyFloodWaitBanner(waitSeconds, isUploadStopped: false, fileName: null, isDownload: true);
                     }
                 }
@@ -2260,6 +2263,7 @@ namespace TGramFS.Services
             AppLogger.Warn("TelegramService", $"Получен FLOOD_WAIT на {seconds} сек от серверов Telegram. Сквозная пауза до {_globalFloodWaitUntil:HH:mm:ss}. Пейсинг адаптирован до {_globalPacingDelayMs} мс.");
             if (_activeInstance?.IsAuthorized == true && seconds > 0)
             {
+                RecordFloodStateAndPersist(seconds, isUploadStopped: false, fileName: null, isDownload: true);
                 NotifyFloodWaitBanner(seconds, isUploadStopped: false, fileName: null, isDownload: true);
             }
         }
@@ -2290,6 +2294,307 @@ namespace TGramFS.Services
         private const int UploadPacingIdleResetMinutes = 5;
         private const int UploadFloodDedupWindowMs = 1500;
         private const int UploadHardStopThresholdSeconds = 60;
+        private const int FloodPersistThresholdSeconds = 10;
+        private const string FloodStateFileName = "flood_state.json";
+        private static string FloodStateFilePath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, FloodStateFileName);
+        private static readonly object _floodStateFileLock = new();
+        private static DateTime _floodBannerUntilUtc = DateTime.MinValue;
+        private static int _floodBannerInitialSeconds = 0;
+        private static bool _floodBannerIsUploadStopped = false;
+        private static bool _floodBannerIsDownload = false;
+        private static string? _floodBannerFileName = null;
+
+        private sealed class PersistedFloodState
+        {
+            public DateTime FloodWaitUntilUtc { get; set; }
+            public int InitialSeconds { get; set; }
+            public bool IsUploadStopped { get; set; }
+            public bool IsDownload { get; set; }
+            public string? FileName { get; set; }
+        }
+
+        private static void SavePersistedFloodState(PersistedFloodState state)
+        {
+            lock (_floodStateFileLock)
+            {
+                lock (_uploadPacingLock)
+                {
+                    if (DateTime.UtcNow >= _floodBannerUntilUtc || state.FloodWaitUntilUtc < _floodBannerUntilUtc)
+                    {
+                        return;
+                    }
+                }
+
+                try
+                {
+                    var options = new JsonSerializerOptions { WriteIndented = true };
+                    string json = JsonSerializer.Serialize(state, options);
+                    File.WriteAllText(FloodStateFilePath, json);
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Debug("TelegramService", $"[Flood Persist] Не удалось сохранить состояние FLOOD_WAIT в {FloodStateFileName}: {ex.Message}");
+                }
+            }
+        }
+
+        private static void DeletePersistedFloodStateNoLock()
+        {
+            try
+            {
+                string path = FloodStateFilePath;
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Debug("TelegramService", $"[Flood Persist] Не удалось удалить {FloodStateFileName}: {ex.Message}");
+            }
+        }
+
+        private static void LoadPersistedFloodState()
+        {
+            lock (_floodStateFileLock)
+            {
+                string path = FloodStateFilePath;
+                if (!File.Exists(path)) return;
+
+                try
+                {
+                    string json = File.ReadAllText(path);
+                    var state = JsonSerializer.Deserialize<PersistedFloodState>(json);
+                    if (state == null || state.InitialSeconds <= 0 || state.FloodWaitUntilUtc == DateTime.MinValue)
+                    {
+                        DeletePersistedFloodStateNoLock();
+                        return;
+                    }
+
+                    DateTime untilUtc = state.FloodWaitUntilUtc.Kind == DateTimeKind.Unspecified
+                        ? DateTime.SpecifyKind(state.FloodWaitUntilUtc, DateTimeKind.Utc)
+                        : state.FloodWaitUntilUtc.ToUniversalTime();
+
+                    var now = DateTime.UtcNow;
+                    if (untilUtc <= now)
+                    {
+                        DeletePersistedFloodStateNoLock();
+                        AppLogger.Info("TelegramService", "[Flood Persist] Таймер сохранённого FLOOD_WAIT уже истёк — файл flood_state.json очищен.");
+                        return;
+                    }
+
+                    int remainingSec = Math.Max(1, (int)Math.Ceiling((untilUtc - now).TotalSeconds));
+                    int initialSec = Math.Max(remainingSec, state.InitialSeconds);
+
+                    lock (_uploadPacingLock)
+                    {
+                        if (untilUtc > _floodBannerUntilUtc)
+                        {
+                            _floodBannerUntilUtc = untilUtc;
+                            _floodBannerInitialSeconds = initialSec;
+                            _floodBannerIsUploadStopped = state.IsUploadStopped;
+                            _floodBannerIsDownload = state.IsDownload && !state.IsUploadStopped;
+                            _floodBannerFileName = state.FileName;
+                        }
+
+                        if (!state.IsDownload && untilUtc > _uploadActiveFloodUntilUtc)
+                        {
+                            _uploadActiveFloodUntilUtc = untilUtc;
+                        }
+
+                        if (state.IsUploadStopped && untilUtc > _uploadHardStopUntilUtc)
+                        {
+                            _uploadHardStopUntilUtc = untilUtc;
+                        }
+                    }
+
+                    if (state.IsDownload || !state.IsUploadStopped)
+                    {
+                        if (untilUtc > _globalFloodWaitUntil)
+                        {
+                            _globalFloodWaitUntil = untilUtc;
+                        }
+                        _globalPacingLock.Wait();
+                        try
+                        {
+                            if (untilUtc > _nextAllowedSendUtc)
+                            {
+                                _nextAllowedSendUtc = untilUtc;
+                            }
+                        }
+                        finally
+                        {
+                            _globalPacingLock.Release();
+                        }
+                    }
+
+                    AppLogger.Warn("TelegramService", $"[Flood Persist] Восстановлен активный FLOOD_WAIT из {FloodStateFileName}: осталось {remainingSec} из {initialSec} сек (до {untilUtc.ToLocalTime():HH:mm:ss}, stop={state.IsUploadStopped}, download={state.IsDownload}).");
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Warn("TelegramService", $"[Flood Persist] Ошибка чтения {FloodStateFileName} ({ex.Message}) — файл сброшен.");
+                    DeletePersistedFloodStateNoLock();
+                }
+            }
+        }
+
+        private static void RecordFloodStateAndPersist(int waitSeconds, bool isUploadStopped, string? fileName, bool isDownload)
+        {
+            if (waitSeconds <= 0) return;
+
+            PersistedFloodState? toPersist = null;
+            lock (_uploadPacingLock)
+            {
+                var now = DateTime.UtcNow;
+                var candidateUntil = now.AddSeconds(waitSeconds);
+                bool activeBanner = now < _floodBannerUntilUtc;
+                bool upgradedToStop = isUploadStopped && !_floodBannerIsUploadStopped;
+                bool extendsSignificantly = !activeBanner || candidateUntil > _floodBannerUntilUtc.AddSeconds(2) || upgradedToStop;
+
+                if (extendsSignificantly)
+                {
+                    if (candidateUntil > _floodBannerUntilUtc)
+                    {
+                        _floodBannerUntilUtc = candidateUntil;
+                    }
+
+                    if (!activeBanner)
+                    {
+                        _floodBannerInitialSeconds = waitSeconds;
+                    }
+                    else if (waitSeconds > _floodBannerInitialSeconds)
+                    {
+                        _floodBannerInitialSeconds = waitSeconds;
+                    }
+
+                    _floodBannerIsUploadStopped = activeBanner ? (_floodBannerIsUploadStopped || isUploadStopped) : isUploadStopped;
+                    _floodBannerIsDownload = isDownload && !_floodBannerIsUploadStopped;
+
+                    if (!string.IsNullOrWhiteSpace(fileName))
+                    {
+                        _floodBannerFileName = fileName;
+                    }
+                    else if (!activeBanner)
+                    {
+                        _floodBannerFileName = null;
+                    }
+
+                    if (waitSeconds > FloodPersistThresholdSeconds || (activeBanner && _floodBannerInitialSeconds > FloodPersistThresholdSeconds))
+                    {
+                        toPersist = new PersistedFloodState
+                        {
+                            FloodWaitUntilUtc = _floodBannerUntilUtc,
+                            InitialSeconds = Math.Max(1, _floodBannerInitialSeconds),
+                            IsUploadStopped = _floodBannerIsUploadStopped,
+                            IsDownload = _floodBannerIsDownload,
+                            FileName = _floodBannerFileName
+                        };
+                    }
+                }
+                else if (string.IsNullOrWhiteSpace(_floodBannerFileName) && !string.IsNullOrWhiteSpace(fileName))
+                {
+                    _floodBannerFileName = fileName;
+                    if (_floodBannerInitialSeconds > FloodPersistThresholdSeconds)
+                    {
+                        toPersist = new PersistedFloodState
+                        {
+                            FloodWaitUntilUtc = _floodBannerUntilUtc,
+                            InitialSeconds = Math.Max(1, _floodBannerInitialSeconds),
+                            IsUploadStopped = _floodBannerIsUploadStopped,
+                            IsDownload = _floodBannerIsDownload,
+                            FileName = _floodBannerFileName
+                        };
+                    }
+                }
+            }
+
+            if (toPersist != null)
+            {
+                SavePersistedFloodState(toPersist);
+            }
+        }
+
+        public void ClearPersistedFloodStateIfExpired()
+        {
+            bool shouldDeleteFile = false;
+            lock (_uploadPacingLock)
+            {
+                var now = DateTime.UtcNow;
+                if (_uploadHardStopUntilUtc != DateTime.MinValue && now >= _uploadHardStopUntilUtc)
+                {
+                    _uploadHardStopUntilUtc = DateTime.MinValue;
+                }
+
+                if (_floodBannerUntilUtc == DateTime.MinValue)
+                {
+                    shouldDeleteFile = true;
+                }
+                else if (now >= _floodBannerUntilUtc)
+                {
+                    _floodBannerUntilUtc = DateTime.MinValue;
+                    _floodBannerInitialSeconds = 0;
+                    _floodBannerIsUploadStopped = false;
+                    _floodBannerIsDownload = false;
+                    _floodBannerFileName = null;
+                    shouldDeleteFile = true;
+                }
+            }
+
+            if (shouldDeleteFile)
+            {
+                lock (_floodStateFileLock)
+                {
+                    lock (_uploadPacingLock)
+                    {
+                        if (_floodBannerUntilUtc > DateTime.UtcNow)
+                        {
+                            return;
+                        }
+                    }
+                    DeletePersistedFloodStateNoLock();
+                }
+            }
+        }
+
+        public bool TryGetActiveFloodBannerState(
+            out int remainingSeconds,
+            out int initialSeconds,
+            out bool isUploadStopped,
+            out string? fileName,
+            out bool isDownload)
+        {
+            bool needCleanup = false;
+            lock (_uploadPacingLock)
+            {
+                var now = DateTime.UtcNow;
+                if (_floodBannerUntilUtc > now)
+                {
+                    remainingSeconds = Math.Max(1, (int)Math.Ceiling((_floodBannerUntilUtc - now).TotalSeconds));
+                    initialSeconds = Math.Max(remainingSeconds, _floodBannerInitialSeconds);
+                    isUploadStopped = _floodBannerIsUploadStopped;
+                    fileName = _floodBannerFileName;
+                    isDownload = _floodBannerIsDownload;
+                    return true;
+                }
+
+                if (_floodBannerUntilUtc != DateTime.MinValue)
+                {
+                    needCleanup = true;
+                }
+            }
+
+            if (needCleanup)
+            {
+                ClearPersistedFloodStateIfExpired();
+            }
+
+            remainingSeconds = 0;
+            initialSeconds = 0;
+            isUploadStopped = false;
+            fileName = null;
+            isDownload = false;
+            return false;
+        }
 
         private static void NotifyFloodWaitBanner(int waitSeconds, bool isUploadStopped, string? fileName, bool isDownload)
         {
@@ -2311,6 +2616,7 @@ namespace TGramFS.Services
 
         private static bool TryGetRemainingUploadHardStopSeconds(out int remainingSeconds, out DateTime hardStopUntilUtc)
         {
+            bool needCleanup = false;
             lock (_uploadPacingLock)
             {
                 var now = DateTime.UtcNow;
@@ -2320,6 +2626,17 @@ namespace TGramFS.Services
                     hardStopUntilUtc = _uploadHardStopUntilUtc;
                     return true;
                 }
+
+                if (_uploadHardStopUntilUtc != DateTime.MinValue)
+                {
+                    _uploadHardStopUntilUtc = DateTime.MinValue;
+                    needCleanup = true;
+                }
+            }
+
+            if (needCleanup)
+            {
+                _activeInstance?.ClearPersistedFloodStateIfExpired();
             }
 
             remainingSeconds = 0;
@@ -2466,7 +2783,10 @@ namespace TGramFS.Services
                 AppLogger.Warn("TelegramService", $"[Upload Pacing] Зафиксирован FLOOD_WAIT_{waitSeconds} ({waitSeconds} сек, источник: {source}). Адаптивная пауза отправки увеличена: {previousDelay} -> {updatedDelay} мс.{boundaryNote}{hardStopNote}");
             }
 
-            NotifyFloodWaitBanner(waitSeconds, isUploadStopped: waitSeconds > UploadHardStopThresholdSeconds || TryGetRemainingUploadHardStopSeconds(out _, out _), fileName ?? _activeUploadFileName, isDownload: false);
+            bool effectiveUploadStopped = waitSeconds > UploadHardStopThresholdSeconds || TryGetRemainingUploadHardStopSeconds(out _, out _);
+            string? effectiveBannerFile = fileName ?? _activeUploadFileName;
+            RecordFloodStateAndPersist(waitSeconds, effectiveUploadStopped, effectiveBannerFile, isDownload: false);
+            NotifyFloodWaitBanner(waitSeconds, isUploadStopped: effectiveUploadStopped, effectiveBannerFile, isDownload: false);
         }
 
         private static void NotifyUploadMessageSucceeded()

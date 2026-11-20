@@ -162,10 +162,30 @@ namespace TGramFS.UI
                 _progressOverlay.CompleteTransfer(fileName, TransferDirection.Download);
             };
 
+            _progressOverlay.OnFloodCountdownExpired += () =>
+            {
+                _telegramService.ClearPersistedFloodStateIfExpired();
+            };
+
             _telegramService.OnFloodWaitDetected += (waitSeconds, isUploadStopped, fileName, isDownload) =>
             {
                 _progressOverlay.ShowFloodWait(waitSeconds, isUploadStopped, fileName, isDownload);
             };
+
+            if (_telegramService.TryGetActiveFloodBannerState(
+                out int activeFloodRemainingSec,
+                out int activeFloodInitialSec,
+                out bool activeFloodUploadStopped,
+                out string? activeFloodFileName,
+                out bool activeFloodIsDownload))
+            {
+                _progressOverlay.ShowFloodWait(
+                    activeFloodRemainingSec,
+                    activeFloodUploadStopped,
+                    activeFloodFileName,
+                    activeFloodIsDownload,
+                    activeFloodInitialSec);
+            }
         }
 
         private void BuildContextMenu()

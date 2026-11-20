@@ -4286,3 +4286,26 @@ _telegramService.UpdateSettings(_settings);
    - Показывается **принудительно**, игнорируя выключенную галочку `AutoShowOverlay` (сохранена только защита от полноэкранных приложений `IsFullScreenAppRunning()` и неактивный фокус `WS_EX_NOACTIVATE`).
    - Отображает два режима с живым 0.5-секундным таймером и прогресс-баром остатка: янтарная пауза (`<= 60 сек`, с автопродолжением) и красный стоп отправки (`> 60 сек`, со временем разблокировки), не сбрасывается таймером неактивности и защищена через `_floodShownAtUtc` от случайного затирания запоздалыми чанками параллельных воркеров скачивания.
 
+---
+
+## 140. Персистентность активного `FLOOD_WAIT > 10 сек` в `flood_state.json` и восстановление HUD-плашки после перезапуска (`TelegramService.cs`, `TrayProgressOverlay.cs`, `TrayContext.cs`)
+
+### Контекст и цель:
+При получении длительного `FLOOD_WAIT` (например, несколько минут или часов) после перезапуска программы или перезагрузки Windows:
+1. Хранимые только в ОЗУ `_uploadHardStopUntilUtc` и `_globalFloodWaitUntil` обнулялись — первая же отправка после запуска снова попадала в активный лимит Telegram.
+2. HUD-плашка трея `TrayProgressOverlay` не появлялась, так как конструкторы и перехватчики не знали об оставшемся времени ожидания.
+
+### Принятое решение:
+1. **Выбор места хранения — отдельный `flood_state.json` рядом с `appsettings.json`**:
+   - Исключено хранение в `base.db`: до создания `TrayContext` выполняется облачная синхронизация `CheckAndSyncFromTelegramAsync`, которая может заменить `base.db` свежей копией с другого ПК; кроме того, временный runtime-таймер не должен «грязнить» БД и триггерить автобэкап.
+   - Исключено хранение в `appsettings.json`: волатильные временные метки не смешиваются с пользовательскими настройками и не конфликтуют при сохранении формы настроек.
+2. **Порог сохранения `> 10 сек` и структура файла (`TelegramService.cs`)**:
+   - Запись выполняется через `RecordFloodStateAndPersist` только при реальном `FLOOD_WAIT > 10 сек` (`FloodPersistThresholdSeconds = 10`) из `RegisterUploadFloodWait`, `TriggerGlobalFloodWait` и ветки скачивания `HandleWTelegramLog`.
+   - Повторные срабатывания внутри одного активного окна (`candidateUntil <= _floodBannerUntilUtc + 2 сек`) и повторные уведомления из `ThrowIfUploadHardStopped` не перезаписывают файл на диске и не сбивают исходное значение `InitialSeconds`.
+   - Сохраняются поля: `FloodWaitUntilUtc` (в UTC, устойчиво к смене часовых поясов и переводу часов), `InitialSeconds`, `IsUploadStopped`, `IsDownload`, `FileName`.
+   - Адаптивная пауза отправки `_uploadPacingDelayMs` и индикация в контекстном меню/тултипе трея сознательно не добавлялись по решению пользователя.
+3. **Восстановление на старте и автоочистка при истечении**:
+   - В конструкторе `TelegramService` вызывается `LoadPersistedFloodState()`. Если `FloodWaitUntilUtc <= UtcNow` (или JSON повреждён) — файл сразу удаляется; если таймер ещё активен — восстанавливаются баннерное состояние, `_uploadActiveFloodUntilUtc`, `_uploadHardStopUntilUtc` (при `IsUploadStopped`) и `_globalFloodWaitUntil` / `_nextAllowedSendUtc` (для скачивания и мягких пауз).
+   - В `TrayProgressOverlay.ShowFloodWait` добавлен опциональный параметр `initialSeconds` (плюс допуск `+1 сек` от округления `Math.Ceiling`) для точного отображения доли прогресс-бара, а по завершении отсчёта вызывается событие `OnFloodCountdownExpired`.
+   - В `TrayContext` сразу после подписки на `OnFloodWaitDetected` проверяется `TryGetActiveFloodBannerState(...)`: при наличии активного флуда немедленно отображается плашка с остатком времени, а при завершении отсчёта или опросе просроченного таймера вызывается `ClearPersistedFloodStateIfExpired()`, удаляющий `flood_state.json`.
+
