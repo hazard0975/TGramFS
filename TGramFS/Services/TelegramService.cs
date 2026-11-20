@@ -2250,16 +2250,62 @@ namespace TGramFS.Services
 
         // Изолированный адаптивный пейсинг исходящих сообщений при загрузке файлов в Telegram.
         // Стартует с 0 мс (без замедления при отсутствии флуда), полностью отделен от _globalPacingDelayMs скачивания.
+        // Откат: -25 мс через 90 сек чистой работы; при касании границы (флуд в пределах интервала после снижения) интервал удваивается (90 -> 180 -> 300 сек).
+        // При простое >= 5 мин между отправками задержка и интервал сбрасываются к 0 мс / 90 сек.
         private static readonly Regex FloodWaitLogRegex = new(@"FLOOD_(?:PREMIUM_)?WAIT_(\d+)", RegexOptions.Compiled);
         private static readonly object _uploadPacingLock = new();
         private static int _uploadPacingDelayMs = 0;
-        private static int _uploadCleanSendStreak = 0;
+        private static int _uploadCleanSendsSinceLastChange = 0;
+        private static int _uploadDecayIntervalSeconds = UploadPacingBaseDecayIntervalSeconds;
         private static DateTime _lastUploadFloodDetectedUtc = DateTime.MinValue;
+        private static DateTime _uploadLastPacingChangeUtc = DateTime.MinValue;
+        private static DateTime _uploadLastDecayAttemptUtc = DateTime.MinValue;
+        private static DateTime _lastUploadActivityFinishedUtc = DateTime.MinValue;
         private const int UploadPacingStepMs = 50;
         private const int UploadPacingMaxDelayMs = 2000;
         private const int UploadPacingDecayStepMs = 25;
-        private const int UploadPacingDecayStreakThreshold = 20;
+        private const int UploadPacingBaseDecayIntervalSeconds = 90;
+        private const int UploadPacingMaxDecayIntervalSeconds = 300;
+        private const int UploadPacingIdleResetMinutes = 5;
         private const int UploadFloodDedupWindowMs = 1500;
+
+        private static void ResetUploadPacingIfIdle()
+        {
+            int previousDelay = 0;
+            double idleMinutes = 0;
+            bool reset = false;
+
+            lock (_uploadPacingLock)
+            {
+                if (_uploadPacingDelayMs > 0 && _lastUploadActivityFinishedUtc != DateTime.MinValue)
+                {
+                    idleMinutes = (DateTime.UtcNow - _lastUploadActivityFinishedUtc).TotalMinutes;
+                    if (idleMinutes >= UploadPacingIdleResetMinutes)
+                    {
+                        previousDelay = _uploadPacingDelayMs;
+                        _uploadPacingDelayMs = 0;
+                        _uploadCleanSendsSinceLastChange = 0;
+                        _uploadDecayIntervalSeconds = UploadPacingBaseDecayIntervalSeconds;
+                        _uploadLastPacingChangeUtc = DateTime.MinValue;
+                        _uploadLastDecayAttemptUtc = DateTime.MinValue;
+                        reset = true;
+                    }
+                }
+            }
+
+            if (reset)
+            {
+                AppLogger.Info("TelegramService", $"[Upload Pacing] Простой {idleMinutes:F1} мин (>= {UploadPacingIdleResetMinutes} мин) без отправки файлов: адаптивная пауза сброшена {previousDelay} -> 0 мс.");
+            }
+        }
+
+        private static void MarkUploadActivityFinished()
+        {
+            lock (_uploadPacingLock)
+            {
+                _lastUploadActivityFinishedUtc = DateTime.UtcNow;
+            }
+        }
 
         private static async Task EnsureUploadMessagePacingAsync(CancellationToken cancellationToken = default)
         {
@@ -2279,12 +2325,17 @@ namespace TGramFS.Services
         {
             int previousDelay;
             int updatedDelay;
+            int previousInterval;
+            int updatedInterval;
             bool wasDeduplicated;
+            bool touchedBoundary = false;
 
             lock (_uploadPacingLock)
             {
                 var now = DateTime.UtcNow;
-                _uploadCleanSendStreak = 0;
+                _uploadCleanSendsSinceLastChange = 0;
+                previousInterval = _uploadDecayIntervalSeconds;
+                updatedInterval = _uploadDecayIntervalSeconds;
 
                 if ((now - _lastUploadFloodDetectedUtc).TotalMilliseconds < UploadFloodDedupWindowMs)
                 {
@@ -2296,15 +2347,29 @@ namespace TGramFS.Services
                 {
                     wasDeduplicated = false;
                     _lastUploadFloodDetectedUtc = now;
+                    _uploadLastPacingChangeUtc = now;
                     previousDelay = _uploadPacingDelayMs;
                     updatedDelay = Math.Min(UploadPacingMaxDelayMs, _uploadPacingDelayMs + UploadPacingStepMs);
                     _uploadPacingDelayMs = updatedDelay;
+
+                    // Анти-пила: если флуд вернулся в пределах окна после недавнего снижения — удваиваем интервал отката (90 -> 180 -> 300 сек)
+                    if (_uploadLastDecayAttemptUtc != DateTime.MinValue &&
+                        (now - _uploadLastDecayAttemptUtc).TotalSeconds <= _uploadDecayIntervalSeconds)
+                    {
+                        updatedInterval = Math.Min(UploadPacingMaxDecayIntervalSeconds, _uploadDecayIntervalSeconds * 2);
+                        _uploadDecayIntervalSeconds = updatedInterval;
+                        _uploadLastDecayAttemptUtc = DateTime.MinValue;
+                        touchedBoundary = updatedInterval != previousInterval;
+                    }
                 }
             }
 
             if (!wasDeduplicated)
             {
-                AppLogger.Warn("TelegramService", $"[Upload Pacing] Зафиксирован FLOOD_WAIT_{waitSeconds} ({waitSeconds} сек, источник: {source}). Адаптивная пауза отправки увеличена: {previousDelay} -> {updatedDelay} мс.");
+                string boundaryNote = touchedBoundary
+                    ? $" Интервал снижения увеличен: {previousInterval} -> {updatedInterval} сек."
+                    : string.Empty;
+                AppLogger.Warn("TelegramService", $"[Upload Pacing] Зафиксирован FLOOD_WAIT_{waitSeconds} ({waitSeconds} сек, источник: {source}). Адаптивная пауза отправки увеличена: {previousDelay} -> {updatedDelay} мс.{boundaryNote}");
             }
         }
 
@@ -2312,30 +2377,57 @@ namespace TGramFS.Services
         {
             int previousDelay = 0;
             int updatedDelay = 0;
+            int currentInterval = 0;
+            double cleanElapsedSeconds = 0;
             bool decayed = false;
 
             lock (_uploadPacingLock)
             {
                 if (_uploadPacingDelayMs <= 0)
                 {
-                    _uploadCleanSendStreak = 0;
+                    _uploadCleanSendsSinceLastChange = 0;
+                    _uploadLastPacingChangeUtc = DateTime.MinValue;
+                    _uploadLastDecayAttemptUtc = DateTime.MinValue;
+                    _uploadDecayIntervalSeconds = UploadPacingBaseDecayIntervalSeconds;
                     return;
                 }
 
-                _uploadCleanSendStreak++;
-                if (_uploadCleanSendStreak >= UploadPacingDecayStreakThreshold)
+                var now = DateTime.UtcNow;
+                _uploadCleanSendsSinceLastChange++;
+
+                if (_uploadLastPacingChangeUtc == DateTime.MinValue)
                 {
-                    _uploadCleanSendStreak = 0;
+                    _uploadLastPacingChangeUtc = now;
+                    return;
+                }
+
+                cleanElapsedSeconds = (now - _uploadLastPacingChangeUtc).TotalSeconds;
+                if (cleanElapsedSeconds >= _uploadDecayIntervalSeconds && _uploadCleanSendsSinceLastChange >= 1)
+                {
                     previousDelay = _uploadPacingDelayMs;
                     updatedDelay = Math.Max(0, _uploadPacingDelayMs - UploadPacingDecayStepMs);
+                    currentInterval = _uploadDecayIntervalSeconds;
                     _uploadPacingDelayMs = updatedDelay;
+                    _uploadLastPacingChangeUtc = now;
+                    _uploadCleanSendsSinceLastChange = 0;
+
+                    if (updatedDelay == 0)
+                    {
+                        _uploadLastDecayAttemptUtc = DateTime.MinValue;
+                        _uploadDecayIntervalSeconds = UploadPacingBaseDecayIntervalSeconds;
+                    }
+                    else
+                    {
+                        _uploadLastDecayAttemptUtc = now;
+                    }
+
                     decayed = updatedDelay != previousDelay;
                 }
             }
 
             if (decayed)
             {
-                AppLogger.Info("TelegramService", $"[Upload Pacing] {UploadPacingDecayStreakThreshold} чистых отправок без FLOOD_WAIT: адаптивная пауза снижена {previousDelay} -> {updatedDelay} мс.");
+                AppLogger.Info("TelegramService", $"[Upload Pacing] {cleanElapsedSeconds:F0} сек чистой отправки (порог {currentInterval} сек) без FLOOD_WAIT: адаптивная пауза снижена {previousDelay} -> {updatedDelay} мс.");
             }
         }
 
@@ -2360,6 +2452,7 @@ namespace TGramFS.Services
         {
             Interlocked.Increment(ref _pendingUploadsCount);
             bool uploadSlotAcquired = false;
+            bool didAttemptNetworkUpload = false;
             bool uploadHitFlood = false;
             string effectiveFileName = !string.IsNullOrEmpty(displayFileName) ? displayFileName : fileName;
             string rawCaptionPath = !string.IsNullOrEmpty(caption) ? caption : effectiveFileName;
@@ -2375,6 +2468,7 @@ namespace TGramFS.Services
                 await _uploadSemaphore.WaitAsync(cancellationToken);
                 uploadSlotAcquired = true;
                 Interlocked.Increment(ref _activeUploadPipelineCount);
+                ResetUploadPacingIfIdle();
 
                 cancellationToken.ThrowIfCancellationRequested();
                 await EnsureFloodWaitDelayAsync();
@@ -2435,6 +2529,7 @@ namespace TGramFS.Services
                     return null;
                 }
 
+                didAttemptNetworkUpload = true;
                 long fileLength = uploadStream.Length;
                 byte[]? galleryPhotoBytes = null;
                 if (isGallery && fileLength > 1)
@@ -2811,6 +2906,10 @@ namespace TGramFS.Services
                     try { uploadStream.Dispose(); } catch { }
                 }
 
+                if (didAttemptNetworkUpload)
+                {
+                    MarkUploadActivityFinished();
+                }
                 if (uploadSlotAcquired)
                 {
                     Interlocked.Decrement(ref _activeUploadPipelineCount);
