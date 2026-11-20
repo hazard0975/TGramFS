@@ -1470,3 +1470,7 @@
       2. В конструкторе `TelegramService` вызывается `LoadPersistedFloodState()`: если срок истёк — файл удаляется; если активен — восстанавливаются баннерное состояние, `_uploadActiveFloodUntilUtc`, жёсткая блокировка `_uploadHardStopUntilUtc` (при `IsUploadStopped`) и `_globalFloodWaitUntil` / `_nextAllowedSendUtc` (при скачивании или не-стоп флуде).
       3. В `TrayProgressOverlay.ShowFloodWait` добавлен опциональный `initialSeconds` и событие `OnFloodCountdownExpired`; в `TrayContext` сразу после подписки `OnFloodWaitDetected` выполняется проверка `TryGetActiveFloodBannerState(...)` для немедленного показа плашки при запуске и очистка `flood_state.json` по истечении таймера.
       4. Валидация: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
+- [x] **8.133. Отправка `.gif` с MIME `application/octet-stream` для обхода жёсткого GIF-лимита Telegram (`TelegramService.cs`)**:
+    - **Причина**: Повторный прогон `log.MD` (`01:16:27`–`01:23:25`) подтвердил гипотезу: `458` файлов (`.jpg` с превью, `.htm`, `.css`) прошли за `6.5` мин с одним начальным `FLOOD_WAIT_6` и снижением паузы `150 -> 50 мс`, но на **11-й** гифке (`247_1.gif`) за `94` сек прилетел жёсткий `FLOOD_WAIT_206`.
+    - **Реализовано**: В `TelegramService.GetDocumentMimeType` для `.gif` установлен `application/octet-stream` вместо `image/gif` (имя файла `.gif` на диске и в `DocumentAttributeFilename` сохраняется полностью; мелкий баг `HideCheckTimer_Tick` отложен по решению пользователя).
+    - **Валидация**: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).

@@ -4114,7 +4114,8 @@ namespace TGramFS.Services
             {
                 ".jpg" or ".jpeg" => "image/jpeg",
                 ".png" => "image/png",
-                ".gif" => "image/gif",
+                // .gif отправляем как обычный документ (application/octet-stream), чтобы не попадать в жёсткий антиспам-лимит Telegram для анимаций image/gif
+                ".gif" => "application/octet-stream",
                 ".webp" => "image/webp",
                 ".bmp" => "image/bmp",
                 ".svg" => "image/svg+xml",
