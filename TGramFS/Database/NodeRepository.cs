@@ -1347,6 +1347,7 @@ namespace TGramFS.Database
                 command.Parameters.AddWithValue("@folderNodeId", folderNodeId);
                 command.ExecuteNonQuery();
             }
+            NotifyNodeChanged();
         }
 
         /// <summary>

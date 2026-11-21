@@ -4353,3 +4353,28 @@ _telegramService.UpdateSettings(_settings);
 5. **Осознанно отложено на следующие этапы**:
    - Список/таблица привязанных папок и каналов в окне настроек и предложение открыть канал в Telegram при повторном нажатии ПКМ.
 
+---
+
+## 143. Исправление удаления привязанных папок и мгновенного обновления иконки без перезапуска (`WinFspServer.cs`, `Program.cs`, `NodeRepository.cs`)
+
+### Контекст и симптомы:
+1. После привязки папки к отдельному каналу через контекстное меню Проводника иконка «звёздочка» не появлялась сразу (не помогали `F5` и переключение папок) — значок отображался только после перезапуска `TGramFS`.
+2. При попытке удалить привязанную папку в Проводнике Windows выводил запрос прав администратора (`Для удаления этой папки нужно обладать правами администратора`, `Осталось элементов: 2`), а после нажатия `Продолжить` появлялась ошибка `Расположение недоступно: Файл T:\ недоступен`.
+
+### Первопричины:
+1. **Блокировка удаления и смены атрибутов виртуального `desktop.ini`**:
+   - При удалении папки с атрибутом `ReadOnly` Проводник (`IFileOperation`) сначала пытается удалить её системный `desktop.ini` (`Hidden | System`): вызывает `SetBasicInfo` для снятия системных атрибутов, а затем `CanDelete` и `SetDelete`.
+   - Возврат `NT_STATUS_ACCESS_DENIED` в `SetBasicInfo` и `NT_STATUS_CANNOT_DELETE` в `CanDelete`/`SetDelete` для `IsVirtualSystemFile` вызывал срабатывание UAC-диалога; повышенный процесс `dllhost.exe` (Admin) не имеет доступа к пользовательской букве диска `T:` WinFsp и падал с ошибкой `Файл T:\ недоступен`.
+2. **Обновление SQLite в обход WinFsp и неполные уведомления Shell**:
+   - `SetFolderChannelId` менял БД напрямую, не оповещая `winfsp-x64.sys` о появлении `desktop.ini` и атрибута `ReadOnly`.
+   - `NotifyExplorerFolderIconChanged` не отправлял `SHCNE_CREATE` для `<папка>\desktop.ini`, `SHCNE_UPDATEDIR` для самой папки и синхронный `SHCNF_FLUSH`, из-за чего кэш `CFSFolder` сохранял старую иконку до перемонтирования диска.
+3. **Пропуск автобэкапа БД**: `NodeRepository.SetFolderChannelId` не вызывал `NotifyNodeChanged()`.
+
+### Принятое решение:
+1. **Корректное удаление виртуального `desktop.ini` в памяти (`WinFspServer.cs`)**:
+   - В `SetBasicInfo`, `CanDelete` и `SetDelete` для `IsVirtualSystemFile` возвращается `STATUS_SUCCESS` (изменение атрибутов/дат происходит только на объекте в памяти, без записи в БД).
+   - В `Cleanup` при `CleanupDelete` для виртуального `desktop.ini` включается кратковременное (`3 сек`) подавление показа `desktop.ini` и `ReadOnly` для родительской папки (`_suppressedVirtualDesktopIniParents`), что позволяет Проводнику штатно завершить удаление в `.Trash` (или вернуть звёздочку через 3 сек при отмене операции).
+2. **Мгновенное обновление иконки через WinFsp + Shell API (`WinFspServer.cs`, `Program.cs`)**:
+   - В `WinFspServer` добавлен метод `NotifyBoundFolderUpdated(relPath)`, вызывающий `_host.NotifyBegin` -> `_host.Notify` (`Added` для `\Папка\desktop.ini`, `Modified` c `ChangeAttributes` для `\Папка`) -> `_host.NotifyEnd`.
+   - `NotifyExplorerFolderIconChanged` дополнен `SHCNE_CREATE` для `desktop.ini`, `SHCNE_UPDATEDIR` для самой папки и флагом `SHCNF_FLUSH`, а также вызывается в клиентском процессе `--bind-channel` (`HandleBindChannelAsync`) при успешном ответе IPC.
+3. **Уведомление автобэкапа БД (`NodeRepository.cs`)**: В `SetFolderChannelId` добавлен вызов `NotifyNodeChanged()`.

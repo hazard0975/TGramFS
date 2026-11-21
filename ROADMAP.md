@@ -1481,3 +1481,11 @@
       3. В `WinFspServer.cs` реализован виртуальный `desktop.ini` в памяти (`UTF-16 LE` с BOM, `IconResource=C:\Windows\System32\SHELL32.dll,43`) и автоматический флаг `FileAttributes.ReadOnly` строго для корневых привязанных папок (`TgChannelId != primaryChannelId`, без наследования на подпапки и без записи в SQLite/Telegram/`.Trash`); при этом в общем листинге каталога (`*`/`null`) виртуальный `desktop.ini` скрыт от `Ctrl+A` и копирования на диск `C:`.
       4. В `Program.cs` (`ExecuteBindChannelAsync`) добавлен вызов `SHChangeNotify` для мгновенного обновления иконки папки в Проводнике сразу после привязки к каналу.
     - **Валидация**: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
+- [x] **8.135. Исправление удаления привязанных папок (без UAC и `Файл T:\ недоступен`) и мгновенного обновления иконки после привязки (`WinFspServer.cs`, `Program.cs`, `NodeRepository.cs`)**:
+    - **Проблема**: После привязки папки к каналу иконка-звёздочка не обновлялась до перезапуска программы даже после `F5`, а при попытке удалить привязанную папку Проводник запрашивал права администратора и затем падал с `Файл T:\ недоступен`.
+    - **Реализовано**:
+      1. В `WinFspServer.cs` для виртуального `desktop.ini` (`IsVirtualSystemFile`) разрешены `SetBasicInfo`, `CanDelete` и `SetDelete` с возвратом `STATUS_SUCCESS`, а при `CleanupDelete` добавлено временное (`3 сек`) подавление показа `desktop.ini` и `ReadOnly` (`_suppressedVirtualDesktopIniParents`), исключающее срабатывание UAC и `dllhost.exe` при удалении папки в `.Trash`.
+      2. В `WinFspServer` добавлен метод `NotifyBoundFolderUpdated(relPath)` на базе `_host.NotifyBegin` / `_host.Notify` / `_host.NotifyEnd` (события `Added` для `desktop.ini` и `Modified` для папки), вызываемый в `ExecuteBindChannelAsync`.
+      3. В `Program.cs` (`NotifyExplorerFolderIconChanged`) добавлены `SHCNE_CREATE` на `desktop.ini`, `SHCNE_UPDATEDIR` на саму папку и синхронный `SHCNF_FLUSH`, а также вызов обновления в `HandleBindChannelAsync` после успешного IPC-ответа.
+      4. В `NodeRepository.SetFolderChannelId` добавлен вызов `NotifyNodeChanged()` для корректного запуска автобэкапа БД после привязки канала.
+    - **Валидация**: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).

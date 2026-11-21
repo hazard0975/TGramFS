@@ -270,6 +270,66 @@ namespace TGramFS.Services
             }
         }
 
+        public void NotifyBoundFolderUpdated(string relPath)
+        {
+            if (string.IsNullOrWhiteSpace(relPath))
+                return;
+
+            FileSystemHost? host;
+            lock (_lock)
+            {
+                host = _host;
+            }
+
+            if (host == null)
+                return;
+
+            try
+            {
+                string cleanWinPath = "\\" + relPath.Replace('/', '\\').Trim().Trim('\\');
+                if (cleanWinPath == "\\")
+                    return;
+
+                string desktopIniWinPath = cleanWinPath + "\\desktop.ini";
+                int beginStatus = host.NotifyBegin(1500);
+                if (beginStatus == FileSystemBase.STATUS_SUCCESS)
+                {
+                    try
+                    {
+                        var events = new[]
+                        {
+                            new NotifyInfo
+                            {
+                                FileName = desktopIniWinPath,
+                                Action = NotifyAction.Added,
+                                Filter = NotifyFilter.ChangeFileName | NotifyFilter.ChangeAttributes | NotifyFilter.ChangeSize | NotifyFilter.ChangeLastWrite
+                            },
+                            new NotifyInfo
+                            {
+                                FileName = cleanWinPath,
+                                Action = NotifyAction.Modified,
+                                Filter = NotifyFilter.ChangeAttributes
+                            }
+                        };
+                        int notifyStatus = host.Notify(events);
+                        AppLogger.Debug("WinFsp", $"[NotifyBoundFolderUpdated] Отправлено уведомление WinFsp для '{cleanWinPath}' и '{desktopIniWinPath}': status=0x{notifyStatus:X8}");
+                    }
+                    finally
+                    {
+                        host.NotifyEnd();
+                    }
+                }
+                else
+                {
+                    AppLogger.Debug("WinFsp", $"[NotifyBoundFolderUpdated] NotifyBegin вернул 0x{beginStatus:X8} для '{cleanWinPath}'.");
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Debug("WinFsp", $"[NotifyBoundFolderUpdated] Не удалось отправить уведомление WinFsp: {ex.Message}");
+            }
+        }
+
         public void Dispose()
         {
             Stop();
@@ -314,9 +374,46 @@ namespace TGramFS.Services
 
         private static readonly byte[] VirtualDesktopIniBytes = CreateVirtualDesktopIniBytes();
 
+        private static readonly ConcurrentDictionary<int, DateTime> _suppressedVirtualDesktopIniParents = new();
         private long _cachedPrimaryChannelId;
         private DateTime _primaryChannelCacheUtc = DateTime.MinValue;
         private bool _hasPrimaryChannelCache;
+
+        private static void SuppressVirtualDesktopIni(int parentFolderId, TimeSpan duration)
+        {
+            if (parentFolderId <= 1)
+                return;
+
+            DateTime now = DateTime.UtcNow;
+            _suppressedVirtualDesktopIniParents[parentFolderId] = now + duration;
+
+            if (_suppressedVirtualDesktopIniParents.Count > 32)
+            {
+                foreach (var kv in _suppressedVirtualDesktopIniParents)
+                {
+                    if (kv.Value <= now)
+                    {
+                        _suppressedVirtualDesktopIniParents.TryRemove(kv.Key, out _);
+                    }
+                }
+            }
+        }
+
+        private static bool IsVirtualDesktopIniSuppressed(int folderId)
+        {
+            if (folderId <= 1)
+                return false;
+
+            if (_suppressedVirtualDesktopIniParents.TryGetValue(folderId, out var expiresAtUtc))
+            {
+                if (DateTime.UtcNow < expiresAtUtc)
+                    return true;
+
+                _suppressedVirtualDesktopIniParents.TryRemove(folderId, out _);
+            }
+
+            return false;
+        }
 
         private static byte[] CreateVirtualDesktopIniBytes()
         {
@@ -347,6 +444,9 @@ namespace TGramFS.Services
         private bool IsBoundChannelRootFolder(Node? node)
         {
             if (node == null || !node.IsDir || node.InTrash || node.Id <= 1)
+                return false;
+
+            if (IsVirtualDesktopIniSuppressed(node.Id))
                 return false;
 
             if (!node.TgChannelId.HasValue || node.TgChannelId.Value == 0)
@@ -1611,8 +1711,15 @@ namespace TGramFS.Services
             var ctx = fileDesc as FspNodeContext;
             if (ctx?.IsVirtualSystemFile == true)
             {
+                if (lastWriteTime != 0)
+                    node.UpdatedAt = DateTime.FromFileTimeUtc((long)lastWriteTime);
+                if (creationTime != 0)
+                    node.CreatedAt = DateTime.FromFileTimeUtc((long)creationTime);
+                if (fileAttributes != 0 && fileAttributes != unchecked((uint)-1))
+                    node.FileAttributes = (int)SanitizeFileAttributes(false, fileAttributes);
+
                 FillFileInfo(node, out fileInfo);
-                return NT_STATUS_ACCESS_DENIED;
+                return STATUS_SUCCESS;
             }
             DateTime? newUpdatedAt = null;
             DateTime? newCreatedAt = null;
@@ -1665,7 +1772,7 @@ namespace TGramFS.Services
             var node = (Node)fileNode;
             if (fileDesc is FspNodeContext vDelCtx && vDelCtx.IsVirtualSystemFile)
             {
-                return NT_STATUS_CANNOT_DELETE;
+                return STATUS_SUCCESS;
             }
             if (node.Id <= 0)
             {
@@ -1697,7 +1804,8 @@ namespace TGramFS.Services
             var node = (Node)fileNode;
             if (fileDesc is FspNodeContext vSetDelCtx && vSetDelCtx.IsVirtualSystemFile)
             {
-                return NT_STATUS_CANNOT_DELETE;
+                vSetDelCtx.DeleteOnClose = deleteFile;
+                return STATUS_SUCCESS;
             }
             AppLogger.Debug("WinFsp", $"[SetDelete] Проводник установил deleteFile={deleteFile} для '{fileName}' (ID {node.Id}, Name '{node.Name}').");
             if (fileDesc is FspNodeContext ctx)
@@ -1868,6 +1976,10 @@ namespace TGramFS.Services
             ctx.CleanupCalled = true;
             if (ctx.IsVirtualSystemFile)
             {
+                if (((flags & CleanupDelete) != 0 || ctx.DeleteOnClose) && node.ParentId.HasValue)
+                {
+                    SuppressVirtualDesktopIni(node.ParentId.Value, TimeSpan.FromSeconds(3));
+                }
                 ctx.Dispose();
                 return;
             }

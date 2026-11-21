@@ -177,7 +177,7 @@ namespace TGramFS
                 {
                     if (req.Command == "bind-channel")
                     {
-                        return await ExecuteBindChannelAsync(req.Path, repository, telegramService);
+                        return await ExecuteBindChannelAsync(req.Path, repository, telegramService, winFspServer);
                     }
                     return new IpcResponse { Success = false, Message = $"Неизвестная команда: {req.Command}" };
                 });
@@ -276,6 +276,7 @@ namespace TGramFS
 
                 if (response.Success)
                 {
+                    NotifyExplorerFolderIconChanged(rawPath, null);
                     MessageBox.Show(
                         response.Message,
                         "Успешная привязка",
@@ -301,7 +302,7 @@ namespace TGramFS
             }
         }
 
-        private static async Task<IpcResponse> ExecuteBindChannelAsync(string rawPath, NodeRepository repository, TelegramService telegramService)
+        private static async Task<IpcResponse> ExecuteBindChannelAsync(string rawPath, NodeRepository repository, TelegramService telegramService, WinFspServer? winFspServer)
         {
             try
             {
@@ -346,7 +347,13 @@ namespace TGramFS
                 if (newChannel != null)
                 {
                     await telegramService.MigrateSubtreeToChannelAsync(node.Id, newChannel.ChannelId);
-                    NotifyExplorerFolderIconChanged(rawPath, relPath);
+                    string exactRelPath = repository.GetNodeFullPath(node.Id);
+                    if (string.IsNullOrWhiteSpace(exactRelPath) || exactRelPath == "/")
+                    {
+                        exactRelPath = relPath;
+                    }
+                    winFspServer?.NotifyBoundFolderUpdated(exactRelPath);
+                    NotifyExplorerFolderIconChanged(rawPath, exactRelPath);
 
                     return new IpcResponse
                     {
@@ -377,7 +384,7 @@ namespace TGramFS
         [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
         private static extern void SHChangeNotify(uint wEventId, uint uFlags, string? dwItem1, string? dwItem2);
 
-        private static void NotifyExplorerFolderIconChanged(string rawPath, string relPath)
+        private static void NotifyExplorerFolderIconChanged(string rawPath, string? relPath)
         {
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 return;
@@ -390,7 +397,7 @@ namespace TGramFS
                 {
                     windowsPath = trimmed.Replace('/', '\\').TrimEnd('\\');
                 }
-                else if (!string.IsNullOrWhiteSpace(WinFspServer.ActiveMountPoint))
+                else if (!string.IsNullOrWhiteSpace(WinFspServer.ActiveMountPoint) && !string.IsNullOrWhiteSpace(relPath))
                 {
                     string drive = WinFspServer.ActiveMountPoint.TrimEnd('\\', '/');
                     string sub = relPath.Replace('/', '\\').TrimStart('\\');
@@ -400,19 +407,23 @@ namespace TGramFS
                 if (string.IsNullOrWhiteSpace(windowsPath))
                     return;
 
+                const uint SHCNE_CREATE = 0x00000002;
                 const uint SHCNE_ATTRIBUTES = 0x00000800;
                 const uint SHCNE_UPDATEDIR = 0x00001000;
                 const uint SHCNE_UPDATEITEM = 0x00002000;
                 const uint SHCNF_PATHW = 0x0005;
-                const uint SHCNF_FLUSHNOWAIT = 0x2000;
+                const uint SHCNF_FLUSH = 0x1000;
 
-                SHChangeNotify(SHCNE_ATTRIBUTES, SHCNF_PATHW | SHCNF_FLUSHNOWAIT, windowsPath, null);
-                SHChangeNotify(SHCNE_UPDATEITEM, SHCNF_PATHW | SHCNF_FLUSHNOWAIT, windowsPath, null);
+                string desktopIniPath = windowsPath.TrimEnd('\\') + "\\desktop.ini";
+                SHChangeNotify(SHCNE_CREATE, SHCNF_PATHW | SHCNF_FLUSH, desktopIniPath, null);
+                SHChangeNotify(SHCNE_ATTRIBUTES, SHCNF_PATHW | SHCNF_FLUSH, windowsPath, null);
+                SHChangeNotify(SHCNE_UPDATEDIR, SHCNF_PATHW | SHCNF_FLUSH, windowsPath, null);
+                SHChangeNotify(SHCNE_UPDATEITEM, SHCNF_PATHW | SHCNF_FLUSH, windowsPath, null);
 
                 string? parentDir = Path.GetDirectoryName(windowsPath);
                 if (!string.IsNullOrWhiteSpace(parentDir))
                 {
-                    SHChangeNotify(SHCNE_UPDATEDIR, SHCNF_PATHW | SHCNF_FLUSHNOWAIT, parentDir, null);
+                    SHChangeNotify(SHCNE_UPDATEDIR, SHCNF_PATHW | SHCNF_FLUSH, parentDir, null);
                 }
             }
             catch (Exception ex)
