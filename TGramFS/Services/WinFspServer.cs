@@ -1315,15 +1315,23 @@ namespace TGramFS.Services
                 }
                 else
                 {
-                    // Для небольших файлов (<= 1 МБ) буферизируем в ОЗУ через MemoryStream
-                    ctx.SmallFileBuffer ??= new MemoryStream();
+                    // Для небольших файлов (<= 1 МБ) буферизируем в ОЗУ через MemoryStream.
+                    // Если редактируется уже существующий файл без Overwrite (например, desktop.ini через WritePrivateProfileString),
+                    // сначала загружаем его текущее содержимое, чтобы запись по смещению > 0 не затёрла начало файла нулями.
+                    if (!EnsureSmallFileBufferLoaded(node, ctx))
+                    {
+                        bytesTransferred = 0;
+                        FillFileInfo(node, out fileInfo);
+                        return NT_STATUS_NETWORK_UNREACHABLE;
+                    }
+
                     if (writeToEndOfFile)
                     {
-                        ctx.SmallFileBuffer.Seek(0, SeekOrigin.End);
+                        ctx.SmallFileBuffer!.Seek(0, SeekOrigin.End);
                     }
                     else
                     {
-                        ctx.SmallFileBuffer.Seek((long)offset, SeekOrigin.Begin);
+                        ctx.SmallFileBuffer!.Seek((long)offset, SeekOrigin.Begin);
                     }
                     ctx.SmallFileBuffer.Write(poolBuffer, 0, (int)length);
                 }
@@ -1358,6 +1366,34 @@ namespace TGramFS.Services
             var ctx = (FspNodeContext)fileDesc;
             if (!setAllocationSize)
             {
+                if (newSize == 0)
+                {
+                    if (ctx.SmallFileBuffer != null)
+                    {
+                        ctx.SmallFileBuffer.SetLength(0);
+                    }
+                    else
+                    {
+                        ctx.SmallFileBuffer = new MemoryStream();
+                    }
+                }
+                else if (newSize <= 1048576)
+                {
+                    if (ctx.SmallFileBuffer == null && node.Id > 0 && !ctx.IsOverwritePending && node.Size > 0 && node.Size <= 1048576)
+                    {
+                        if (!EnsureSmallFileBufferLoaded(node, ctx))
+                        {
+                            FillFileInfo(node, out fileInfo);
+                            return NT_STATUS_NETWORK_UNREACHABLE;
+                        }
+                    }
+
+                    if (ctx.SmallFileBuffer != null)
+                    {
+                        ctx.SmallFileBuffer.SetLength((long)newSize);
+                    }
+                }
+
                 node.Size = (long)newSize;
                 ctx.KnownTargetSize = (long)newSize;
                 ctx.ExplicitTruncateToZero = newSize == 0;
@@ -1370,6 +1406,59 @@ namespace TGramFS.Services
             }
             FillFileInfo(node, out fileInfo);
             return STATUS_SUCCESS;
+        }
+
+        private bool EnsureSmallFileBufferLoaded(Node node, FspNodeContext ctx)
+        {
+            if (ctx.SmallFileBuffer != null) return true;
+
+            var buffer = new MemoryStream();
+            if (node.Id > 0 && !ctx.IsOverwritePending && node.Size > 0 && node.Size <= 1048576)
+            {
+                try
+                {
+                    if (node.TgMessageId == null)
+                    {
+                        if (node.InlineData != null && node.InlineData.Length > 0)
+                        {
+                            buffer.Write(node.InlineData, 0, node.InlineData.Length);
+                        }
+                    }
+                    else
+                    {
+                        string? fullVPath = ctx.VirtualPath ?? _repository.GetNodeFullPath(node.Id);
+                        var downloadTask = _telegramService.DownloadFileAsync(
+                            node.TgMessageId.Value,
+                            buffer,
+                            0,
+                            node.Size,
+                            node.Name,
+                            node.Size,
+                            node.TgChannelId,
+                            node.Id,
+                            fullVPath
+                        );
+
+                        if (!downloadTask.Wait(TimeSpan.FromSeconds(25)))
+                        {
+                            LogNetworkWarning(node.Name, "прервано по таймауту 25 сек при предзагрузке файла для частичного редактирования");
+                            buffer.Dispose();
+                            return false;
+                        }
+                    }
+
+                    buffer.Seek(0, SeekOrigin.Begin);
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Warn("WinFsp", $"Не удалось предзагрузить файл '{node.Name}' (ID {node.Id}) для частичного редактирования: {ex.Message}");
+                    buffer.Dispose();
+                    return false;
+                }
+            }
+
+            ctx.SmallFileBuffer = buffer;
+            return true;
         }
 
         public override int SetBasicInfo(
@@ -2326,6 +2415,20 @@ namespace TGramFS.Services
 
             try
             {
+                if (fileDesc is FspNodeContext readCtx && readCtx.SmallFileBuffer != null)
+                {
+                    if (readCtx.SmallFileBuffer.TryGetBuffer(out ArraySegment<byte> seg) && (long)offset < seg.Count)
+                    {
+                        uint count = (uint)Math.Min((ulong)toRead, (ulong)(seg.Count - (long)offset));
+                        Marshal.Copy(seg.Array!, seg.Offset + (int)offset, buffer, (int)count);
+                        bytesTransferred = count;
+                        return STATUS_SUCCESS;
+                    }
+
+                    bytesTransferred = 0;
+                    return NT_STATUS_END_OF_FILE;
+                }
+
                 if (node.TgMessageId == null)
                 {
                     if (node.InlineData != null && node.InlineData.Length > 0)
