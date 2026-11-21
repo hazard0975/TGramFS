@@ -1259,6 +1259,21 @@ namespace TGramFS.Database
         }
 
         /// <summary>
+        /// Обновляет битовую маску Windows FileAttributes узла (file_attributes).
+        /// </summary>
+        public bool UpdateNodeFileAttributes(int nodeId, int fileAttributes)
+        {
+            using (var connection = _dbManager.GetConnection())
+            using (var command = connection.CreateCommand())
+            {
+                command.CommandText = "UPDATE nodes SET file_attributes = @fileAttributes WHERE id = @nodeId;";
+                command.Parameters.AddWithValue("@fileAttributes", fileAttributes);
+                command.Parameters.AddWithValue("@nodeId", nodeId);
+                return command.ExecuteNonQuery() > 0;
+            }
+        }
+
+        /// <summary>
         /// Вычисляет эффективный ID Telegram-канала для узла по иерархии родительских папок.
         /// Поднимается от parentId вверх к корню и возвращает первый найденный tg_channel_id.
         /// Если кастомный канал не найден, возвращает ID основного (Primary) канала.
@@ -1380,7 +1395,7 @@ namespace TGramFS.Database
         /// <summary>
         /// Создание или перезапись файла с поддержкой версионирования, локального inline_data для микрофайлов, частей файла (parts) и сохранения оригинальных дат
         /// </summary>
-        public int CreateOrUpdateFile(int parentId, string name, long size, int? tgMessageId, int? tgPreviewMessageId = null, byte[]? inlineData = null, DateTime? lastModified = null, DateTime? creationDate = null, long? tgChannelId = null, IEnumerable<NodePart>? parts = null)
+        public int CreateOrUpdateFile(int parentId, string name, long size, int? tgMessageId, int? tgPreviewMessageId = null, byte[]? inlineData = null, DateTime? lastModified = null, DateTime? creationDate = null, long? tgChannelId = null, IEnumerable<NodePart>? parts = null, int fileAttributes = 0)
         {
             long? effectiveTgChannelId = (tgChannelId.HasValue && tgChannelId.Value != 0) 
                 ? tgChannelId.Value 
@@ -1414,6 +1429,7 @@ namespace TGramFS.Database
                                     tg_preview_message_id = @tgPreviewMessageId,
                                     tg_channel_id = @tgChannelId,
                                     inline_data = @inlineData,
+                                    file_attributes = @fileAttributes,
                                     updated_at = " + (lastModified.HasValue ? "@updatedAt" : "CURRENT_TIMESTAMP") +
                                     (creationDate.HasValue ? ", created_at = @createdAt" : "") + @"
                                 WHERE id = @nodeId;";
@@ -1424,6 +1440,7 @@ namespace TGramFS.Database
                             updateCmd.Parameters.AddWithValue("@tgPreviewMessageId", (object?)tgPreviewMessageId ?? DBNull.Value);
                             updateCmd.Parameters.AddWithValue("@tgChannelId", (object?)effectiveTgChannelId ?? DBNull.Value);
                             updateCmd.Parameters.AddWithValue("@inlineData", (object?)inlineData ?? DBNull.Value);
+                            updateCmd.Parameters.AddWithValue("@fileAttributes", fileAttributes);
                             updateCmd.Parameters.AddWithValue("@nodeId", existingNode.Id);
                             if (lastModified.HasValue)
                             {
@@ -1504,10 +1521,10 @@ namespace TGramFS.Database
                             insertCmd.CommandText = @"
                                 INSERT INTO nodes (
                                     parent_id, original_node_id, name, is_dir, version, in_trash,
-                                    tg_message_id, tg_preview_message_id, tg_channel_id, size, created_at, updated_at, inline_data
+                                    tg_message_id, tg_preview_message_id, tg_channel_id, size, created_at, updated_at, inline_data, file_attributes
                                 ) VALUES (
                                     @parentId, @originalId, @name, 0, @version, 0,
-                                    @tgMessageId, @tgPreviewMessageId, @tgChannelId, @size, @createdAt, @updatedAt, @inlineData
+                                    @tgMessageId, @tgPreviewMessageId, @tgChannelId, @size, @createdAt, @updatedAt, @inlineData, @fileAttributes
                                 ); SELECT last_insert_rowid();";
                             insertCmd.Parameters.AddWithValue("@parentId", parentId);
                             insertCmd.Parameters.AddWithValue("@name", name);
@@ -1518,6 +1535,7 @@ namespace TGramFS.Database
                             insertCmd.Parameters.AddWithValue("@tgPreviewMessageId", (object?)tgPreviewMessageId ?? DBNull.Value);
                             insertCmd.Parameters.AddWithValue("@tgChannelId", (object?)effectiveTgChannelId ?? DBNull.Value);
                             insertCmd.Parameters.AddWithValue("@inlineData", (object?)inlineData ?? DBNull.Value);
+                            insertCmd.Parameters.AddWithValue("@fileAttributes", fileAttributes);
                             insertCmd.Parameters.AddWithValue("@createdAt", creationDate.HasValue 
                                 ? FormatDateTime(creationDate.Value) 
                                 : FormatDateTime(DateTime.UtcNow));
@@ -1627,10 +1645,10 @@ namespace TGramFS.Database
                         command.CommandText = @"
                             INSERT INTO nodes (
                                 parent_id, original_node_id, name, is_dir, version, in_trash,
-                                tg_message_id, tg_preview_message_id, tg_channel_id, size, created_at, updated_at, inline_data
+                                tg_message_id, tg_preview_message_id, tg_channel_id, size, created_at, updated_at, inline_data, file_attributes
                             ) VALUES (
                                 @parentId, NULL, @name, 0, 1, 0,
-                                @tgMessageId, @tgPreviewMessageId, @tgChannelId, @size, @createdAt, @updatedAt, @inlineData
+                                @tgMessageId, @tgPreviewMessageId, @tgChannelId, @size, @createdAt, @updatedAt, @inlineData, @fileAttributes
                             ); SELECT last_insert_rowid();";
                         command.Parameters.AddWithValue("@parentId", parentId);
                         command.Parameters.AddWithValue("@name", name);
@@ -1639,6 +1657,7 @@ namespace TGramFS.Database
                         command.Parameters.AddWithValue("@tgPreviewMessageId", (object?)tgPreviewMessageId ?? DBNull.Value);
                         command.Parameters.AddWithValue("@tgChannelId", (object?)effectiveTgChannelId ?? DBNull.Value);
                         command.Parameters.AddWithValue("@inlineData", (object?)inlineData ?? DBNull.Value);
+                        command.Parameters.AddWithValue("@fileAttributes", fileAttributes);
                         command.Parameters.AddWithValue("@createdAt", creationDate.HasValue 
                             ? FormatDateTime(creationDate.Value) 
                             : FormatDateTime(DateTime.UtcNow));
@@ -1741,7 +1760,8 @@ namespace TGramFS.Database
                 Size = Convert.ToInt64(reader["size"]),
                 CreatedAt = ParseDateTime(reader["created_at"]),
                 UpdatedAt = ParseDateTime(reader["updated_at"]),
-                InlineData = reader["inline_data"] != DBNull.Value ? (byte[])reader["inline_data"] : null
+                InlineData = reader["inline_data"] != DBNull.Value ? (byte[])reader["inline_data"] : null,
+                FileAttributes = reader["file_attributes"] != DBNull.Value ? Convert.ToInt32(reader["file_attributes"]) : 0
             };
 
             return node;

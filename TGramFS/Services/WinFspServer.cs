@@ -741,7 +741,7 @@ namespace TGramFS.Services
                 return NT_STATUS_OBJECT_NAME_NOT_FOUND;
             }
 
-            fileAttributes = node.IsDir ? (uint)FileAttributes.Directory : (uint)FileAttributes.Normal;
+            fileAttributes = GetEffectiveFileAttributes(node);
             return STATUS_SUCCESS;
         }
 
@@ -832,6 +832,7 @@ namespace TGramFS.Services
                     openCtx.PreOverwriteSize = node.Size;
                     openCtx.PreOverwriteUpdatedAt = node.UpdatedAt;
                     openCtx.PreOverwriteCreatedAt = node.CreatedAt;
+                    openCtx.PreOverwriteFileAttributes = node.FileAttributes;
                     if (string.IsNullOrEmpty(openCtx.OriginalSourcePath) &&
                         !string.IsNullOrEmpty(twoPassOverwrite.OriginalSourcePath) &&
                         File.Exists(twoPassOverwrite.OriginalSourcePath))
@@ -919,6 +920,16 @@ namespace TGramFS.Services
                     return NT_STATUS_UNSUCCESSFUL;
                 }
 
+                if (!existed && fileAttributes != 0 && fileAttributes != unchecked((uint)-1))
+                {
+                    uint sanitizedDirAttrs = SanitizeFileAttributes(true, fileAttributes);
+                    if (sanitizedDirAttrs != (uint)System.IO.FileAttributes.Directory)
+                    {
+                        dirNode.FileAttributes = (int)sanitizedDirAttrs;
+                        _repository.UpdateNodeFileAttributes(dirNode.Id, dirNode.FileAttributes);
+                    }
+                }
+
                 fileNode = dirNode;
                 fileDesc = new FspNodeContext(dirNode) { CreatorProcessId = callerPid, VirtualPath = cleanPath };
                 FillFileInfo(dirNode, out fileInfo);
@@ -935,6 +946,10 @@ namespace TGramFS.Services
             }
             else
             {
+                int initialFileAttrs = (fileAttributes != 0 && fileAttributes != unchecked((uint)-1))
+                    ? (int)SanitizeFileAttributes(false, fileAttributes)
+                    : 0;
+
                 long expectedSize = allocationSize > 0 ? (long)allocationSize : -1;
                 var (virtualSource, originalSource) = ResolveFileSource(itemName, cleanPath, callerPid, _repository, expectedSize);
                 if (virtualSource != null)
@@ -952,7 +967,8 @@ namespace TGramFS.Services
                         InTrash = false,
                         Size = virtualSource.Size,
                         CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow
+                        UpdatedAt = DateTime.UtcNow,
+                        FileAttributes = initialFileAttrs
                     };
                     _activeUploadNodes[cleanPath] = vNode;
 
@@ -1013,7 +1029,8 @@ namespace TGramFS.Services
                     InTrash = false,
                     Size = 0,
                     CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
+                    UpdatedAt = DateTime.UtcNow,
+                    FileAttributes = initialFileAttrs
                 };
                 _activeUploadNodes[cleanPath] = node;
 
@@ -1074,6 +1091,16 @@ namespace TGramFS.Services
                 ctx.PreOverwriteSize = prevSize;
                 ctx.PreOverwriteUpdatedAt = node.UpdatedAt;
                 ctx.PreOverwriteCreatedAt = node.CreatedAt;
+                ctx.PreOverwriteFileAttributes = node.FileAttributes;
+            }
+
+            if (fileAttributes != 0 && fileAttributes != unchecked((uint)-1))
+            {
+                uint incomingAttrs = SanitizeFileAttributes(node.IsDir, fileAttributes);
+                uint currentAttrs = GetEffectiveFileAttributes(node);
+                node.FileAttributes = (int)(replaceFileAttributes
+                    ? incomingAttrs
+                    : SanitizeFileAttributes(node.IsDir, currentAttrs | incomingAttrs));
             }
 
             node.Size = 0;
@@ -1385,6 +1412,17 @@ namespace TGramFS.Services
                 else
                 {
                     AppLogger.Info("WinFsp", $"Обновлены системные даты для '{node.Name}' (ID {node.Id}): Изменен: {node.UpdatedAt:yyyy-MM-dd HH:mm:ss.fff}, Создан: {node.CreatedAt:yyyy-MM-dd HH:mm:ss.fff}");
+                }
+            }
+
+            if (fileAttributes != 0 && fileAttributes != unchecked((uint)-1))
+            {
+                uint sanitizedAttrs = SanitizeFileAttributes(node.IsDir, fileAttributes);
+                node.FileAttributes = (int)sanitizedAttrs;
+                if (node.Id > 0 && ctx?.IsOverwritePending != true)
+                {
+                    _repository.UpdateNodeFileAttributes(node.Id, node.FileAttributes);
+                    AppLogger.Debug("WinFsp", $"Обновлены атрибуты для '{node.Name}' (ID {node.Id}): {(System.IO.FileAttributes)sanitizedAttrs} (0x{sanitizedAttrs:X})");
                 }
             }
 
@@ -1790,7 +1828,8 @@ namespace TGramFS.Services
                                         inlineData: null,
                                         lastModified: targetUpdatedAt,
                                         creationDate: targetCreatedAt,
-                                        parts: fwdResult.Parts
+                                        parts: fwdResult.Parts,
+                                        fileAttributes: node.FileAttributes
                                     );
 
                                     if (newNodeId > 0) node.Id = newNodeId;
@@ -1850,7 +1889,8 @@ namespace TGramFS.Services
                                 tgPreviewMessageId: null,
                                 inlineData: ctx.VirtualSourceNode.InlineData,
                                 lastModified: targetUpdatedAt,
-                                creationDate: targetCreatedAt
+                                creationDate: targetCreatedAt,
+                                fileAttributes: node.FileAttributes
                             );
 
                             if (newNodeId > 0) node.Id = newNodeId;
@@ -1906,7 +1946,8 @@ namespace TGramFS.Services
                                     inlineData: null,
                                     lastModified: targetUpdatedAt,
                                     creationDate: targetCreatedAt,
-                                    parts: uploadResult.Parts
+                                    parts: uploadResult.Parts,
+                                    fileAttributes: node.FileAttributes
                                 );
 
                                 if (newNodeId > 0) node.Id = newNodeId;
@@ -1994,7 +2035,8 @@ namespace TGramFS.Services
                                     tgPreviewMessageId: null,
                                     inlineData: inlineBytes,
                                     lastModified: targetUpdatedAt,
-                                    creationDate: targetCreatedAt
+                                    creationDate: targetCreatedAt,
+                                    fileAttributes: node.FileAttributes
                                 );
 
                                 if (newNodeId > 0) node.Id = newNodeId;
@@ -2076,7 +2118,8 @@ namespace TGramFS.Services
                                         inlineData: null,
                                         lastModified: targetUpdatedAt,
                                         creationDate: targetCreatedAt,
-                                        parts: uploadResult.Parts
+                                        parts: uploadResult.Parts,
+                                        fileAttributes: node.FileAttributes
                                     );
 
                                     if (newNodeId > 0) node.Id = newNodeId;
@@ -2344,10 +2387,30 @@ namespace TGramFS.Services
             }
         }
 
+        private static uint SanitizeFileAttributes(bool isDir, uint rawAttributes)
+        {
+            if (isDir)
+            {
+                return (rawAttributes & ~(uint)System.IO.FileAttributes.Normal) | (uint)System.IO.FileAttributes.Directory;
+            }
+
+            uint sanitized = rawAttributes & ~(uint)System.IO.FileAttributes.Directory;
+            return sanitized != 0 ? sanitized : (uint)System.IO.FileAttributes.Normal;
+        }
+
+        private static uint GetEffectiveFileAttributes(Node node)
+        {
+            if (node.FileAttributes != 0)
+            {
+                return SanitizeFileAttributes(node.IsDir, (uint)node.FileAttributes);
+            }
+            return node.IsDir ? (uint)System.IO.FileAttributes.Directory : (uint)System.IO.FileAttributes.Normal;
+        }
+
         private static void FillFileInfo(Node node, out FileInfo fileInfo)
         {
             fileInfo = default;
-            fileInfo.FileAttributes = node.IsDir ? (uint)FileAttributes.Directory : (uint)FileAttributes.Normal;
+            fileInfo.FileAttributes = GetEffectiveFileAttributes(node);
             fileInfo.FileSize = (ulong)node.Size;
             fileInfo.AllocationSize = (ulong)((node.Size + 4095) / 4096 * 4096);
             fileInfo.CreationTime = (ulong)node.CreatedAt.ToFileTimeUtc();
@@ -4116,6 +4179,7 @@ namespace TGramFS.Services
             public long PreOverwriteSize { get; set; } = -1;
             public DateTime PreOverwriteUpdatedAt { get; set; }
             public DateTime PreOverwriteCreatedAt { get; set; }
+            public int PreOverwriteFileAttributes { get; set; }
 
             public FspNodeContext(Node node) => Node = node;
 
@@ -4125,6 +4189,7 @@ namespace TGramFS.Services
                 if (PreOverwriteSize >= 0) Node.Size = PreOverwriteSize;
                 Node.UpdatedAt = PreOverwriteUpdatedAt;
                 Node.CreatedAt = PreOverwriteCreatedAt;
+                Node.FileAttributes = PreOverwriteFileAttributes;
                 IsOverwritePending = false;
                 ExplicitTruncateToZero = false;
             }

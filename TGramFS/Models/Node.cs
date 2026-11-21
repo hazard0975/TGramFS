@@ -24,5 +24,8 @@ namespace TGramFS.Models
 
         // Local payload for small files (<= 1 byte or unuploaded placeholders)
         public byte[]? InlineData { get; set; }
+
+        // Windows FileAttributes bitmask (0 = default Directory/Normal)
+        public int FileAttributes { get; set; }
     }
 }

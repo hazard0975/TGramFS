@@ -45,13 +45,17 @@ namespace TGramFS.Database
                 cmd.CommandText = "PRAGMA table_info(nodes);";
                 using var reader = cmd.ExecuteReader();
                 bool hasTgChannelId = false;
+                bool hasFileAttributes = false;
                 while (reader.Read())
                 {
                     string colName = reader["name"]?.ToString() ?? "";
                     if (colName.Equals("tg_channel_id", StringComparison.OrdinalIgnoreCase))
                     {
                         hasTgChannelId = true;
-                        break;
+                    }
+                    else if (colName.Equals("file_attributes", StringComparison.OrdinalIgnoreCase))
+                    {
+                        hasFileAttributes = true;
                     }
                 }
                 reader.Close();
@@ -61,6 +65,13 @@ namespace TGramFS.Database
                     using var alterCmd = connection.CreateCommand();
                     alterCmd.CommandText = "ALTER TABLE nodes ADD COLUMN tg_channel_id INTEGER;";
                     alterCmd.ExecuteNonQuery();
+                }
+
+                if (!hasFileAttributes)
+                {
+                    using var alterAttrCmd = connection.CreateCommand();
+                    alterAttrCmd.CommandText = "ALTER TABLE nodes ADD COLUMN file_attributes INTEGER NOT NULL DEFAULT 0;";
+                    alterAttrCmd.ExecuteNonQuery();
                 }
 
                 // Гарантируем наличие таблицы node_parts и ее индекса
@@ -159,6 +170,7 @@ CREATE TABLE IF NOT EXISTS nodes (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     inline_data BLOB,
+    file_attributes INTEGER NOT NULL DEFAULT 0,
     
     FOREIGN KEY (parent_id) REFERENCES nodes(id)
 );
