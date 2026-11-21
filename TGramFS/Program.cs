@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using TGramFS.Config;
@@ -345,6 +346,7 @@ namespace TGramFS
                 if (newChannel != null)
                 {
                     await telegramService.MigrateSubtreeToChannelAsync(node.Id, newChannel.ChannelId);
+                    NotifyExplorerFolderIconChanged(rawPath, relPath);
 
                     return new IpcResponse
                     {
@@ -369,6 +371,53 @@ namespace TGramFS
                     Success = false,
                     Message = $"Ошибка при связывании папки с каналом Telegram:\n{ex.Message}"
                 };
+            }
+        }
+
+        [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+        private static extern void SHChangeNotify(uint wEventId, uint uFlags, string? dwItem1, string? dwItem2);
+
+        private static void NotifyExplorerFolderIconChanged(string rawPath, string relPath)
+        {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                return;
+
+            try
+            {
+                string? windowsPath = null;
+                string trimmed = (rawPath ?? "").Trim();
+                if (trimmed.Contains(':'))
+                {
+                    windowsPath = trimmed.Replace('/', '\\').TrimEnd('\\');
+                }
+                else if (!string.IsNullOrWhiteSpace(WinFspServer.ActiveMountPoint))
+                {
+                    string drive = WinFspServer.ActiveMountPoint.TrimEnd('\\', '/');
+                    string sub = relPath.Replace('/', '\\').TrimStart('\\');
+                    windowsPath = string.IsNullOrEmpty(sub) ? drive : $"{drive}\\{sub}";
+                }
+
+                if (string.IsNullOrWhiteSpace(windowsPath))
+                    return;
+
+                const uint SHCNE_ATTRIBUTES = 0x00000800;
+                const uint SHCNE_UPDATEDIR = 0x00001000;
+                const uint SHCNE_UPDATEITEM = 0x00002000;
+                const uint SHCNF_PATHW = 0x0005;
+                const uint SHCNF_FLUSHNOWAIT = 0x2000;
+
+                SHChangeNotify(SHCNE_ATTRIBUTES, SHCNF_PATHW | SHCNF_FLUSHNOWAIT, windowsPath, null);
+                SHChangeNotify(SHCNE_UPDATEITEM, SHCNF_PATHW | SHCNF_FLUSHNOWAIT, windowsPath, null);
+
+                string? parentDir = Path.GetDirectoryName(windowsPath);
+                if (!string.IsNullOrWhiteSpace(parentDir))
+                {
+                    SHChangeNotify(SHCNE_UPDATEDIR, SHCNF_PATHW | SHCNF_FLUSHNOWAIT, parentDir, null);
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Debug("Shell", $"Предупреждение при обновлении иконки папки в Проводнике: {ex.Message}");
             }
         }
     }

@@ -4323,3 +4323,33 @@ _telegramService.UpdateSettings(_settings);
 2. Имя файла `.gif` на виртуальном диске, `DocumentAttributeFilename`, SQLite-узел и скачивание остаются без изменений; в канале Telegram файл сохраняется как обычный документ без анимационного индекса.
 3. По решению пользователя мелкая гонка `HideCheckTimer_Tick` при истечении `FLOOD_WAIT_6` пока отложена до повторного воспроизведения; изменение отправлено на живую проверку следующей заливки той же папки.
 
+---
+
+## 142. Визуальное выделение привязанных к каналам папок (иконка «звёздочка» через виртуальный `desktop.ini` и поддержка `file_attributes`) (`Node.cs`, `Schema.sql`, `DatabaseManager.cs`, `NodeRepository.cs`, `WinFspServer.cs`, `Program.cs`)
+
+### Контекст и симптомы:
+1. Папки, привязанные к отдельным каналам Telegram (`tg_channel_id != primaryChannelId`), в Проводнике Windows визуально ничем не отличались от обычных папок.
+2. При первой попытке ручной настройки иконки папки через `Свойства -> Настройка -> Сменить значок...` Windows создавала `desktop.ini`, но иконка не отображалась.
+3. После добавления поддержки `file_attributes` иконка стала появляться при нажатии `Применить`, однако повторная запись (например, `Применить` → `ОК` или смена значка во второй раз) повреждала содержимое `desktop.ini` в 32 пробела + `C:\Windows\System32\SHELL32.dll,43`.
+
+### Первопричины:
+1. **Игнорирование `FILE_ATTRIBUTE_*` в `WinFspServer.cs`**: `GetSecurityByName`, `FillFileInfo`, `Create`, `Overwrite` и `SetBasicInfo` всегда отдавали жёсткие `Directory`/`Normal`. Без атрибута `FILE_ATTRIBUTE_READONLY` (`0x01`) на папке и `Hidden | System` на `desktop.ini` Проводник Windows полностью игнорирует `desktop.ini`.
+2. **Порча малых файлов при частичном `Write` без `Overwrite` (`WritePrivateProfileStringW`)**: При повторном изменении `desktop.ini` Windows открывает существующий файл через `Open` (без `Overwrite`) и пишет только обновляемую часть со смещения `offset = 32` (пропуская `[.ShellClassInfo]\r\nIconResource=`). `WinFspServer.Write` создавал пустой `MemoryStream` в `SmallFileBuffer` и делал `Seek(32)`, заполняя первые `32` байта нулями (`0x00`), а `SetFileSize` не ресайзил `SmallFileBuffer`.
+3. **Попытка использовать `InfoTip` на непустых папках**: В Windows 10/11 при наведении на непустую папку Проводник выводит системную сводку (`Тип / Дата изменения / Размер / Файлы`), игнорируя `InfoTip` (что подтвердилось тестом пользователя).
+
+### Принятое решение:
+1. **Персистентная поддержка `file_attributes` в БД и WinFsp**:
+   - В `Node.cs`, `Schema.sql`, `DatabaseManager.cs` (`EnsureSchemaColumns`) и `NodeRepository.cs` (`CreateOrUpdateFile`, `UpdateNodeFileAttributes`, `MapReaderToNode`) добавлена колонка `file_attributes INTEGER NOT NULL DEFAULT 0`.
+   - В `WinFspServer.cs` атрибуты сохраняются и возвращаются в `GetSecurityByName`, `FillFileInfo`, `Create`, `Overwrite`, `SetBasicInfo`, `Cleanup`, а также откатываются через `PreOverwriteFileAttributes` при отмене перезаписи.
+2. **Исправление частичной записи/усечения малых файлов `<= 1 МБ` (`EnsureSmallFileBufferLoaded`)**:
+   - В `WinFspServer.cs` добавлен `EnsureSmallFileBufferLoaded`, предзагружающий существующее содержимое файла (`InlineData` или `DownloadFileAsync`) в `ctx.SmallFileBuffer` до смещения записи в `Write` и ресайза в `SetFileSize`.
+   - `Read` учитывает несохранённый `readCtx.SmallFileBuffer` в пределах открытого дескриптора.
+3. **Виртуальный `desktop.ini` в памяти только для корневых привязанных папок (`WinFspServer.cs`)**:
+   - Для папок `node.IsDir && !node.InTrash && node.Id > 1 && node.TgChannelId != null && node.TgChannelId != 0 && node.TgChannelId != primaryChannelId` (подпапки не наследуют иконку) метод `GetEffectiveFileAttributes` автоматически добавляет `FileAttributes.ReadOnly`.
+   - Если реального `desktop.ini` для такой папки нет в SQLite / `_activeUploadNodes`, драйвер отдаёт на лету виртуальный `desktop.ini` в `UTF-16 LE` с BOM (`[.ShellClassInfo]\r\nIconResource=C:\Windows\System32\SHELL32.dll,43\r\n`, атрибуты `Hidden | System | Archive`) без записи в SQLite, Telegram и `.Trash`.
+   - Включён `_host.PassQueryDirectoryPattern = true`: в обычной выдаче каталога (`*`/`null`) виртуальный `desktop.ini` скрыт (не копируется при `Ctrl+A` и переносе папки на диск `C:`), а при явном запросе `pattern == "desktop.ini"` или через `GetSecurityByName`/`Open`/`Read` отдаётся мгновенно из памяти. Запись/удаление виртуального системного файла защищены (`NT_STATUS_ACCESS_DENIED` / `NT_STATUS_CANNOT_DELETE`).
+4. **Мгновенное обновление иконки после привязки (`Program.cs`)**:
+   - В `ExecuteBindChannelAsync` добавлен вызов `SHChangeNotify` (`SHCNE_ATTRIBUTES`, `SHCNE_UPDATEITEM`, `SHCNE_UPDATEDIR`), чтобы Проводник сразу перерисовывал значок папки без ручного `F5`.
+5. **Осознанно отложено на следующие этапы**:
+   - Список/таблица привязанных папок и каналов в окне настроек и предложение открыть канал в Telegram при повторном нажатии ПКМ.
+
