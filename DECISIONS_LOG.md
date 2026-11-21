@@ -4378,3 +4378,32 @@ _telegramService.UpdateSettings(_settings);
    - В `WinFspServer` добавлен метод `NotifyBoundFolderUpdated(relPath)`, вызывающий `_host.NotifyBegin` -> `_host.Notify` (`Added` для `\Папка\desktop.ini`, `Modified` c `ChangeAttributes` для `\Папка`) -> `_host.NotifyEnd`.
    - `NotifyExplorerFolderIconChanged` дополнен `SHCNE_CREATE` для `desktop.ini`, `SHCNE_UPDATEDIR` для самой папки и флагом `SHCNF_FLUSH`, а также вызывается в клиентском процессе `--bind-channel` (`HandleBindChannelAsync`) при успешном ответе IPC.
 3. **Уведомление автобэкапа БД (`NodeRepository.cs`)**: В `SetFolderChannelId` добавлен вызов `NotifyNodeChanged()`.
+
+---
+
+## 144. Доработка удаления привязанных папок (`Open` + снятие `ReadOnly` в `SetBasicInfo`) и обновление иконки через `PIDL` (`SHCNF_IDLIST`) (`WinFspServer.cs`, `Program.cs`)
+
+### Контекст и симптомы после решения 143:
+1. При проверке сборки по решению 143 удаление привязанной папки по-прежнему вызывало окно UAC («Для удаления этой папки нужно обладать правами администратора») и ошибку `Файл T:\ недоступен`.
+2. Значок «звёздочка» после привязки папки к каналу по-прежнему появлялся не сразу (после серии обновлений, переходов в другие папки и загрузки файлов).
+3. Контрольный тест пользователя со сменой иконки вручную на обычной папке `Новая папка (10)` показал, что реальный `desktop.ini` Windows создаёт с атрибутами `Hidden | System` (`0x06`, без `Archive`), а у самой папки выставляется `ReadOnly | Directory` (`0x11`), при этом лог зафиксировал вызовы `SetBasicInfo` на снятие `ReadOnly` (`0x10`) и отсутствие записей `[CanDelete]`.
+
+### Первопричины:
+1. **Блокировка `Open` виртуального `desktop.ini` до этапа удаления (`WinFspServer.cs`)**:
+   - При наличии `DefaultSecurityDescriptor` с полными правами (`FA`) Проводник (`IFileOperation`) открывает `desktop.ini` с запросом `MAXIMUM_ALLOWED` или правами записи, из-за чего в `grantedAccess` присутствуют флаги `FILE_WRITE_DATA | FILE_APPEND_DATA`.
+   - Проверка `if ((grantedAccess & (FILE_WRITE_DATA | FILE_APPEND_DATA)) != 0) return NT_STATUS_ACCESS_DENIED;` в `Open` отклоняла операцию до вызова `SetDelete` и `CleanupDelete`, провоцируя UAC.
+2. **Принудительное возвращение `ReadOnly` в ответе `SetBasicInfo` (`WinFspServer.cs`)**:
+   - Когда Проводник снимал `ReadOnly` с привязанной папки (`0x11 -> 0x10`), `SetBasicInfo` вызывал `FillFileInfo` -> `GetEffectiveFileAttributes`, который вновь приклеивал `ReadOnly` в возвращаемый ответ до срабатывания `CleanupDelete` на `desktop.ini`.
+3. **Неточные атрибуты виртуального `desktop.ini` и `SHCNF_PATHW` в Проводнике**:
+   - В `VirtualDesktopIniAttributes` присутствовал лишний флаг `Archive` (`0x26` вместо `0x06`).
+   - В `Program.cs` вызов `SHChangeNotify` передавал строковые пути (`SHCNF_PATHW`), которые `CDefView` / кеш иконок Windows 10/11 часто игнорирует без `PIDL` (`SHCNF_IDLIST`), а `NotifyBoundFolderUpdated` не включал `ChangeLastWrite` и логировал только на уровне `Debug`.
+
+### Принятое решение (Вариант 2 — точечное исправление виртуальной схемы):
+1. **Снятие ложного `ACCESS_DENIED` в `Open` и честное снятие `ReadOnly` в `SetBasicInfo` (`WinFspServer.cs`)**:
+   - Из `Open` удалён возврат `NT_STATUS_ACCESS_DENIED` при открытии виртуального `desktop.ini` (защита от реальной записи/перезаписи сохранена в `Overwrite`, `Write`, `SetFileSize` и `Create`).
+   - Добавлен хелпер `IsBoundChannelFolderUnfiltered(node)`: в `SetBasicInfo` при явном снятии флага `ReadOnly` с привязанной папки (`(sanitizedAttrs & ReadOnly) == 0`) на `3 сек` включается `SuppressVirtualDesktopIni(node.Id, TimeSpan.FromSeconds(3))`, чтобы `FillFileInfo` и последующие запросы возвращали `Directory (0x10)` до завершения удаления (или автоматически возвращали звёздочку через 3 сек при отмене).
+   - `VirtualDesktopIniAttributes` приведён к точному стандарту Windows: `Hidden | System` (`0x06`, без `Archive`).
+   - Добавлены `Info`/`Warn`-логи для `NotifyBoundFolderUpdated` (с фильтром `ChangeAttributes | ChangeLastWrite`), `SetBasicInfo` (снятие `ReadOnly`), `SetDelete` и `CleanupDelete` виртуального `desktop.ini`.
+2. **Уведомление Проводника по `PIDL` (`Program.cs`)**:
+   - В `NotifyExplorerFolderIconChanged` добавлено разрешение `PIDL` через `ILCreateFromPathW` / `ILFree` и отправка `SHChangeNotify` с `SHCNF_IDLIST | SHCNF_FLUSH` (с фоллбэком на `SHCNF_PATHW`) и `Info`-логированием.
+

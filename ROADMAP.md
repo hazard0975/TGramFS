@@ -1489,3 +1489,12 @@
       3. В `Program.cs` (`NotifyExplorerFolderIconChanged`) добавлены `SHCNE_CREATE` на `desktop.ini`, `SHCNE_UPDATEDIR` на саму папку и синхронный `SHCNF_FLUSH`, а также вызов обновления в `HandleBindChannelAsync` после успешного IPC-ответа.
       4. В `NodeRepository.SetFolderChannelId` добавлен вызов `NotifyNodeChanged()` для корректного запуска автобэкапа БД после привязки канала.
     - **Валидация**: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
+- [x] **8.136. Устранение `ACCESS_DENIED` в `Open` виртуального `desktop.ini`, временное снятие `ReadOnly` в `SetBasicInfo` и `SHCNF_IDLIST` по `PIDL` (`WinFspServer.cs`, `Program.cs`)**:
+    - **Причина доработки**: После теста решения 143 подтвердилось, что `Open` отклонял `desktop.ini` с `NT_STATUS_ACCESS_DENIED` при запросе `FILE_WRITE_DATA | FILE_APPEND_DATA` (из `MAXIMUM_ALLOWED`), `SetBasicInfo` возвращал `ReadOnly` обратно до удаления папки, `VirtualDesktopIniAttributes` содержал лишний флаг `Archive`, а `SHChangeNotify` использовал строковый `SHCNF_PATHW` вместо `PIDL`.
+    - **Реализовано**:
+      1. В `WinFspServer.Open` снят отказ `NT_STATUS_ACCESS_DENIED` для виртуального `desktop.ini` (запись по-прежнему блокируется на уровне `Write`/`Overwrite`/`SetFileSize`).
+      2. В `WinFspServer.SetBasicInfo` при явном снятии `ReadOnly` с привязанной папки включается 3-секундное подавление `SuppressVirtualDesktopIni`, чтобы `FillFileInfo` возвращал `Directory (0x10)` на время удаления.
+      3. Атрибуты виртуального `desktop.ini` приведены к `Hidden | System` (`0x06`); в `NotifyBoundFolderUpdated` добавлен `NotifyFilter.ChangeLastWrite` и `Info`/`Warn`-логирование.
+      4. В `Program.NotifyExplorerFolderIconChanged` реализована отправка `SHChangeNotify` через `ILCreateFromPathW` + `SHCNF_IDLIST | SHCNF_FLUSH` (с фоллбэком на `SHCNF_PATHW`).
+    - **Валидация**: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
+
