@@ -539,19 +539,20 @@ namespace TGramFS.Server
                 long primaryChannelId = repository.GetPrimaryTelegramChannel()?.ChannelId ?? 0;
                 var channelsToDestroy = new HashSet<long>();
 
-                var boundFoldersToDelete = nodesToDelete
-                    .Where(n => n.IsDir && n.TgChannelId.HasValue && n.TgChannelId.Value != 0 && n.TgChannelId.Value != primaryChannelId)
+                var candidateChannelsToDestroy = nodesToDelete
+                    .Where(n => n.TgChannelId.HasValue && n.TgChannelId.Value != 0 && n.TgChannelId.Value != primaryChannelId)
                     .Select(n => n.TgChannelId!.Value)
                     .Distinct()
                     .ToList();
 
-                foreach (var chId in boundFoldersToDelete)
+                foreach (var chId in candidateChannelsToDestroy)
                 {
                     int nodesInSubtreeForChannel = nodesToDelete.Count(n => n.TgChannelId == chId);
                     int totalNodesInDbForChannel = repository.GetNodeCountForChannel(chId);
                     if (totalNodesInDbForChannel > 0 && totalNodesInDbForChannel <= nodesInSubtreeForChannel)
                     {
                         channelsToDestroy.Add(chId);
+                        telegramService.MarkChannelPendingDeletion(chId);
                     }
                 }
 
@@ -684,6 +685,8 @@ namespace TGramFS.Server
                 repository.SoftDeleteNode(existingDestNode.Id);
             }
 
+            bool wasInTrash = sourceNode.InTrash || repository.IsNodeInTrash(sourceNode.Id);
+            bool targetInTrash = destParentNode.InTrash || repository.IsNodeInTrash(destParentNode.Id);
             long? sourceChannelId = repository.GetEffectiveChannelId(sourceNode.ParentId);
             long? targetChannelId = repository.GetEffectiveChannelId(destParentNode.Id);
 
@@ -706,28 +709,51 @@ namespace TGramFS.Server
                         });
                     }
                 }
-                else if (sourceChannelId != targetChannelId && targetChannelId.HasValue && telegramService != null)
+                else if (!targetInTrash && (wasInTrash || sourceChannelId != targetChannelId) && targetChannelId.HasValue && telegramService != null)
                 {
-                    var subtreeFiles = repository.GetSubtreeNodes(sourceNode.Id)
-                        .Where(n => !n.IsDir && n.TgMessageId.HasValue && n.TgMessageId.Value > 0)
+                    var migrationFiles = repository.GetFilesForChannelMigration(sourceNode.Id)
+                        .Where(n => n.TgMessageId.HasValue && n.TgMessageId.Value > 0)
                         .OrderBy(n => n.TgMessageId!.Value)
-                        .Select(n => n.Id)
                         .ToList();
-                    if (subtreeFiles.Count > 0)
+
+                    var groupsBySource = migrationFiles
+                        .Select(n => new
+                        {
+                            NodeId = n.Id,
+                            SourceChannelId = (n.TgChannelId.HasValue && n.TgChannelId.Value != 0)
+                                ? n.TgChannelId.Value
+                                : (sourceChannelId ?? 0)
+                        })
+                        .Where(x => x.SourceChannelId != 0 && x.SourceChannelId != targetChannelId.Value)
+                        .GroupBy(x => x.SourceChannelId)
+                        .ToList();
+
+                    int totalQueued = 0;
+                    foreach (var group in groupsBySource)
                     {
-                        repository.EnqueueChannelMigrations(subtreeFiles, sourceChannelId ?? 0, targetChannelId.Value);
+                        var ids = group.Select(x => x.NodeId).ToList();
+                        repository.EnqueueChannelMigrations(ids, group.Key, targetChannelId.Value);
+                        totalQueued += ids.Count;
+                    }
+
+                    if (totalQueued > 0)
+                    {
                         telegramService.TriggerChannelMigrationProcessing();
-                        AppLogger.Info("WebDAV", $"[MOVE] Перемещение папки '{destName}': {subtreeFiles.Count} файлов поставлено в очередь миграции каналов ({sourceChannelId} -> {targetChannelId.Value}).");
+                        AppLogger.Info("WebDAV", $"[MOVE] Перемещение папки '{destName}': {totalQueued} файлов поставлено в очередь миграции каналов (-> {targetChannelId.Value}).");
                     }
                 }
             }
-            else if (sourceChannelId != targetChannelId && targetChannelId.HasValue && telegramService != null)
+            else if (!targetInTrash && targetChannelId.HasValue && telegramService != null)
             {
-                if (sourceNode.TgMessageId.HasValue && sourceNode.TgMessageId.Value > 0)
+                long actualSourceChannelId = (sourceNode.TgChannelId.HasValue && sourceNode.TgChannelId.Value != 0)
+                    ? sourceNode.TgChannelId.Value
+                    : (sourceChannelId ?? 0);
+
+                if (actualSourceChannelId != 0 && actualSourceChannelId != targetChannelId.Value && sourceNode.TgMessageId.HasValue && sourceNode.TgMessageId.Value > 0)
                 {
-                    repository.EnqueueChannelMigrations(new[] { sourceNode.Id }, sourceChannelId ?? 0, targetChannelId.Value);
+                    repository.EnqueueChannelMigrations(new[] { sourceNode.Id }, actualSourceChannelId, targetChannelId.Value);
                     telegramService.TriggerChannelMigrationProcessing();
-                    AppLogger.Info("WebDAV", $"[MOVE] Перемещение файла '{sourceNode.Name}': поставлен в очередь миграции каналов ({sourceChannelId} -> {targetChannelId.Value}).");
+                    AppLogger.Info("WebDAV", $"[MOVE] Перемещение файла '{sourceNode.Name}': поставлен в очередь миграции каналов ({actualSourceChannelId} -> {targetChannelId.Value}).");
                 }
             }
 

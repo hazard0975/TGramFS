@@ -4437,3 +4437,33 @@ _telegramService.UpdateSettings(_settings);
    - В `ExecuteBindChannelAsync` перед уведомлением добавлен `ApplyBoundFolderAttributesThroughVfs` (`File.SetAttributes(..., FileAttributes.ReadOnly)`) через смонтированный диск WinFsp; убран дублирующий вызов `NotifyExplorerFolderIconChanged` из `HandleBindChannelAsync` и перебивающий `SHCNE_UPDATEDIR` на родительский каталог.
    - Логи `[SetBasicInfo]` (снятие `ReadOnly`), `[SetDelete]`/`[CleanupDelete]` виртуального `desktop.ini`, `[NotifyBoundFolderUpdated]` и `[NotifyExplorerFolderIconChanged]` переведены в `Debug`.
 
+---
+
+## 146. Изоляция зеркал `.Trash`, уничтожение канала по последнему узлу, точная миграция при восстановлении и дебаунс `pending_deletions` (`NodeRepository.cs`, `WinFspServer.cs`, `WebDavMiddleware.cs`, `TelegramService.cs`)
+
+### Контекст и выявленные граничные сценарии:
+После внедрения решения `#145` аудит сценариев частичного/поэтапного удаления и восстановления из корзины выявил 4 остаточных граничных бага:
+1. **Потеря удаления канала при обратном порядке очистки `.Trash` (`Fix 1`)**:
+   - Если в живой привязанной папке удалили часть файлов (создалось зеркало `\.Trash\Папка X` с `tg_channel_id = NULL`, файлы внутри с `tg_channel_id = C`), потом удалили саму ставшую пустой папку (`\.Trash\Папка X (2)`, `tg_channel_id = C`), а при очистке корзины сначала удалили `Папка X (2)` и лишь потом `Папка X`, проверка `boundFoldersToDelete` (`n.IsDir && n.TgChannelId != null`) игнорировала зеркало `Папка X` (где лежали последние файлы канала `C`), оставляя канал в Telegram навечно.
+2. **Смешивание зеркал с удалённой привязанной папкой (`Fix 2`)**:
+   - `EnsureTrashHierarchyForParent` искал любую папку `is_dir = 1 AND in_trash = 1` без проверки `tg_channel_id`, поэтому при удалении файла из новой обычной папки `Папка X` файл мог упасть внутрь уже лежащей в `.Trash` привязанной папки `Папка X (C)`.
+3. **Ложная/сломанная миграция при восстановлении или переносе из зеркал `.Trash` (`Fix 3`)**:
+   - `WinFspServer.Rename` и `WebDavMiddleware.HandleMoveAsync` брали исходный канал через `GetEffectiveChannelId(node.ParentId)` вместо `node.TgChannelId`, а при переносе обычных папок использовали `GetSubtreeNodes` (не защищая вложенные привязанные подпапки). Восстановление файла (`tg_channel_id = C`) из зеркала корзины (`tg_channel_id = NULL`) обратно в живую привязанную папку `C` (или в корень) давало неверный исходный канал.
+4. **Избыточное поштучное удаление сообщений при удалении папки через WinFsp**:
+   - Из-за `NT_STATUS_DIRECTORY_NOT_EMPTY` в `WinFspServer.CanDelete` Проводник Windows при удалении непустой папки из `.Trash` предварительно удаляет вложенные файлы по одному; без дебаунса `ProcessDeletionQueueAsync` мгновенно начинал удалять сообщения канала в Telegram до того, как Проводник доходил до самой папки и запускал `DeleteChannelAsync`.
+
+### Принятое решение:
+1. **Уничтожение канала при удалении последнего узла (`Fix 1` в `WinFspServer.Cleanup` и `WebDavMiddleware.HandleDeleteAsync`)**:
+   - Список каналов-кандидатов строится по всем узлам удаляемого поддерева (и папкам, и файлам) с кастомным `TgChannelId` (`!= 0` и `!= primaryChannelId`).
+   - Канал уничтожается через `DeleteChannelAsync` в момент ухода из БД **последнего** узла с этим `tg_channel_id` (`totalNodesInDbForChannel <= nodesInSubtreeForChannel`), независимо от порядка очистки папок и зеркал в корзине. Идея дублирования `tg_channel_id` на сами зеркала `.Trash` сознательно отклонена во избежание появления двух активных владельцев канала при восстановлении.
+2. **Изоляция зеркал в `NodeRepository.EnsureTrashHierarchyForParent` (`Fix 2`)**:
+   - Переиспользуются только папки-зеркала без кастомного канала (`tg_channel_id IS NULL / 0 / primaryChannelId`). Если имя занято привязанной папкой или файлом в `.Trash`, подбирается/создаётся свободное зеркало `Имя (2)`, `Имя (3)`.
+3. **Точная миграция по `node.TgChannelId` и `GetFilesForChannelMigration` (`Fix 3` в `WinFspServer.Rename` и `WebDavMiddleware.HandleMoveAsync`)**:
+   - Для файлов при выходе/перемещении вне корзины (`!targetInTrash`) исходный канал определяется как `node.TgChannelId` (с фоллбэком на `GetEffectiveChannelId(node.ParentId)`).
+   - Для обычных папок при переносе между каналами или восстановлении из `.Trash` используется `GetFilesForChannelMigration` (пропуск вложенных привязанных подпапок) с группировкой файлов по их фактическому исходному каналу.
+4. **Скользящий 2-сек дебаунс и очистка очереди канала (`TelegramService.cs`, `NodeRepository.cs`)**:
+   - В `ProcessDeletionQueueAsync` добавлен скользящий дебаунс `2 сек` (с потолком `10 сек`) после последнего вызова `TriggerDeletionQueueProcessing()`.
+   - Добавлен трекинг `_channelsPendingDeletion` (`MarkChannelPendingDeletion` при постановке канала на снос) и метод `NodeRepository.RemovePendingDeletionsForChannel(channelId)`: пока канал ждёт удаления (`_channelDeleteSemaphore` с паузой `350 мс`), воркер не удаляет его сообщения поштучно, а после успешного `Channels_DeleteChannel` очищает оставшиеся записи `pending_deletions` этого канала.
+
+
+

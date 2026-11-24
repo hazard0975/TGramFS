@@ -1505,4 +1505,13 @@
       3. В `TelegramService.DeleteChannelAsync` добавлена последовательная синхронизация через `_channelDeleteSemaphore` с паузой `350 мс` для защиты от `FLOOD_WAIT`.
       4. В `Program.cs` добавлено обновление `FileAttributes.ReadOnly` через WinFsp VFS (`ApplyBoundFolderAttributesThroughVfs`), удалён дубль вызова в `HandleBindChannelAsync` и `SHCNE_UPDATEDIR` на родителя; диагностические логи виртуального `desktop.ini` / `SetBasicInfo` переведены в `Debug`.
     - **Валидация**: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
+- [x] **8.138. Защита граничных сценариев корзины (уничтожение канала по последнему узлу, изоляция зеркал, точная миграция при восстановлении и 2-сек дебаунс очереди удаления) (`NodeRepository.cs`, `WinFspServer.cs`, `WebDavMiddleware.cs`, `TelegramService.cs`)**:
+    - **Реализовано**:
+      1. **Уничтожение канала по последнему узлу (`WinFspServer.Cleanup`, `WebDavMiddleware.HandleDeleteAsync`)**: проверка `channelsToDestroy` расширена на все узлы поддерева с кастомным `TgChannelId` (и папки, и файлы) — канал уничтожается при удалении из БД последнего узла этого канала независимо от порядка очистки папок и зеркал в `.Trash`.
+      2. **Изоляция зеркал в `.Trash` (`NodeRepository.EnsureTrashHierarchyForParent`)**: переиспользуются только незакреплённые папки-зеркала (`tg_channel_id` отсутствует или равен `Primary`), при коллизии с удалённой привязанной папкой или файлом создаётся `Имя (2)`.
+      3. **Точная миграция при восстановлении и перемещении (`WinFspServer.Rename`, `WebDavMiddleware.HandleMoveAsync`)**: для одиночных файлов используется фактический `node.TgChannelId`, а для непривязанных папок — `GetFilesForChannelMigration` (с защитой вложенных привязанных папок и группировкой по реальному каналу каждого файла).
+      4. **Скользящий 2-сек дебаунс и очистка `pending_deletions` (`TelegramService.cs`, `NodeRepository.cs`)**: добавлен скользящий дебаунс `2 сек` (макс. `10 сек`) в `ProcessDeletionQueueAsync`, пропуск каналов из `_channelsPendingDeletion` и очистка `RemovePendingDeletionsForChannel` после `DeleteChannelAsync` (пауза `350 мс` сохранена).
+    - **Валидация**: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
+
+
 

@@ -693,9 +693,35 @@ namespace TGramFS.Services
 
         private System.Threading.CancellationTokenSource? _deletionQueueCts;
         private readonly SemaphoreSlim _deletionSignal = new SemaphoreSlim(0, int.MaxValue);
+        private long _lastDeletionSignalTicks = 0;
+        private readonly System.Collections.Concurrent.ConcurrentDictionary<long, int> _channelsPendingDeletion = new();
 
         private System.Threading.CancellationTokenSource? _migrationQueueCts;
         private readonly SemaphoreSlim _migrationSignal = new SemaphoreSlim(0, int.MaxValue);
+
+        /// <summary>
+        /// Помечает канал как ожидающий полного уничтожения, чтобы воркер очереди удаления не удалял его сообщения поштучно.
+        /// </summary>
+        public void MarkChannelPendingDeletion(long channelId)
+        {
+            if (channelId == 0) return;
+            _channelsPendingDeletion.AddOrUpdate(channelId, 1, (_, count) => count + 1);
+        }
+
+        private bool IsChannelPendingDeletion(long channelId)
+        {
+            return channelId != 0 && _channelsPendingDeletion.ContainsKey(channelId);
+        }
+
+        private void ClearChannelPendingDeletion(long channelId)
+        {
+            if (channelId == 0) return;
+            _channelsPendingDeletion.AddOrUpdate(channelId, 0, (_, count) => Math.Max(0, count - 1));
+            if (_channelsPendingDeletion.TryGetValue(channelId, out int remaining) && remaining <= 0)
+            {
+                _channelsPendingDeletion.TryRemove(new KeyValuePair<long, int>(channelId, 0));
+            }
+        }
 
         /// <summary>
         /// Сигнализирует фоновому воркеру об отправке новых сообщений в очередь перманентного удаления
@@ -704,6 +730,7 @@ namespace TGramFS.Services
         {
             try
             {
+                Volatile.Write(ref _lastDeletionSignalTicks, DateTime.UtcNow.Ticks);
                 if (_deletionSignal.CurrentCount == 0)
                 {
                     _deletionSignal.Release();
@@ -757,6 +784,31 @@ namespace TGramFS.Services
                     break;
                 }
 
+                // Скользящий дебаунс 2 сек (потолок 10 сек): даём Проводнику завершить пакетное удаление файлов
+                // до старта поштучных RPC-удалений, чтобы при сносе всей папки в .Trash сразу удалить канал целиком
+                DateTime debounceStartUtc = DateTime.UtcNow;
+                while (!token.IsCancellationRequested)
+                {
+                    long lastTicks = Volatile.Read(ref _lastDeletionSignalTicks);
+                    DateTime lastSignalUtc = lastTicks > 0 ? new DateTime(lastTicks, DateTimeKind.Utc) : debounceStartUtc;
+                    double msSinceLastSignal = (DateTime.UtcNow - lastSignalUtc).TotalMilliseconds;
+                    double totalWaitedMs = (DateTime.UtcNow - debounceStartUtc).TotalMilliseconds;
+                    if (msSinceLastSignal >= 2000 || totalWaitedMs >= 10000)
+                    {
+                        break;
+                    }
+
+                    int sleepMs = (int)Math.Clamp(2000 - msSinceLastSignal, 100, 500);
+                    try
+                    {
+                        await Task.Delay(sleepMs, token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        break;
+                    }
+                }
+
                 // 2. Обрабатываем очередь до тех пор, пока она не опустеет
                 while (!token.IsCancellationRequested)
                 {
@@ -787,10 +839,19 @@ namespace TGramFS.Services
                     AppLogger.Info("TelegramService", $"[DeletionQueue] Фоновое перманентное удаление {batch.Count} сообщений из Telegram...");
 
                     var channelGroups = batch.GroupBy(x => x.ChannelId).ToDictionary(g => g.Key, g => g.Select(x => x.MessageId).ToList());
-                    bool allSuccess = true;
+                    var completedMsgIds = new List<int>();
+                    bool hasRetryableFailure = false;
+                    bool hasPendingChannelSkip = false;
 
                     foreach (var kvp in channelGroups)
                     {
+                        if (kvp.Key != 0L && IsChannelPendingDeletion(kvp.Key))
+                        {
+                            hasPendingChannelSkip = true;
+                            AppLogger.Debug("TelegramService", $"[DeletionQueue] Канал ID {kvp.Key} уже ожидает полного уничтожения. Пропуск поштучного удаления {kvp.Value.Count} сообщений.");
+                            continue;
+                        }
+
                         try
                         {
                             var peer = await GetStoragePeerAsync(kvp.Key != 0L ? kvp.Key : (long?)null);
@@ -803,36 +864,44 @@ namespace TGramFS.Services
                                 var subBatch = kvp.Value.GetRange(i, count).ToArray();
                                 await DeleteBatchWithBisectAsync(peer, isChannel, subBatch);
                             }
+
+                            completedMsgIds.AddRange(kvp.Value);
                         }
                         catch (Exception ex) when (kvp.Key != 0L && (ex.Message.Contains("не найден") || ex.Message.Contains("CHANNEL_INVALID") || ex.Message.Contains("CHANNEL_PRIVATE")))
                         {
                             AppLogger.Info("TelegramService", $"[DeletionQueue] Канал Telegram ID {kvp.Key} уже удален или недоступен. {kvp.Value.Count} сообщений считаются очищенными.");
+                            completedMsgIds.AddRange(kvp.Value);
                         }
                         catch (Exception ex)
                         {
                             AppLogger.Error("TelegramService", $"[DeletionQueue] Ошибка удаления из канала ID {kvp.Key}: {ex.Message}", ex);
-                            allSuccess = false;
+                            hasRetryableFailure = true;
                         }
                     }
 
-                    if (allSuccess)
+                    if (completedMsgIds.Count > 0)
                     {
                         try
                         {
-                            var allMsgIds = batch.Select(x => x.MessageId).ToList();
-                            _repository.RemovePendingDeletions(allMsgIds);
-                            AppLogger.Info("TelegramService", $"[DeletionQueue] Пакет из {batch.Count} сообщений успешно очищен из очереди.");
+                            _repository.RemovePendingDeletions(completedMsgIds);
+                            AppLogger.Info("TelegramService", $"[DeletionQueue] Очищено {completedMsgIds.Count} сообщений из очереди.");
                         }
                         catch (Exception ex)
                         {
                             AppLogger.Debug("TelegramService", $"[DeletionQueue] Ошибка удаления из базы: {ex.Message}");
                         }
                     }
-                    else
+
+                    if (hasRetryableFailure)
                     {
                         // При неудаче в сети/биссекции повторяем попытку через 5 секунд только пока в очереди есть записи
                         AppLogger.Warn("TelegramService", $"[DeletionQueue] Не удалось завершить пакетное удаление сообщений из Telegram. Повтор через 5 секунд...");
                         await Task.Delay(5000, token);
+                    }
+                    else if (hasPendingChannelSkip && completedMsgIds.Count == 0)
+                    {
+                        // Все записи в текущей пачке относятся к каналам, ждущим очереди _channelDeleteSemaphore
+                        await Task.Delay(500, token);
                     }
                 }
             }
@@ -1377,7 +1446,11 @@ namespace TGramFS.Services
         /// </summary>
         public async Task DeleteChannelAsync(long channelId)
         {
-            if (_client == null || !IsAuthorized || channelId == 0) return;
+            if (_client == null || !IsAuthorized || channelId == 0)
+            {
+                ClearChannelPendingDeletion(channelId);
+                return;
+            }
 
             await _channelDeleteSemaphore.WaitAsync();
             try
@@ -1394,9 +1467,18 @@ namespace TGramFS.Services
                     };
                     await _client.Invoke(req);
                     _repository?.DeleteTelegramChannel(channelId);
-                    AppLogger.Info("TelegramService", $"Канал Telegram ID {channelId} полностью удален.");
+                    int purged = _repository?.RemovePendingDeletionsForChannel(channelId) ?? 0;
+                    AppLogger.Info("TelegramService", purged > 0
+                        ? $"Канал Telegram ID {channelId} полностью удален (очищено {purged} ожидающих сообщений из очереди)."
+                        : $"Канал Telegram ID {channelId} полностью удален.");
                     await Task.Delay(350);
                 }
+            }
+            catch (Exception ex) when (ex.Message.Contains("CHANNEL_INVALID") || ex.Message.Contains("CHANNEL_PRIVATE") || ex.Message.Contains("не найден"))
+            {
+                _repository?.DeleteTelegramChannel(channelId);
+                int purged = _repository?.RemovePendingDeletionsForChannel(channelId) ?? 0;
+                AppLogger.Info("TelegramService", $"Канал Telegram ID {channelId} уже недоступен/удален (очищено {purged} записей очереди).");
             }
             catch (Exception ex)
             {
@@ -1404,6 +1486,7 @@ namespace TGramFS.Services
             }
             finally
             {
+                ClearChannelPendingDeletion(channelId);
                 _channelDeleteSemaphore.Release();
             }
         }

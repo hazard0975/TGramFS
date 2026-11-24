@@ -1910,6 +1910,8 @@ namespace TGramFS.Services
                     return STATUS_SUCCESS;
                 }
 
+                bool wasInTrash = node.InTrash || _repository.IsNodeInTrash(node.Id);
+                bool targetInTrash = targetParent.InTrash || _repository.IsNodeInTrash(targetParent.Id);
                 long? sourceChannelId = _repository.GetEffectiveChannelId(node.ParentId);
                 long? targetChannelId = _repository.GetEffectiveChannelId(targetParent.Id);
 
@@ -1938,28 +1940,51 @@ namespace TGramFS.Services
                             });
                         }
                     }
-                    else if (sourceChannelId != targetChannelId && targetChannelId.HasValue)
+                    else if (!targetInTrash && (wasInTrash || sourceChannelId != targetChannelId) && targetChannelId.HasValue)
                     {
-                        var subtreeFiles = _repository.GetSubtreeNodes(node.Id)
-                            .Where(n => !n.IsDir && n.TgMessageId.HasValue && n.TgMessageId.Value > 0)
+                        var migrationFiles = _repository.GetFilesForChannelMigration(node.Id)
+                            .Where(n => n.TgMessageId.HasValue && n.TgMessageId.Value > 0)
                             .OrderBy(n => n.TgMessageId!.Value)
-                            .Select(n => n.Id)
                             .ToList();
-                        if (subtreeFiles.Count > 0)
+
+                        var groupsBySource = migrationFiles
+                            .Select(n => new
+                            {
+                                NodeId = n.Id,
+                                SourceChannelId = (n.TgChannelId.HasValue && n.TgChannelId.Value != 0)
+                                    ? n.TgChannelId.Value
+                                    : (sourceChannelId ?? 0)
+                            })
+                            .Where(x => x.SourceChannelId != 0 && x.SourceChannelId != targetChannelId.Value)
+                            .GroupBy(x => x.SourceChannelId)
+                            .ToList();
+
+                        int totalQueued = 0;
+                        foreach (var group in groupsBySource)
                         {
-                            _repository.EnqueueChannelMigrations(subtreeFiles, sourceChannelId ?? 0, targetChannelId.Value);
+                            var ids = group.Select(x => x.NodeId).ToList();
+                            _repository.EnqueueChannelMigrations(ids, group.Key, targetChannelId.Value);
+                            totalQueued += ids.Count;
+                        }
+
+                        if (totalQueued > 0)
+                        {
                             _telegramService.TriggerChannelMigrationProcessing();
-                            AppLogger.Info("WinFsp", $"[MOVE] Перемещение папки '{newName}': {subtreeFiles.Count} файлов поставлено в очередь миграции каналов ({sourceChannelId} -> {targetChannelId.Value}).");
+                            AppLogger.Info("WinFsp", $"[MOVE] Перемещение папки '{newName}': {totalQueued} файлов поставлено в очередь миграции каналов (-> {targetChannelId.Value}).");
                         }
                     }
                 }
-                else if (sourceChannelId != targetChannelId && targetChannelId.HasValue)
+                else if (!targetInTrash && targetChannelId.HasValue)
                 {
-                    if (node.TgMessageId.HasValue && node.TgMessageId.Value > 0)
+                    long actualSourceChannelId = (node.TgChannelId.HasValue && node.TgChannelId.Value != 0)
+                        ? node.TgChannelId.Value
+                        : (sourceChannelId ?? 0);
+
+                    if (actualSourceChannelId != 0 && actualSourceChannelId != targetChannelId.Value && node.TgMessageId.HasValue && node.TgMessageId.Value > 0)
                     {
-                        _repository.EnqueueChannelMigrations(new[] { node.Id }, sourceChannelId ?? 0, targetChannelId.Value);
+                        _repository.EnqueueChannelMigrations(new[] { node.Id }, actualSourceChannelId, targetChannelId.Value);
                         _telegramService.TriggerChannelMigrationProcessing();
-                        AppLogger.Info("WinFsp", $"[MOVE] Перемещение файла '{node.Name}': поставлен в очередь миграции каналов ({sourceChannelId} -> {targetChannelId.Value}).");
+                        AppLogger.Info("WinFsp", $"[MOVE] Перемещение файла '{node.Name}': поставлен в очередь миграции каналов ({actualSourceChannelId} -> {targetChannelId.Value}).");
                     }
                 }
 
@@ -2046,21 +2071,22 @@ namespace TGramFS.Services
                         var channelsToDestroy = new HashSet<long>();
 
                         // Канал подлежит полному уничтожению через Channels_DeleteChannel, если:
-                        // 1. В удаляемом поддереве есть папка, привязанная к этому каналу (одиночный файл имеет IsDir == false).
-                        // 2. В базе данных больше не осталось других узлов с явным tg_channel_id = chId (удаляется всё поддерево канала целиком).
-                        var boundFoldersToDelete = sortedSubtree
-                            .Where(n => n.IsDir && n.TgChannelId.HasValue && n.TgChannelId.Value != 0 && n.TgChannelId.Value != primaryChannelId)
+                        // 1. Это кастомный канал (не 0 и не primaryChannelId), встречающийся среди удаляемых узлов поддерева (папок или файлов).
+                        // 2. В базе данных больше не осталось других узлов с явным tg_channel_id = chId (удаляется последний фрагмент канала).
+                        var candidateChannelsToDestroy = sortedSubtree
+                            .Where(n => n.TgChannelId.HasValue && n.TgChannelId.Value != 0 && n.TgChannelId.Value != primaryChannelId)
                             .Select(n => n.TgChannelId!.Value)
                             .Distinct()
                             .ToList();
 
-                        foreach (var chId in boundFoldersToDelete)
+                        foreach (var chId in candidateChannelsToDestroy)
                         {
                             int nodesInSubtreeForChannel = sortedSubtree.Count(n => n.TgChannelId == chId);
                             int totalNodesInDbForChannel = _repository.GetNodeCountForChannel(chId);
                             if (totalNodesInDbForChannel > 0 && totalNodesInDbForChannel <= nodesInSubtreeForChannel)
                             {
                                 channelsToDestroy.Add(chId);
+                                _telegramService.MarkChannelPendingDeletion(chId);
                             }
                         }
 

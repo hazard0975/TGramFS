@@ -313,21 +313,43 @@ namespace TGramFS.Database
             var trash = EnsureTrashFolder();
             int currentTrashParentId = trash.Id;
 
+            long primaryChannelId = GetPrimaryTelegramChannel()?.ChannelId ?? 0;
+
             using (var connection = _dbManager.GetConnection())
             {
                 foreach (var folderName in chain)
                 {
                     int? foundId = null;
-                    using (var searchCmd = connection.CreateCommand())
+                    string candidateName = folderName;
+                    int duplicateIndex = 1;
+
+                    while (true)
                     {
-                        searchCmd.CommandText = "SELECT id FROM nodes WHERE parent_id = @parentId AND name = @name AND is_dir = 1 AND in_trash = 1 LIMIT 1;";
-                        searchCmd.Parameters.AddWithValue("@parentId", currentTrashParentId);
-                        searchCmd.Parameters.AddWithValue("@name", folderName);
-                        var scalar = searchCmd.ExecuteScalar();
-                        if (scalar != null && scalar != DBNull.Value)
+                        using (var searchCmd = connection.CreateCommand())
                         {
-                            foundId = Convert.ToInt32(scalar);
+                            searchCmd.CommandText = "SELECT id, is_dir, tg_channel_id FROM nodes WHERE parent_id = @parentId AND name = @name AND in_trash = 1 LIMIT 1;";
+                            searchCmd.Parameters.AddWithValue("@parentId", currentTrashParentId);
+                            searchCmd.Parameters.AddWithValue("@name", candidateName);
+                            using (var reader = searchCmd.ExecuteReader())
+                            {
+                                if (!reader.Read())
+                                {
+                                    break;
+                                }
+
+                                bool isDir = reader.GetInt32(1) == 1;
+                                long tgCh = !reader.IsDBNull(2) ? reader.GetInt64(2) : 0;
+                                bool isUnboundMirror = isDir && (tgCh == 0 || (primaryChannelId != 0 && tgCh == primaryChannelId));
+                                if (isUnboundMirror)
+                                {
+                                    foundId = reader.GetInt32(0);
+                                    break;
+                                }
+                            }
                         }
+
+                        duplicateIndex++;
+                        candidateName = $"{folderName} ({duplicateIndex})";
                     }
 
                     if (foundId.HasValue)
@@ -340,7 +362,7 @@ namespace TGramFS.Database
                         {
                             insertCmd.CommandText = "INSERT INTO nodes (parent_id, name, is_dir, in_trash) VALUES (@parentId, @name, 1, 1); SELECT last_insert_rowid();";
                             insertCmd.Parameters.AddWithValue("@parentId", currentTrashParentId);
-                            insertCmd.Parameters.AddWithValue("@name", folderName);
+                            insertCmd.Parameters.AddWithValue("@name", candidateName);
                             currentTrashParentId = Convert.ToInt32(insertCmd.ExecuteScalar());
                         }
                     }
@@ -1129,6 +1151,21 @@ namespace TGramFS.Database
                     transaction.Rollback();
                     throw;
                 }
+            }
+        }
+
+        /// <summary>
+        /// Удаляет все ожидающие записи из очереди pending_deletions для уничтоженного канала
+        /// </summary>
+        public int RemovePendingDeletionsForChannel(long channelId)
+        {
+            if (channelId == 0) return 0;
+            using (var connection = _dbManager.GetConnection())
+            using (var command = connection.CreateCommand())
+            {
+                command.CommandText = "DELETE FROM pending_deletions WHERE channel_id = @channelId;";
+                command.Parameters.AddWithValue("@channelId", channelId);
+                return command.ExecuteNonQuery();
             }
         }
 
