@@ -1497,4 +1497,12 @@
       3. Атрибуты виртуального `desktop.ini` приведены к `Hidden | System` (`0x06`); в `NotifyBoundFolderUpdated` добавлен `NotifyFilter.ChangeLastWrite` и `Info`/`Warn`-логирование.
       4. В `Program.NotifyExplorerFolderIconChanged` реализована отправка `SHChangeNotify` через `ILCreateFromPathW` + `SHCNF_IDLIST | SHCNF_FLUSH` (с фоллбэком на `SHCNF_PATHW`).
     - **Валидация**: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
+- [x] **8.137. Уникальное переименование папок в `.Trash`, удаление вложенных каналов, очередь `DeleteChannelAsync` и VFS-обновление иконки (`NodeRepository.cs`, `WinFspServer.cs`, `WebDavMiddleware.cs`, `TelegramService.cs`, `Program.cs`)**:
+    - **Проблема**: При удалении папки с именем, уже присутствующим в `.Trash`, `SoftDeleteNode` объединял их и удалял новую строку из `nodes`, теряя `tg_channel_id` (каналы оставались пустыми в Telegram); вложенные привязанные папки пропускались из-за `n.Id == node.Id`; массовое удаление каналов вызывало `FLOOD_WAIT`; иконка при `--bind-channel` обновлялась с задержкой.
+    - **Реализовано**:
+      1. В `NodeRepository.SoftDeleteNode` слияние папок в `.Trash` заменено на уникальное переименование (`Имя (2)`, `Имя (3)`) с полным сохранением `tg_channel_id` и содержимого.
+      2. В `WinFspServer.Cleanup` и `WebDavMiddleware.HandleDeleteAsync` удалён фильтр `n.Id == node.Id` (в `WinFspServer` подсчёт приведён к явному `n.TgChannelId == chId`) для удаления каналов вложенных привязанных папок.
+      3. В `TelegramService.DeleteChannelAsync` добавлена последовательная синхронизация через `_channelDeleteSemaphore` с паузой `350 мс` для защиты от `FLOOD_WAIT`.
+      4. В `Program.cs` добавлено обновление `FileAttributes.ReadOnly` через WinFsp VFS (`ApplyBoundFolderAttributesThroughVfs`), удалён дубль вызова в `HandleBindChannelAsync` и `SHCNE_UPDATEDIR` на родителя; диагностические логи виртуального `desktop.ini` / `SetBasicInfo` переведены в `Debug`.
+    - **Валидация**: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
 

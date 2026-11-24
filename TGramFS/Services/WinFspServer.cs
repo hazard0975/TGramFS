@@ -312,7 +312,7 @@ namespace TGramFS.Services
                             }
                         };
                         int notifyStatus = host.Notify(events);
-                        AppLogger.Info("WinFsp", $"[NotifyBoundFolderUpdated] Отправлено уведомление WinFsp для '{cleanWinPath}' и '{desktopIniWinPath}': status=0x{notifyStatus:X8}");
+                        AppLogger.Debug("WinFsp", $"[NotifyBoundFolderUpdated] Отправлено уведомление WinFsp для '{cleanWinPath}' и '{desktopIniWinPath}': status=0x{notifyStatus:X8}");
                     }
                     finally
                     {
@@ -1755,7 +1755,7 @@ namespace TGramFS.Services
                     IsBoundChannelFolderUnfiltered(node))
                 {
                     SuppressVirtualDesktopIni(node.Id, TimeSpan.FromSeconds(3));
-                    AppLogger.Info("WinFsp", $"[SetBasicInfo] Снят атрибут ReadOnly с привязанной папки '{node.Name}' (ID {node.Id}); виртуальный desktop.ini временно скрыт на 3 сек.");
+                    AppLogger.Debug("WinFsp", $"[SetBasicInfo] Снят атрибут ReadOnly с привязанной папки '{node.Name}' (ID {node.Id}); виртуальный desktop.ini временно скрыт на 3 сек.");
                 }
                 node.FileAttributes = (int)sanitizedAttrs;
                 if (node.Id > 0 && ctx?.IsOverwritePending != true)
@@ -1807,7 +1807,7 @@ namespace TGramFS.Services
             if (fileDesc is FspNodeContext vSetDelCtx && vSetDelCtx.IsVirtualSystemFile)
             {
                 vSetDelCtx.DeleteOnClose = deleteFile;
-                AppLogger.Info("WinFsp", $"[SetDelete] Виртуальный desktop.ini: deleteFile={deleteFile} для '{fileName}' (ParentId={node.ParentId}).");
+                AppLogger.Debug("WinFsp", $"[SetDelete] Виртуальный desktop.ini: deleteFile={deleteFile} для '{fileName}' (ParentId={node.ParentId}).");
                 return STATUS_SUCCESS;
             }
             AppLogger.Debug("WinFsp", $"[SetDelete] Проводник установил deleteFile={deleteFile} для '{fileName}' (ID {node.Id}, Name '{node.Name}').");
@@ -1982,7 +1982,7 @@ namespace TGramFS.Services
                 if (((flags & CleanupDelete) != 0 || ctx.DeleteOnClose) && node.ParentId.HasValue)
                 {
                     SuppressVirtualDesktopIni(node.ParentId.Value, TimeSpan.FromSeconds(3));
-                    AppLogger.Info("WinFsp", $"[CleanupDelete] Виртуальный desktop.ini удалён из памяти для папки ParentId={node.ParentId.Value} (подавление 3 сек).");
+                    AppLogger.Debug("WinFsp", $"[CleanupDelete] Виртуальный desktop.ini удалён из памяти для папки ParentId={node.ParentId.Value} (подавление 3 сек).");
                 }
                 ctx.Dispose();
                 return;
@@ -2045,18 +2045,18 @@ namespace TGramFS.Services
                         long primaryChannelId = _repository.GetPrimaryTelegramChannel()?.ChannelId ?? 0;
                         var channelsToDestroy = new HashSet<long>();
 
-                        // Канал подлежит полному уничтожению через Channels_DeleteChannel ТОЛЬКО если:
-                        // 1. Удаляемый узел является самой корневой привязанной папкой (node.Id == n.Id для папки с этим каналом).
-                        // 2. В базе данных больше не осталось других узлов, принадлежащих этому каналу (удаляется всё поддерево целиком).
+                        // Канал подлежит полному уничтожению через Channels_DeleteChannel, если:
+                        // 1. В удаляемом поддереве есть папка, привязанная к этому каналу (одиночный файл имеет IsDir == false).
+                        // 2. В базе данных больше не осталось других узлов с явным tg_channel_id = chId (удаляется всё поддерево канала целиком).
                         var boundFoldersToDelete = sortedSubtree
-                            .Where(n => n.IsDir && n.TgChannelId.HasValue && n.TgChannelId.Value != 0 && n.TgChannelId.Value != primaryChannelId && n.Id == node.Id)
+                            .Where(n => n.IsDir && n.TgChannelId.HasValue && n.TgChannelId.Value != 0 && n.TgChannelId.Value != primaryChannelId)
                             .Select(n => n.TgChannelId!.Value)
                             .Distinct()
                             .ToList();
 
                         foreach (var chId in boundFoldersToDelete)
                         {
-                            int nodesInSubtreeForChannel = sortedSubtree.Count(n => (n.TgChannelId ?? _repository.GetEffectiveChannelId(n.ParentId)) == chId);
+                            int nodesInSubtreeForChannel = sortedSubtree.Count(n => n.TgChannelId == chId);
                             int totalNodesInDbForChannel = _repository.GetNodeCountForChannel(chId);
                             if (totalNodesInDbForChannel > 0 && totalNodesInDbForChannel <= nodesInSubtreeForChannel)
                             {

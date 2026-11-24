@@ -532,57 +532,37 @@ namespace TGramFS.Database
                 {
                     if (node.IsDir)
                     {
-                        // Проверяем, существует ли уже такая папка в целевой директории корзины
-                        int? existingTrashFolderId = null;
-                        using (var checkCmd = connection.CreateCommand())
+                        string finalName = node.Name;
+                        int duplicateIndex = 1;
+
+                        while (true)
                         {
-                            checkCmd.Transaction = transaction;
-                            checkCmd.CommandText = "SELECT id FROM nodes WHERE parent_id = @parentId AND name = @name AND is_dir = 1 AND in_trash = 1 LIMIT 1;";
-                            checkCmd.Parameters.AddWithValue("@parentId", targetTrashParentId);
-                            checkCmd.Parameters.AddWithValue("@name", node.Name);
-                            var scalar = checkCmd.ExecuteScalar();
-                            if (scalar != null && scalar != DBNull.Value)
+                            using (var checkCmd = connection.CreateCommand())
                             {
-                                existingTrashFolderId = Convert.ToInt32(scalar);
+                                checkCmd.Transaction = transaction;
+                                checkCmd.CommandText = "SELECT COUNT(*) FROM nodes WHERE parent_id = @parentId AND name = @name AND in_trash = 1 AND id != @nodeId;";
+                                checkCmd.Parameters.AddWithValue("@parentId", targetTrashParentId);
+                                checkCmd.Parameters.AddWithValue("@name", finalName);
+                                checkCmd.Parameters.AddWithValue("@nodeId", nodeId);
+                                long count = Convert.ToInt64(checkCmd.ExecuteScalar() ?? 0);
+                                if (count == 0) break;
+
+                                duplicateIndex++;
+                                finalName = $"{node.Name} ({duplicateIndex})";
                             }
                         }
 
-                        if (existingTrashFolderId.HasValue)
+                        using (var command = connection.CreateCommand())
                         {
-
-                            // Если папка уже создана в корзине, переносим дочерние узлы в неё
-                            using (var moveChildrenCmd = connection.CreateCommand())
-                            {
-                                moveChildrenCmd.Transaction = transaction;
-                                moveChildrenCmd.CommandText = "UPDATE nodes SET parent_id = @existingId, in_trash = 1, updated_at = CURRENT_TIMESTAMP WHERE parent_id = @nodeId;";
-                                moveChildrenCmd.Parameters.AddWithValue("@existingId", existingTrashFolderId.Value);
-                                moveChildrenCmd.Parameters.AddWithValue("@nodeId", nodeId);
-                                moveChildrenCmd.ExecuteNonQuery();
-                            }
-
-                            UpdateChildrenTrashStateRecursive(connection, transaction, existingTrashFolderId.Value, 1);
-
-                            using (var deleteFolderCmd = connection.CreateCommand())
-                            {
-                                deleteFolderCmd.Transaction = transaction;
-                                deleteFolderCmd.CommandText = "DELETE FROM nodes WHERE id = @nodeId;";
-                                deleteFolderCmd.Parameters.AddWithValue("@nodeId", nodeId);
-                                deleteFolderCmd.ExecuteNonQuery();
-                            }
+                            command.Transaction = transaction;
+                            command.CommandText = "UPDATE nodes SET in_trash = 1, parent_id = @trashParentId, name = @name, updated_at = CURRENT_TIMESTAMP WHERE id = @nodeId;";
+                            command.Parameters.AddWithValue("@trashParentId", targetTrashParentId);
+                            command.Parameters.AddWithValue("@name", finalName);
+                            command.Parameters.AddWithValue("@nodeId", nodeId);
+                            command.ExecuteNonQuery();
                         }
-                        else
-                        {
-                            using (var command = connection.CreateCommand())
-                            {
-                                command.Transaction = transaction;
-                                command.CommandText = "UPDATE nodes SET in_trash = 1, parent_id = @trashParentId, updated_at = CURRENT_TIMESTAMP WHERE id = @nodeId;";
-                                command.Parameters.AddWithValue("@trashParentId", targetTrashParentId);
-                                command.Parameters.AddWithValue("@nodeId", nodeId);
-                                command.ExecuteNonQuery();
-                            }
 
-                            UpdateChildrenTrashStateRecursive(connection, transaction, nodeId, 1);
-                        }
+                        UpdateChildrenTrashStateRecursive(connection, transaction, nodeId, 1);
                     }
                     else
                     {

@@ -276,7 +276,6 @@ namespace TGramFS
 
                 if (response.Success)
                 {
-                    NotifyExplorerFolderIconChanged(rawPath, null);
                     MessageBox.Show(
                         response.Message,
                         "Успешная привязка",
@@ -352,6 +351,7 @@ namespace TGramFS
                     {
                         exactRelPath = relPath;
                     }
+                    ApplyBoundFolderAttributesThroughVfs(rawPath, exactRelPath);
                     winFspServer?.NotifyBoundFolderUpdated(exactRelPath);
                     NotifyExplorerFolderIconChanged(rawPath, exactRelPath);
 
@@ -425,6 +425,44 @@ namespace TGramFS
             return false;
         }
 
+        private static string? ResolveBoundFolderWindowsPath(string rawPath, string? relPath)
+        {
+            string trimmed = (rawPath ?? "").Trim();
+            if (trimmed.Contains(':'))
+            {
+                return trimmed.Replace('/', '\\').TrimEnd('\\');
+            }
+
+            if (!string.IsNullOrWhiteSpace(WinFspServer.ActiveMountPoint) && !string.IsNullOrWhiteSpace(relPath))
+            {
+                string drive = WinFspServer.ActiveMountPoint.TrimEnd('\\', '/');
+                string sub = relPath.Replace('/', '\\').TrimStart('\\');
+                return string.IsNullOrEmpty(sub) ? drive : $"{drive}\\{sub}";
+            }
+
+            return null;
+        }
+
+        private static void ApplyBoundFolderAttributesThroughVfs(string rawPath, string? relPath)
+        {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                return;
+
+            try
+            {
+                string? windowsPath = ResolveBoundFolderWindowsPath(rawPath, relPath);
+                if (string.IsNullOrWhiteSpace(windowsPath) || !Directory.Exists(windowsPath))
+                    return;
+
+                var currentAttrs = File.GetAttributes(windowsPath);
+                File.SetAttributes(windowsPath, currentAttrs | FileAttributes.ReadOnly);
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Debug("Shell", $"[ApplyBoundFolderAttributesThroughVfs] Не удалось обновить атрибуты папки через ФС: {ex.Message}");
+            }
+        }
+
         private static void NotifyExplorerFolderIconChanged(string rawPath, string? relPath)
         {
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -432,19 +470,7 @@ namespace TGramFS
 
             try
             {
-                string? windowsPath = null;
-                string trimmed = (rawPath ?? "").Trim();
-                if (trimmed.Contains(':'))
-                {
-                    windowsPath = trimmed.Replace('/', '\\').TrimEnd('\\');
-                }
-                else if (!string.IsNullOrWhiteSpace(WinFspServer.ActiveMountPoint) && !string.IsNullOrWhiteSpace(relPath))
-                {
-                    string drive = WinFspServer.ActiveMountPoint.TrimEnd('\\', '/');
-                    string sub = relPath.Replace('/', '\\').TrimStart('\\');
-                    windowsPath = string.IsNullOrEmpty(sub) ? drive : $"{drive}\\{sub}";
-                }
-
+                string? windowsPath = ResolveBoundFolderWindowsPath(rawPath, relPath);
                 if (string.IsNullOrWhiteSpace(windowsPath))
                     return;
 
@@ -459,13 +485,7 @@ namespace TGramFS
                 NotifyShellByPidlOrPath(SHCNE_UPDATEITEM, windowsPath);
                 NotifyShellByPidlOrPath(SHCNE_UPDATEDIR, windowsPath);
 
-                string? parentDir = Path.GetDirectoryName(windowsPath);
-                if (!string.IsNullOrWhiteSpace(parentDir))
-                {
-                    NotifyShellByPidlOrPath(SHCNE_UPDATEDIR, parentDir);
-                }
-
-                AppLogger.Info("Shell", $"[NotifyExplorerFolderIconChanged] Отправлено SHChangeNotify для '{windowsPath}' (iniPidl={iniUsedPidl}, folderPidl={attrUsedPidl}).");
+                AppLogger.Debug("Shell", $"[NotifyExplorerFolderIconChanged] Отправлено SHChangeNotify для '{windowsPath}' (iniPidl={iniUsedPidl}, folderPidl={attrUsedPidl}).");
             }
             catch (Exception ex)
             {

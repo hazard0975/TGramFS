@@ -126,6 +126,7 @@ namespace TGramFS.Services
         // Очередь последовательной загрузки файлов в Telegram (Upload Queue)
         // Предотвращает конкуренцию за полосу пропускания, мерцание оверлея и FLOOD_WAIT
         private readonly SemaphoreSlim _uploadSemaphore = new SemaphoreSlim(1, 1);
+        private readonly SemaphoreSlim _channelDeleteSemaphore = new SemaphoreSlim(1, 1);
         private int _pendingUploadsCount = 0;
         private int _activeUploadPipelineCount = 0;
 
@@ -1376,11 +1377,14 @@ namespace TGramFS.Services
         /// </summary>
         public async Task DeleteChannelAsync(long channelId)
         {
-            await EnsureFloodWaitDelayAsync();
             if (_client == null || !IsAuthorized || channelId == 0) return;
 
+            await _channelDeleteSemaphore.WaitAsync();
             try
             {
+                await EnsureFloodWaitDelayAsync();
+                if (_client == null || !IsAuthorized) return;
+
                 var peer = await GetStoragePeerAsync(channelId);
                 if (peer is TL.InputPeerChannel pc)
                 {
@@ -1391,11 +1395,16 @@ namespace TGramFS.Services
                     await _client.Invoke(req);
                     _repository?.DeleteTelegramChannel(channelId);
                     AppLogger.Info("TelegramService", $"Канал Telegram ID {channelId} полностью удален.");
+                    await Task.Delay(350);
                 }
             }
             catch (Exception ex)
             {
                 AppLogger.Warn("TelegramService", $"Не удалось удалить канал ID {channelId} из Telegram: {ex.Message}");
+            }
+            finally
+            {
+                _channelDeleteSemaphore.Release();
             }
         }
 
@@ -5212,6 +5221,7 @@ namespace TGramFS.Services
             catch { }
             _floodLock?.Dispose();
             _uploadSemaphore?.Dispose();
+            _channelDeleteSemaphore?.Dispose();
         }
     }
 }

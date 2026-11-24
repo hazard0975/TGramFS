@@ -540,7 +540,7 @@ namespace TGramFS.Server
                 var channelsToDestroy = new HashSet<long>();
 
                 var boundFoldersToDelete = nodesToDelete
-                    .Where(n => n.IsDir && n.TgChannelId.HasValue && n.TgChannelId.Value != 0 && n.TgChannelId.Value != primaryChannelId && n.Id == node.Id)
+                    .Where(n => n.IsDir && n.TgChannelId.HasValue && n.TgChannelId.Value != 0 && n.TgChannelId.Value != primaryChannelId)
                     .Select(n => n.TgChannelId!.Value)
                     .Distinct()
                     .ToList();
@@ -549,7 +549,7 @@ namespace TGramFS.Server
                 {
                     int nodesInSubtreeForChannel = nodesToDelete.Count(n => n.TgChannelId == chId);
                     int totalNodesInDbForChannel = repository.GetNodeCountForChannel(chId);
-                    if (totalNodesInDbForChannel > 0 && totalNodesInDbForChannel == nodesInSubtreeForChannel)
+                    if (totalNodesInDbForChannel > 0 && totalNodesInDbForChannel <= nodesInSubtreeForChannel)
                     {
                         channelsToDestroy.Add(chId);
                     }
