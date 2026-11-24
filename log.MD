@@ -1,544 +1,1405 @@
-[2026-11-21 22:44:17.144] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 12
-[2026-11-21 22:44:17.850] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка (4)' (/Новая папка (4)) (ID 3435), элементов: 0
-[2026-11-21 22:44:19.768] [DEBUG] [WTelegram] 2>Receiving Updates                                  2026-11-21 20:44:18Z  
-[2026-11-21 22:44:25.439] [DEBUG] [WTelegram] 2>Receiving Updates                                  2026-11-21 20:44:24Z  
-[2026-11-21 22:44:37.452] [DEBUG] [WTelegram] 2>Receiving UpdateShort                              2026-11-21 20:44:36Z  
-[2026-11-21 22:44:38.074] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 12
-[2026-11-21 22:44:38.575] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'arnold_schwarzenegger_encyclopedia_book_3' (/Новая папка/1/arnold_schwarzenegger_encyclopedia_book_3) (ID 2510), элементов: 221
-[2026-11-21 22:44:39.078] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Singles' (/Новая папка/2 Brothers On The 4th Floor Full Discography/Singles) (ID 2077), элементов: 29
-[2026-11-21 22:44:39.589] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка '1999 - 2 Brothers On The 4th Floor - Heaven Is Here CDM' (/Новая папка/2 Brothers On The 4th Floor Full Discography/Singles/1999 - 2 Brothers On The 4th Floor - Heaven Is Here CDM) (ID 2213), элементов: 6
-[2026-11-21 22:44:40.092] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка '2 Fabiola (3 Singles)' (/Новая папка/2 Fabiola (3 Singles)) (ID 2281), элементов: 3
-[2026-11-21 22:44:48.332] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 12
-[2026-11-21 22:44:48.835] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'arnold_schwarzenegger_encyclopedia_book_3' (/качалка/Арнольд Шварценеггер - Энциклопедия бодибилдинга/arnold_schwarzenegger_encyclopedia_book_3) (ID 1251), элементов: 221
-[2026-11-21 22:44:51.136] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 12
-[2026-11-21 22:44:51.683] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка (8)' (/Новая папка (8)) (ID 3440), элементов: 1
-[2026-11-21 22:44:53.561] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 12
-[2026-11-21 22:44:54.999] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка (8)' (/Новая папка (8)) (ID 3440), элементов: 1
-[2026-11-21 22:44:57.329] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 12
-[2026-11-21 22:45:02.388] [DEBUG] [WTelegram] 2>Sending   MsgContainer                             2026-11-21 20:45:01Z (svc)
-[2026-11-21 22:45:02.388] [DEBUG] [WTelegram]             → PingDelayDisconnect                    #D4EF
-[2026-11-21 22:45:02.388] [DEBUG] [WTelegram]             → MsgsAck                               
-[2026-11-21 22:45:02.445] [DEBUG] [WTelegram] 2>Receiving Pong                                     2026-11-21 20:45:01Z (svc) 
-[2026-11-21 22:45:03.840] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка (8)' (/Новая папка (8)) (ID 3440), элементов: 1
-[2026-11-21 22:45:03.901] [INFO ] [WinFsp] [SetBasicInfo] Снят атрибут ReadOnly с привязанной папки 'Новая папка (8)' (ID 3440); виртуальный desktop.ini временно скрыт на 3 сек.
-[2026-11-21 22:45:04.186] [DEBUG] [WinFsp] Обновлены атрибуты для 'Новая папка (8)' (ID 3440): Directory (0x10)
-[2026-11-21 22:45:04.191] [DEBUG] [WinFsp] [SetDelete] Проводник установил deleteFile=True для '\Новая папка (8)' (ID 3440, Name 'Новая папка (8)').
-[2026-11-21 22:45:04.191] [DEBUG] [WinFsp] [CleanupDelete] Закрытие с флагом удаления для '\Новая папка (8)' (ID 3440, Name 'Новая папка (8)', flags=33, DeleteOnClose=True).
-[2026-11-21 22:45:04.192] [INFO ] [WinFsp] Перемещение элемента 'Новая папка (8)' (ID 3440) в корзину (.Trash)...
-[2026-11-21 22:45:04.380] [INFO ] [Database] Поставлено в фоновую очередь обновление подписей Telegram для 2 элементов.
-[2026-11-21 22:45:04.611] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 11
-[2026-11-21 22:45:04.876] [DEBUG] [WTelegram] 2>Sending   Messages_EditMessage                     #B835
-[2026-11-21 22:45:04.960] [DEBUG] [WTelegram] 2>Receiving RpcResult                                2026-11-21 20:45:04Z
-[2026-11-21 22:45:05.054] [DEBUG] [WTelegram]              → Updates                               #B835
-[2026-11-21 22:45:05.054] [INFO ] [TelegramService] Подпись сообщения #4 в Telegram успешно обновлена на: '🗑️ /.Trash/Новая папка (8)/002_v1.jpg
+
+[2026-11-25 00:44:47.362] [INFO ] [WinFsp] Создан новый каталог: '/Новая папка (2)' (ID 3460)
+[2026-11-25 00:44:53.186] [INFO ] [WinFsp] Переименование/перемещение: '/Новая папка (2)' -> '/testtt'
+[2026-11-25 00:45:05.071] [INFO ] [TelegramService] Создание нового приватного канала 'testtt'...
+[2026-11-25 00:45:05.436] [INFO ] [TelegramService] Создан новый кастомный канал 'testtt' (ID: 5716286593). Записан в SQLite.
+[2026-11-25 00:45:05.695] [INFO ] [TelegramService] Установлена стандартная иконка для канала 'testtt' (ID: 5716286593).
+[2026-11-25 00:45:05.911] [INFO ] [TelegramService] [Migration] В папке ID 3460 нет файлов для миграции.
+[2026-11-25 00:45:06.173] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'testtt' (/testtt) (ID 3460), элементов: 1
+[2026-11-25 00:45:16.013] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 00:45:17.974] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'testtt' (/testtt) (ID 3460), элементов: 0
+[2026-11-25 00:45:19.699] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 00:45:22.165] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'testtt' (/testtt) (ID 3460), элементов: 0
+[2026-11-25 00:45:30.983] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 00:45:36.900] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'testtt' (/testtt) (ID 3460), элементов: 0
+[2026-11-25 00:45:38.012] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 00:45:39.779] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'testtt' (/testtt) (ID 3460), элементов: 0
+[2026-11-25 00:45:43.593] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 00:46:05.907] [INFO ] [DatabaseBackup] Сработал Debounce-таймер резервного копирования (1 мин тишины).
+[2026-11-25 00:46:05.916] [INFO ] [TelegramService] Запрос к Telegram: поиск последней резервной копии базы данных...
+[2026-11-25 00:46:05.991] [INFO ] [TelegramService] Найден файл бэкапа базы в Telegram: Message #166, 'base_2026-11-24_23-51-09.db', 568,0 КБ, дата: 2026-11-24 23:51:10
+[2026-11-25 00:46:05.994] [INFO ] [DatabaseBackup] Запуск резервного копирования базы данных. Причина: 'Автоматический бэкап (1 мин тишины)'...
+[2026-11-25 00:46:05.996] [INFO ] [Database] Создание консистентного снимка базы данных в: D:\Temp\TGramFS\backups\base_2026-11-25_00-46-05.db...
+[2026-11-25 00:46:06.712] [INFO ] [Database] Снимок базы данных успешно создан: D:\Temp\TGramFS\backups\base_2026-11-25_00-46-05.db
+[2026-11-25 00:46:06.721] [INFO ] [TelegramService] Загрузка резервной копии 'base_2026-11-25_00-46-05.db' в Telegram (канал ID: 4439566709)...
+[2026-11-25 00:46:13.385] [INFO ] [TelegramService] Резервная копия 'base_2026-11-25_00-46-05.db' успешно загружена в Telegram. Message ID: 167
+[2026-11-25 00:46:13.408] [INFO ] [DatabaseBackup] Резервная копия базы данных успешно отправлена в Telegram! (Размер: 0,56 МБ).
+[2026-11-25 00:46:44.111] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'testtt' (/testtt) (ID 3460), элементов: 0
+[2026-11-25 00:47:03.090] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 00:47:38.764] [INFO ] [WinFsp] Открыт каталог: '/testtt' (ID 3460)
+[2026-11-25 00:47:38.813] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для '004.jpg' (виртуальный путь: '/testtt/004.jpg')...
+[2026-11-25 00:47:38.840] [INFO ] [WinFsp] [Handles DragDrop] Сканирование хэндлов для 1 процессов (PID: 12292, вызывающий процесс: explorer (PID: 12292))...
+[2026-11-25 00:47:38.886] [INFO ] [WinFsp] [Handles DragDrop] В системе обнаружено 88356 дескрипторов ядра (File Type Index: 36).
+[2026-11-25 00:47:38.923] [INFO ] [WinFsp] [Handles DragDrop] Обнаружен открытый файл в процессе PID 12292: 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\arnold_schwarzenegger_encyclopedia_book_1\images\004.jpg'
+[2026-11-25 00:47:38.927] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\arnold_schwarzenegger_encyclopedia_book_1\images\004.jpg' существует и доступен для чтения (размер: 45,4 КБ (46 534 байт)).
+[2026-11-25 00:47:38.928] [INFO ] [WinFsp] [Handles DragDrop] Привязана папка-источник 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\arnold_schwarzenegger_encyclopedia_book_1\images' для виртуального каталога '/testtt'
+[2026-11-25 00:47:38.929] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/testtt/004.jpg' (alloc: 49152), источник: 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\arnold_schwarzenegger_encyclopedia_book_1\images\004.jpg'
+[2026-11-25 00:47:38.938] [INFO ] [WinFsp] Обновлены системные даты для '004.jpg' (ID -1): Изменен: 2005-06-13 10:44:12.000, Создан: 2026-11-24 22:47:38.928
+[2026-11-25 00:47:38.947] [INFO ] [WinFsp] Отправка файла '004.jpg' (45,4 КБ (46 534 байт)) из памяти в Telegram (Zero-Temp), канал: 5716286593...
+[2026-11-25 00:47:38.987] [INFO ] [TelegramService] Прямая потоковая передача файла '004.jpg' (46534 байт) в Telegram...
+[2026-11-25 00:47:39.092] [INFO ] [TelegramService] Файл '004.jpg' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /testtt/004_v1.jpg
+#latest')...
+[2026-11-25 00:47:39.106] [INFO ] [TrayProgressOverlay] Показ окна прогресса [Upload] для 004.jpg (46534/46534)
+[2026-11-25 00:47:39.262] [INFO ] [TelegramService] Фото-превью для галереи успешно опубликовано в Telegram (Message ID: 3, имя: '004_preview.jpg').
+[2026-11-25 00:47:39.447] [INFO ] [TelegramService] Файл '004.jpg' успешно сохранен в Telegram. Message ID: 4, Preview ID: 3
+[2026-11-25 00:47:39.447] [INFO ] [TrayContext] Событие OnUploadCompleted для '004.jpg' получено из TelegramService.
+[2026-11-25 00:47:39.449] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для '004.jpg'. Запуск _completionTimer...
+[2026-11-25 00:47:39.935] [INFO ] [WinFsp] Файл '004.jpg' успешно сохранен в Telegram (Msg ID: 4, Preview ID: 3, дата изменения: 2005-06-13 10:44:12).
+[2026-11-25 00:47:39.941] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для '002.jpg' (виртуальный путь: '/testtt/002.jpg')...
+[2026-11-25 00:47:39.943] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\arnold_schwarzenegger_encyclopedia_book_1\images\002.jpg' существует и доступен для чтения (размер: 16,3 КБ (16 657 байт)).
+[2026-11-25 00:47:39.943] [INFO ] [WinFsp] [Источник] Найдено совпадение в активной сессии для папки '/testtt': 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\arnold_schwarzenegger_encyclopedia_book_1\images\002.jpg'
+[2026-11-25 00:47:39.944] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/testtt/002.jpg' (alloc: 20480), источник: 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\arnold_schwarzenegger_encyclopedia_book_1\images\002.jpg'
+[2026-11-25 00:47:39.944] [INFO ] [WinFsp] Обновлены системные даты для '002.jpg' (ID -2): Изменен: 2005-06-13 10:43:04.000, Создан: 2026-11-24 22:47:39.944
+[2026-11-25 00:47:39.946] [INFO ] [WinFsp] Отправка файла '002.jpg' (16,3 КБ (16 657 байт)) из памяти в Telegram (Zero-Temp), канал: 5716286593...
+[2026-11-25 00:47:39.959] [INFO ] [TelegramService] Прямая потоковая передача файла '002.jpg' (16657 байт) в Telegram...
+[2026-11-25 00:47:40.096] [INFO ] [TelegramService] Файл '002.jpg' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /testtt/002_v1.jpg
+#latest')...
+[2026-11-25 00:47:40.096] [INFO ] [TrayProgressOverlay] Остановлен активный _completionTimer для файла 002.jpg
+[2026-11-25 00:47:40.334] [INFO ] [TelegramService] Фото-превью для галереи успешно опубликовано в Telegram (Message ID: 5, имя: '002_preview.jpg').
+[2026-11-25 00:47:40.518] [INFO ] [TelegramService] Файл '002.jpg' успешно сохранен в Telegram. Message ID: 6, Preview ID: 5
+[2026-11-25 00:47:40.518] [INFO ] [TrayContext] Событие OnUploadCompleted для '002.jpg' получено из TelegramService.
+[2026-11-25 00:47:40.518] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для '002.jpg'. Запуск _completionTimer...
+[2026-11-25 00:47:40.824] [INFO ] [WinFsp] Файл '002.jpg' успешно сохранен в Telegram (Msg ID: 6, Preview ID: 5, дата изменения: 2005-06-13 10:43:04).
+[2026-11-25 00:47:41.921] [INFO ] [TrayProgressOverlay] _completionTimer Tick! _isTransferring=False, _isCompleted=True, Visible=True
+[2026-11-25 00:47:41.928] [INFO ] [TrayProgressOverlay] Оверлей успешно скрыт по завершению таймаута.
+[2026-11-25 00:47:42.058] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка' (/Новая папка) (ID 1890), элементов: 103
+[2026-11-25 00:47:42.559] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 00:47:43.059] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка' (/Новая папка) (ID 1890), элементов: 103
+[2026-11-25 00:47:45.551] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 00:47:52.138] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'testtt' (/testtt) (ID 3460), элементов: 2
+[2026-11-25 00:47:52.318] [INFO ] [WinFsp] Перемещение элемента 'testtt' (ID 3460) в корзину (.Trash)...
+[2026-11-25 00:47:52.608] [INFO ] [Database] Поставлено в фоновую очередь обновление подписей Telegram для 4 элементов.
+[2026-11-25 00:47:52.733] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 5
+[2026-11-25 00:47:53.019] [INFO ] [TelegramService] Подпись сообщения #4 в Telegram успешно обновлена на: '🗑️ /.Trash/testtt/004_v1.jpg
 ID: 4
 #trash'.
-[2026-11-21 22:45:05.152] [DEBUG] [WTelegram] 2>Sending   MsgContainer                             2026-11-21 20:45:04Z (svc)
-[2026-11-21 22:45:05.152] [DEBUG] [WTelegram]             → Messages_EditMessage                   #418E
-[2026-11-21 22:45:05.152] [DEBUG] [WTelegram]             → MsgsAck                               
-[2026-11-21 22:45:05.243] [DEBUG] [WTelegram] 2>Receiving RpcResult                                2026-11-21 20:45:04Z
-[2026-11-21 22:45:05.245] [DEBUG] [WTelegram]              → Updates                               #418E
-[2026-11-21 22:45:05.246] [INFO ] [TelegramService] Подпись сообщения #3 в Telegram успешно обновлена на: '🗑️ /.Trash/Новая папка (8)/002_v1.jpg
+[2026-11-25 00:47:53.236] [INFO ] [TelegramService] Подпись сообщения #3 в Telegram успешно обновлена на: '🗑️ /.Trash/testtt/004_v1.jpg
 ID: 3
 #trash'.
-[2026-11-21 22:45:07.146] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка' (/Новая папка) (ID 1890), элементов: 103
-[2026-11-21 22:45:07.668] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 11
-[2026-11-21 22:45:08.169] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка' (/Новая папка) (ID 1890), элементов: 103
-[2026-11-21 22:45:17.647] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 11
-[2026-11-21 22:45:18.651] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка (7)' (/Новая папка (7)) (ID 3439), элементов: 0
-[2026-11-21 22:45:19.861] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 11
-[2026-11-21 22:45:21.300] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка (7)' (/Новая папка (7)) (ID 3439), элементов: 0
-[2026-11-21 22:45:22.306] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 11
-[2026-11-21 22:45:24.887] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка (5)' (/Новая папка (5)) (ID 3436), элементов: 1
-[2026-11-21 22:45:26.328] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 11
-[2026-11-21 22:45:27.788] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка (4)' (/Новая папка (4)) (ID 3435), элементов: 0
-[2026-11-21 22:45:28.731] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 11
-[2026-11-21 22:45:30.167] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка (3)' (/Новая папка (3)) (ID 3434), элементов: 0
-[2026-11-21 22:45:31.006] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 11
-[2026-11-21 22:45:32.589] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка (2)' (/Новая папка (2)) (ID 3430), элементов: 1
-[2026-11-21 22:45:34.217] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 11
-[2026-11-21 22:45:35.739] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка (2)' (/Новая папка (2)) (ID 3430), элементов: 1
-[2026-11-21 22:45:36.927] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 11
-[2026-11-21 22:45:40.495] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка (7)' (/Новая папка (7)) (ID 3439), элементов: 0
-[2026-11-21 22:45:40.640] [INFO ] [WinFsp] [SetBasicInfo] Снят атрибут ReadOnly с привязанной папки 'Новая папка (7)' (ID 3439); виртуальный desktop.ini временно скрыт на 3 сек.
-[2026-11-21 22:45:40.808] [DEBUG] [WinFsp] Обновлены атрибуты для 'Новая папка (7)' (ID 3439): Directory (0x10)
-[2026-11-21 22:45:40.812] [DEBUG] [WinFsp] [SetDelete] Проводник установил deleteFile=True для '\Новая папка (7)' (ID 3439, Name 'Новая папка (7)').
-[2026-11-21 22:45:40.812] [DEBUG] [WinFsp] [CleanupDelete] Закрытие с флагом удаления для '\Новая папка (7)' (ID 3439, Name 'Новая папка (7)', flags=33, DeleteOnClose=True).
-[2026-11-21 22:45:40.812] [INFO ] [WinFsp] Перемещение элемента 'Новая папка (7)' (ID 3439) в корзину (.Trash)...
-[2026-11-21 22:45:40.929] [INFO ] [WinFsp] [SetBasicInfo] Снят атрибут ReadOnly с привязанной папки 'Новая папка (2)' (ID 3430); виртуальный desktop.ini временно скрыт на 3 сек.
-[2026-11-21 22:45:41.024] [DEBUG] [WinFsp] Обновлены атрибуты для 'Новая папка (2)' (ID 3430): Directory (0x10)
-[2026-11-21 22:45:41.028] [DEBUG] [WinFsp] [SetDelete] Проводник установил deleteFile=True для '\Новая папка (2)' (ID 3430, Name 'Новая папка (2)').
-[2026-11-21 22:45:41.028] [DEBUG] [WinFsp] [CleanupDelete] Закрытие с флагом удаления для '\Новая папка (2)' (ID 3430, Name 'Новая папка (2)', flags=33, DeleteOnClose=True).
-[2026-11-21 22:45:41.028] [INFO ] [WinFsp] Перемещение элемента 'Новая папка (2)' (ID 3430) в корзину (.Trash)...
-[2026-11-21 22:45:41.218] [INFO ] [Database] Поставлено в фоновую очередь обновление подписей Telegram для 2 элементов.
-[2026-11-21 22:45:41.237] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 9
-[2026-11-21 22:45:41.248] [INFO ] [WinFsp] [SetBasicInfo] Снят атрибут ReadOnly с привязанной папки 'Новая папка (3)' (ID 3434); виртуальный desktop.ini временно скрыт на 3 сек.
-[2026-11-21 22:45:41.342] [DEBUG] [WinFsp] Обновлены атрибуты для 'Новая папка (3)' (ID 3434): Directory (0x10)
-[2026-11-21 22:45:41.346] [DEBUG] [WinFsp] [SetDelete] Проводник установил deleteFile=True для '\Новая папка (3)' (ID 3434, Name 'Новая папка (3)').
-[2026-11-21 22:45:41.346] [DEBUG] [WinFsp] [CleanupDelete] Закрытие с флагом удаления для '\Новая папка (3)' (ID 3434, Name 'Новая папка (3)', flags=33, DeleteOnClose=True).
-[2026-11-21 22:45:41.346] [INFO ] [WinFsp] Перемещение элемента 'Новая папка (3)' (ID 3434) в корзину (.Trash)...
-[2026-11-21 22:45:41.356] [DEBUG] [WTelegram] 2>Sending   MsgContainer                             2026-11-21 20:45:40Z (svc)
-[2026-11-21 22:45:41.356] [DEBUG] [WTelegram]             → Messages_EditMessage                   #7C8A
-[2026-11-21 22:45:41.356] [DEBUG] [WTelegram]             → MsgsAck                               
-[2026-11-21 22:45:41.429] [DEBUG] [WTelegram] 2>Receiving RpcResult                                2026-11-21 20:45:40Z
-[2026-11-21 22:45:41.429] [DEBUG] [WTelegram]              → Updates                               #7C8A
-[2026-11-21 22:45:41.429] [INFO ] [TelegramService] Подпись сообщения #4 в Telegram успешно обновлена на: '🗑️ /.Trash/Новая папка (2)/010_v1.jpg
+[2026-11-25 00:47:53.576] [INFO ] [TelegramService] Подпись сообщения #6 в Telegram успешно обновлена на: '🗑️ /.Trash/testtt/002_v1.jpg
+ID: 6
+#trash'.
+[2026-11-25 00:47:53.866] [INFO ] [TelegramService] Подпись сообщения #5 в Telegram успешно обновлена на: '🗑️ /.Trash/testtt/002_v1.jpg
+ID: 5
+#trash'.
+[2026-11-25 00:47:54.157] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка' (/Новая папка) (ID 1890), элементов: 103
+[2026-11-25 00:48:13.726] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 5
+[2026-11-25 00:48:37.392] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'качалка' (/качалка) (ID 1088), элементов: 16
+[2026-11-25 00:48:37.893] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'arnold_schwarzenegger_encyclopedia_book_4' (/качалка/Арнольд Шварценеггер - Энциклопедия бодибилдинга/arnold_schwarzenegger_encyclopedia_book_4) (ID 1845), элементов: 1
+[2026-11-25 00:48:43.132] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 5
+[2026-11-25 00:48:43.868] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка '.Trash' (/.Trash) (ID 2), элементов: 2
+[2026-11-25 00:48:52.609] [INFO ] [DatabaseBackup] Сработал Debounce-таймер резервного копирования (1 мин тишины).
+[2026-11-25 00:48:52.609] [INFO ] [TelegramService] Запрос к Telegram: поиск последней резервной копии базы данных...
+[2026-11-25 00:48:52.681] [INFO ] [TelegramService] Найден файл бэкапа базы в Telegram: Message #167, 'base_2026-11-25_00-46-05.db', 572,0 КБ, дата: 2026-11-25 00:46:13
+[2026-11-25 00:48:52.682] [INFO ] [DatabaseBackup] Запуск резервного копирования базы данных. Причина: 'Автоматический бэкап (1 мин тишины)'...
+[2026-11-25 00:48:52.682] [INFO ] [Database] Создание консистентного снимка базы данных в: D:\Temp\TGramFS\backups\base_2026-11-25_00-48-52.db...
+[2026-11-25 00:48:53.617] [INFO ] [Database] Снимок базы данных успешно создан: D:\Temp\TGramFS\backups\base_2026-11-25_00-48-52.db
+[2026-11-25 00:48:53.621] [INFO ] [TelegramService] Загрузка резервной копии 'base_2026-11-25_00-48-52.db' в Telegram (канал ID: 4439566709)...
+[2026-11-25 00:48:53.857] [INFO ] [TelegramService] Резервная копия 'base_2026-11-25_00-48-52.db' успешно загружена в Telegram. Message ID: 168
+[2026-11-25 00:48:53.884] [INFO ] [DatabaseBackup] Резервная копия базы данных успешно отправлена в Telegram! (Размер: 0,56 МБ).
+[2026-11-25 00:48:58.162] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 5
+[2026-11-25 00:49:12.871] [INFO ] [WinFsp] Создан новый каталог: '/Новая папка (2)' (ID 3463)
+[2026-11-25 00:49:16.733] [INFO ] [WinFsp] Переименование/перемещение: '/Новая папка (2)' -> '/testtt'
+[2026-11-25 00:49:19.903] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'testtt' (/testtt) (ID 3463), элементов: 0
+[2026-11-25 00:49:21.730] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 00:49:25.511] [INFO ] [TelegramService] Создание нового приватного канала 'testtt'...
+[2026-11-25 00:49:25.836] [INFO ] [TelegramService] Создан новый кастомный канал 'testtt' (ID: 5974892427). Записан в SQLite.
+[2026-11-25 00:49:26.107] [INFO ] [TelegramService] Установлена стандартная иконка для канала 'testtt' (ID: 5974892427).
+[2026-11-25 00:49:26.329] [INFO ] [TelegramService] [Migration] В папке ID 3463 нет файлов для миграции.
+[2026-11-25 00:49:26.587] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'testtt' (/testtt) (ID 3463), элементов: 1
+[2026-11-25 00:49:37.795] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 00:49:41.267] [INFO ] [WinFsp] Открыт каталог: '/testtt' (ID 3463)
+[2026-11-25 00:49:41.313] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'glava3.htm' (виртуальный путь: '/testtt/glava3.htm')...
+[2026-11-25 00:49:41.313] [INFO ] [WinFsp] [Источник] Предыдущая сессия копирования завершена по таймауту бездействия (20 сек).
+[2026-11-25 00:49:41.313] [INFO ] [WinFsp] [Handles DragDrop] Сканирование хэндлов для 1 процессов (PID: 12292, вызывающий процесс: explorer (PID: 12292))...
+[2026-11-25 00:49:41.329] [INFO ] [WinFsp] [Handles DragDrop] В системе обнаружено 90561 дескрипторов ядра (File Type Index: 36).
+[2026-11-25 00:49:41.356] [INFO ] [WinFsp] [Handles DragDrop] Обнаружен открытый файл в процессе PID 12292: 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\arnold_schwarzenegger_encyclopedia_book_1\glava3.htm'
+[2026-11-25 00:49:41.356] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\arnold_schwarzenegger_encyclopedia_book_1\glava3.htm' существует и доступен для чтения (размер: 40,3 КБ (41 235 байт)).
+[2026-11-25 00:49:41.356] [INFO ] [WinFsp] [Handles DragDrop] Привязана папка-источник 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\arnold_schwarzenegger_encyclopedia_book_1' для виртуального каталога '/testtt'
+[2026-11-25 00:49:41.357] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/testtt/glava3.htm' (alloc: 45056), источник: 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\arnold_schwarzenegger_encyclopedia_book_1\glava3.htm'
+[2026-11-25 00:49:41.464] [INFO ] [WinFsp] Обновлены системные даты для 'glava3.htm' (ID -3): Изменен: 2005-06-28 12:43:34.000, Создан: 2026-11-24 22:49:41.357
+[2026-11-25 00:49:41.466] [INFO ] [WinFsp] Отправка файла 'glava3.htm' (40,3 КБ (41 235 байт)) из памяти в Telegram (Zero-Temp), канал: 5974892427...
+[2026-11-25 00:49:41.467] [INFO ] [TelegramService] Прямая потоковая передача файла 'glava3.htm' (41235 байт) в Telegram...
+[2026-11-25 00:49:41.517] [INFO ] [TelegramService] Файл 'glava3.htm' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /testtt/glava3_v1.htm
+#latest')...
+[2026-11-25 00:49:41.523] [INFO ] [TrayProgressOverlay] Показ окна прогресса [Upload] для glava3.htm (41235/41235)
+[2026-11-25 00:49:41.685] [INFO ] [TelegramService] Файл 'glava3.htm' успешно сохранен в Telegram. Message ID: 3
+[2026-11-25 00:49:41.685] [INFO ] [TrayContext] Событие OnUploadCompleted для 'glava3.htm' получено из TelegramService.
+[2026-11-25 00:49:41.686] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для 'glava3.htm'. Запуск _completionTimer...
+[2026-11-25 00:49:41.848] [INFO ] [WinFsp] Файл 'glava3.htm' успешно сохранен в Telegram (Msg ID: 3, дата изменения: 2005-06-28 12:43:34).
+[2026-11-25 00:49:41.855] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'glava4.htm' (виртуальный путь: '/testtt/glava4.htm')...
+[2026-11-25 00:49:41.855] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\arnold_schwarzenegger_encyclopedia_book_1\glava4.htm' существует и доступен для чтения (размер: 22,1 КБ (22 602 байт)).
+[2026-11-25 00:49:41.855] [INFO ] [WinFsp] [Источник] Найдено совпадение в активной сессии для папки '/testtt': 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\arnold_schwarzenegger_encyclopedia_book_1\glava4.htm'
+[2026-11-25 00:49:41.856] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/testtt/glava4.htm' (alloc: 24576), источник: 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\arnold_schwarzenegger_encyclopedia_book_1\glava4.htm'
+[2026-11-25 00:49:41.876] [INFO ] [WinFsp] Обновлены системные даты для 'glava4.htm' (ID -4): Изменен: 2005-06-28 12:43:56.000, Создан: 2026-11-24 22:49:41.856
+[2026-11-25 00:49:41.882] [INFO ] [WinFsp] Отправка файла 'glava4.htm' (22,1 КБ (22 602 байт)) из памяти в Telegram (Zero-Temp), канал: 5974892427...
+[2026-11-25 00:49:41.884] [INFO ] [TelegramService] Прямая потоковая передача файла 'glava4.htm' (22602 байт) в Telegram...
+[2026-11-25 00:49:41.934] [INFO ] [TelegramService] Файл 'glava4.htm' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /testtt/glava4_v1.htm
+#latest')...
+[2026-11-25 00:49:41.934] [INFO ] [TrayProgressOverlay] Остановлен активный _completionTimer для файла glava4.htm
+[2026-11-25 00:49:42.077] [INFO ] [TelegramService] Файл 'glava4.htm' успешно сохранен в Telegram. Message ID: 4
+[2026-11-25 00:49:42.077] [INFO ] [TrayContext] Событие OnUploadCompleted для 'glava4.htm' получено из TelegramService.
+[2026-11-25 00:49:42.077] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для 'glava4.htm'. Запуск _completionTimer...
+[2026-11-25 00:49:42.261] [INFO ] [WinFsp] Файл 'glava4.htm' успешно сохранен в Telegram (Msg ID: 4, дата изменения: 2005-06-28 12:43:56).
+[2026-11-25 00:49:42.268] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'glava5.htm' (виртуальный путь: '/testtt/glava5.htm')...
+[2026-11-25 00:49:42.269] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\arnold_schwarzenegger_encyclopedia_book_1\glava5.htm' существует и доступен для чтения (размер: 41,2 КБ (42 211 байт)).
+[2026-11-25 00:49:42.269] [INFO ] [WinFsp] [Источник] Найдено совпадение в активной сессии для папки '/testtt': 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\arnold_schwarzenegger_encyclopedia_book_1\glava5.htm'
+[2026-11-25 00:49:42.269] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/testtt/glava5.htm' (alloc: 45056), источник: 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\arnold_schwarzenegger_encyclopedia_book_1\glava5.htm'
+[2026-11-25 00:49:42.292] [INFO ] [WinFsp] Обновлены системные даты для 'glava5.htm' (ID -5): Изменен: 2005-06-28 12:44:12.000, Создан: 2026-11-24 22:49:42.269
+[2026-11-25 00:49:42.294] [INFO ] [WinFsp] Отправка файла 'glava5.htm' (41,2 КБ (42 211 байт)) из памяти в Telegram (Zero-Temp), канал: 5974892427...
+[2026-11-25 00:49:42.295] [INFO ] [TelegramService] Прямая потоковая передача файла 'glava5.htm' (42211 байт) в Telegram...
+[2026-11-25 00:49:42.347] [INFO ] [TelegramService] Файл 'glava5.htm' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /testtt/glava5_v1.htm
+#latest')...
+[2026-11-25 00:49:42.347] [INFO ] [TrayProgressOverlay] Остановлен активный _completionTimer для файла glava5.htm
+[2026-11-25 00:49:42.496] [INFO ] [TelegramService] Файл 'glava5.htm' успешно сохранен в Telegram. Message ID: 5
+[2026-11-25 00:49:42.496] [INFO ] [TrayContext] Событие OnUploadCompleted для 'glava5.htm' получено из TelegramService.
+[2026-11-25 00:49:42.496] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для 'glava5.htm'. Запуск _completionTimer...
+[2026-11-25 00:49:42.608] [INFO ] [WinFsp] Файл 'glava5.htm' успешно сохранен в Telegram (Msg ID: 5, дата изменения: 2005-06-28 12:44:12).
+[2026-11-25 00:49:42.613] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'index.htm' (виртуальный путь: '/testtt/index.htm')...
+[2026-11-25 00:49:42.614] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\arnold_schwarzenegger_encyclopedia_book_1\index.htm' существует и доступен для чтения (размер: 1,2 КБ (1 259 байт)).
+[2026-11-25 00:49:42.614] [INFO ] [WinFsp] [Источник] Найдено совпадение в активной сессии для папки '/testtt': 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\arnold_schwarzenegger_encyclopedia_book_1\index.htm'
+[2026-11-25 00:49:42.615] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/testtt/index.htm' (alloc: 0), источник: 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\arnold_schwarzenegger_encyclopedia_book_1\index.htm'
+[2026-11-25 00:49:42.640] [INFO ] [WinFsp] Обновлены системные даты для 'index.htm' (ID -6): Изменен: 2006-08-21 07:09:59.197, Создан: 2026-11-24 22:49:42.615
+[2026-11-25 00:49:42.642] [INFO ] [WinFsp] Отправка файла 'index.htm' (1,2 КБ (1 259 байт)) из памяти в Telegram (Zero-Temp), канал: 5974892427...
+[2026-11-25 00:49:42.643] [INFO ] [TelegramService] Прямая потоковая передача файла 'index.htm' (1259 байт) в Telegram...
+[2026-11-25 00:49:42.690] [INFO ] [TelegramService] Файл 'index.htm' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /testtt/index_v1.htm
+#latest')...
+[2026-11-25 00:49:42.690] [INFO ] [TrayProgressOverlay] Остановлен активный _completionTimer для файла index.htm
+[2026-11-25 00:49:42.831] [INFO ] [TelegramService] Файл 'index.htm' успешно сохранен в Telegram. Message ID: 6
+[2026-11-25 00:49:42.831] [INFO ] [TrayContext] Событие OnUploadCompleted для 'index.htm' получено из TelegramService.
+[2026-11-25 00:49:42.831] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для 'index.htm'. Запуск _completionTimer...
+[2026-11-25 00:49:42.999] [INFO ] [WinFsp] Файл 'index.htm' успешно сохранен в Telegram (Msg ID: 6, дата изменения: 2006-08-21 07:09:59).
+[2026-11-25 00:49:43.377] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'testtt' (/testtt) (ID 3463), элементов: 4
+[2026-11-25 00:49:43.966] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 00:49:44.234] [INFO ] [TrayProgressOverlay] _completionTimer Tick! _isTransferring=False, _isCompleted=True, Visible=True
+[2026-11-25 00:49:44.241] [INFO ] [TrayProgressOverlay] Оверлей успешно скрыт по завершению таймаута.
+[2026-11-25 00:49:44.494] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка' (/Новая папка) (ID 1890), элементов: 103
+[2026-11-25 00:49:44.999] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 00:49:45.501] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка' (/Новая папка) (ID 1890), элементов: 103
+[2026-11-25 00:49:46.841] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 00:49:48.118] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'testtt' (/testtt) (ID 3463), элементов: 4
+[2026-11-25 00:49:49.725] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 00:49:51.363] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'testtt' (/testtt) (ID 3463), элементов: 4
+[2026-11-25 00:49:51.374] [INFO ] [WinFsp] Перемещение элемента 'index.htm' (ID 3467) в корзину (.Trash)...
+[2026-11-25 00:49:51.835] [INFO ] [Database] Поставлено в фоновую очередь обновление подписей Telegram для 1 элементов.
+[2026-11-25 00:49:52.053] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 00:49:52.225] [INFO ] [TelegramService] Подпись сообщения #6 в Telegram успешно обновлена на: '🗑️ /.Trash/testtt (2)/index_v1.htm
+ID: 6
+#trash'.
+[2026-11-25 00:50:01.237] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка '.Trash' (/.Trash) (ID 2), элементов: 3
+[2026-11-25 00:50:04.329] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'testtt (2)' (/.Trash/testtt (2)) (ID 3468), элементов: 1
+[2026-11-25 00:50:04.963] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка '.Trash' (/.Trash) (ID 2), элементов: 3
+[2026-11-25 00:50:06.996] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 00:50:17.090] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'качалка' (/качалка) (ID 1088), элементов: 16
+[2026-11-25 00:50:18.679] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 00:50:43.321] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'testtt' (/testtt) (ID 3463), элементов: 3
+[2026-11-25 00:50:43.652] [INFO ] [WinFsp] Перемещение элемента 'testtt' (ID 3463) в корзину (.Trash)...
+[2026-11-25 00:50:43.964] [INFO ] [Database] Поставлено в фоновую очередь обновление подписей Telegram для 3 элементов.
+[2026-11-25 00:50:44.098] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 5
+[2026-11-25 00:50:44.520] [INFO ] [TelegramService] Подпись сообщения #3 в Telegram успешно обновлена на: '🗑️ /.Trash/testtt (3)/glava3_v1.htm
+ID: 3
+#trash'.
+[2026-11-25 00:50:44.758] [INFO ] [TelegramService] Подпись сообщения #4 в Telegram успешно обновлена на: '🗑️ /.Trash/testtt (3)/glava4_v1.htm
 ID: 4
 #trash'.
-[2026-11-21 22:45:41.469] [INFO ] [WinFsp] [SetBasicInfo] Снят атрибут ReadOnly с привязанной папки 'Новая папка (4)' (ID 3435); виртуальный desktop.ini временно скрыт на 3 сек.
-[2026-11-21 22:45:41.558] [DEBUG] [WinFsp] Обновлены атрибуты для 'Новая папка (4)' (ID 3435): Directory (0x10)
-[2026-11-21 22:45:41.562] [DEBUG] [WinFsp] [SetDelete] Проводник установил deleteFile=True для '\Новая папка (4)' (ID 3435, Name 'Новая папка (4)').
-[2026-11-21 22:45:41.562] [DEBUG] [WinFsp] [CleanupDelete] Закрытие с флагом удаления для '\Новая папка (4)' (ID 3435, Name 'Новая папка (4)', flags=33, DeleteOnClose=True).
-[2026-11-21 22:45:41.563] [INFO ] [WinFsp] Перемещение элемента 'Новая папка (4)' (ID 3435) в корзину (.Trash)...
-[2026-11-21 22:45:41.693] [INFO ] [WinFsp] [SetBasicInfo] Снят атрибут ReadOnly с привязанной папки 'Новая папка (5)' (ID 3436); виртуальный desktop.ini временно скрыт на 3 сек.
-[2026-11-21 22:45:41.785] [DEBUG] [WinFsp] Обновлены атрибуты для 'Новая папка (5)' (ID 3436): Directory (0x10)
-[2026-11-21 22:45:41.790] [DEBUG] [WinFsp] [SetDelete] Проводник установил deleteFile=True для '\Новая папка (5)' (ID 3436, Name 'Новая папка (5)').
-[2026-11-21 22:45:41.790] [DEBUG] [WinFsp] [CleanupDelete] Закрытие с флагом удаления для '\Новая папка (5)' (ID 3436, Name 'Новая папка (5)', flags=33, DeleteOnClose=True).
-[2026-11-21 22:45:41.790] [INFO ] [WinFsp] Перемещение элемента 'Новая папка (5)' (ID 3436) в корзину (.Trash)...
-[2026-11-21 22:45:41.979] [INFO ] [Database] Поставлено в фоновую очередь обновление подписей Telegram для 2 элементов.
-[2026-11-21 22:45:42.012] [INFO ] [WinFsp] [SetBasicInfo] Снят атрибут ReadOnly с привязанной папки 'Новая папка (6)' (ID 3438); виртуальный desktop.ini временно скрыт на 3 сек.
-[2026-11-21 22:45:42.104] [DEBUG] [WinFsp] Обновлены атрибуты для 'Новая папка (6)' (ID 3438): Directory (0x10)
-[2026-11-21 22:45:42.108] [DEBUG] [WinFsp] [SetDelete] Проводник установил deleteFile=True для '\Новая папка (6)' (ID 3438, Name 'Новая папка (6)').
-[2026-11-21 22:45:42.108] [DEBUG] [WinFsp] [CleanupDelete] Закрытие с флагом удаления для '\Новая папка (6)' (ID 3438, Name 'Новая папка (6)', flags=33, DeleteOnClose=True).
-[2026-11-21 22:45:42.109] [INFO ] [WinFsp] Перемещение элемента 'Новая папка (6)' (ID 3438) в корзину (.Trash)...
-[2026-11-21 22:45:42.532] [DEBUG] [WTelegram] 2>Sending   MsgContainer                             2026-11-21 20:45:41Z (svc)
-[2026-11-21 22:45:42.533] [DEBUG] [WTelegram]             → Messages_EditMessage                   #2297
-[2026-11-21 22:45:42.533] [DEBUG] [WTelegram]             → MsgsAck                               
-[2026-11-21 22:45:42.665] [DEBUG] [WTelegram] 2>Receiving RpcResult                                2026-11-21 20:45:41Z
-[2026-11-21 22:45:42.666] [DEBUG] [WTelegram]              → Updates                               #2297
-[2026-11-21 22:45:42.668] [INFO ] [TelegramService] Подпись сообщения #3 в Telegram успешно обновлена на: '🗑️ /.Trash/Новая папка (5)/008_v1.jpg
+[2026-11-25 00:50:45.212] [INFO ] [TelegramService] Подпись сообщения #5 в Telegram успешно обновлена на: '🗑️ /.Trash/testtt (3)/glava5_v1.htm
+ID: 5
+#trash'.
+[2026-11-25 00:50:45.555] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка' (/Новая папка) (ID 1890), элементов: 103
+[2026-11-25 00:50:46.439] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 5
+[2026-11-25 00:50:46.939] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка' (/Новая папка) (ID 1890), элементов: 103
+[2026-11-25 00:50:47.440] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'New 2010 Releases' (/Новая папка/2 Brothers On The 4th Floor Full Discography/New 2010 Releases) (ID 2020), элементов: 12
+[2026-11-25 00:50:47.942] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Singles' (/Новая папка/2 Brothers On The 4th Floor Full Discography/Singles) (ID 2077), элементов: 29
+[2026-11-25 00:50:48.961] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка '.Trash' (/.Trash) (ID 2), элементов: 4
+[2026-11-25 00:50:50.179] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'testtt (3)' (/.Trash/testtt (3)) (ID 3463), элементов: 3
+[2026-11-25 00:50:50.796] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 5
+[2026-11-25 00:50:58.778] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка '.Trash' (/.Trash) (ID 2), элементов: 4
+[2026-11-25 00:51:00.623] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка (2)5' (/.Trash/Новая папка (2)5) (ID 3455), элементов: 2
+[2026-11-25 00:51:07.093] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 5
+[2026-11-25 00:51:09.777] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка '.Trash' (/.Trash) (ID 2), элементов: 4
+[2026-11-25 00:51:23.090] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 5
+[2026-11-25 00:51:23.135] [INFO ] [WinFsp] Перманентное удаление элемента 'testtt' (ID 3460) из корзины...
+[2026-11-25 00:51:23.172] [INFO ] [Database] [EnqueuePermanentDeletion] Транзакция перманентного удаления: 3 узлов из БД, 0 уникальных сообщений Telegram в очередь pending_deletions.
+[2026-11-25 00:51:23.566] [INFO ] [Database] [EnqueuePermanentDeletion] Транзакция успешно зафиксирована.
+[2026-11-25 00:51:23.566] [INFO ] [WinFsp] Удалено 3 узлов из базы; 0 сообщений отправлено в очередь удаления Telegram.
+[2026-11-25 00:51:23.567] [INFO ] [WinFsp] Привязанная папка удалена навсегда, канал Telegram ID 5716286593 больше не используется. Авто-удаление канала и всех его сообщений из Telegram...
+[2026-11-25 00:51:23.586] [INFO ] [WinFsp] Перманентное удаление элемента 'testtt (2)' (ID 3468) из корзины...
+[2026-11-25 00:51:23.592] [INFO ] [Database] [EnqueuePermanentDeletion] Транзакция перманентного удаления: 2 узлов из БД, 1 уникальных сообщений Telegram в очередь pending_deletions.
+[2026-11-25 00:51:23.724] [INFO ] [Database] [EnqueuePermanentDeletion] Транзакция успешно зафиксирована.
+[2026-11-25 00:51:23.724] [INFO ] [WinFsp] Удалено 2 узлов из базы; 1 сообщений отправлено в очередь удаления Telegram.
+[2026-11-25 00:51:23.739] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка '.Trash' (/.Trash) (ID 2), элементов: 2
+[2026-11-25 00:51:23.740] [INFO ] [WinFsp] Перманентное удаление элемента 'testtt (3)' (ID 3463) из корзины...
+[2026-11-25 00:51:23.741] [INFO ] [Database] [EnqueuePermanentDeletion] Транзакция перманентного удаления: 4 узлов из БД, 0 уникальных сообщений Telegram в очередь pending_deletions.
+[2026-11-25 00:51:23.871] [INFO ] [Database] [EnqueuePermanentDeletion] Транзакция успешно зафиксирована.
+[2026-11-25 00:51:23.871] [INFO ] [WinFsp] Удалено 4 узлов из базы; 0 сообщений отправлено в очередь удаления Telegram.
+[2026-11-25 00:51:23.871] [INFO ] [WinFsp] Привязанная папка удалена навсегда, канал Telegram ID 5974892427 больше не используется. Авто-удаление канала и всех его сообщений из Telegram...
+[2026-11-25 00:51:24.068] [INFO ] [TelegramService] Канал Telegram ID 5716286593 полностью удален.
+[2026-11-25 00:51:24.243] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 5
+[2026-11-25 00:51:24.922] [INFO ] [TelegramService] Канал Telegram ID 5974892427 полностью удален (очищено 1 ожидающих сообщений из очереди).
+[2026-11-25 00:51:26.285] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка' (/Новая папка) (ID 1890), элементов: 103
+[2026-11-25 00:51:26.872] [INFO ] [Database] Запуск оптимизации базы данных SQLite (VACUUM)...
+[2026-11-25 00:51:27.157] [INFO ] [Database] Оптимизация базы данных (VACUUM) успешно завершена.
+[2026-11-25 00:52:23.872] [INFO ] [DatabaseBackup] Сработал Debounce-таймер резервного копирования (1 мин тишины).
+[2026-11-25 00:52:23.872] [INFO ] [TelegramService] Запрос к Telegram: поиск последней резервной копии базы данных...
+[2026-11-25 00:52:23.939] [INFO ] [TelegramService] Найден файл бэкапа базы в Telegram: Message #168, 'base_2026-11-25_00-48-52.db', 572,0 КБ, дата: 2026-11-25 00:48:53
+[2026-11-25 00:52:23.940] [INFO ] [DatabaseBackup] Запуск резервного копирования базы данных. Причина: 'Автоматический бэкап (1 мин тишины)'...
+[2026-11-25 00:52:23.941] [INFO ] [Database] Создание консистентного снимка базы данных в: D:\Temp\TGramFS\backups\base_2026-11-25_00-52-23.db...
+[2026-11-25 00:52:24.688] [INFO ] [Database] Снимок базы данных успешно создан: D:\Temp\TGramFS\backups\base_2026-11-25_00-52-23.db
+[2026-11-25 00:52:24.692] [INFO ] [TelegramService] Загрузка резервной копии 'base_2026-11-25_00-52-23.db' в Telegram (канал ID: 4439566709)...
+[2026-11-25 00:52:24.889] [INFO ] [TelegramService] Резервная копия 'base_2026-11-25_00-52-23.db' успешно загружена в Telegram. Message ID: 169
+[2026-11-25 00:52:25.011] [INFO ] [DatabaseBackup] Резервная копия базы данных успешно отправлена в Telegram! (Размер: 0,55 МБ).
+[2026-11-25 00:53:11.716] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 5
+[2026-11-25 00:53:12.411] [INFO ] [WinFsp] Создан новый каталог: '/Новая папка (2)' (ID 3469)
+[2026-11-25 00:53:21.017] [INFO ] [WinFsp] Переименование/перемещение: '/Новая папка (2)' -> '/test'
+[2026-11-25 00:53:22.983] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'test' (/test) (ID 3469), элементов: 0
+[2026-11-25 00:53:23.741] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 00:53:35.411] [INFO ] [WinFsp] Открыт каталог: '/test' (ID 3469)
+[2026-11-25 00:53:35.446] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (виртуальный путь: '/test/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe')...
+[2026-11-25 00:53:35.446] [INFO ] [WinFsp] [Источник] Предыдущая сессия копирования завершена по таймауту бездействия (20 сек).
+[2026-11-25 00:53:35.446] [INFO ] [WinFsp] [Handles DragDrop] Сканирование хэндлов для 1 процессов (PID: 12292, вызывающий процесс: explorer (PID: 12292))...
+[2026-11-25 00:53:35.461] [INFO ] [WinFsp] [Handles DragDrop] В системе обнаружено 90239 дескрипторов ядра (File Type Index: 36).
+[2026-11-25 00:53:35.492] [INFO ] [WinFsp] [Handles DragDrop] Обнаружен открытый файл в процессе PID 12292: 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe'
+[2026-11-25 00:53:35.493] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' существует и доступен для чтения (размер: 328,1 КБ (335 976 байт)).
+[2026-11-25 00:53:35.493] [INFO ] [WinFsp] [Handles DragDrop] Привязана папка-источник 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга' для виртуального каталога '/test'
+[2026-11-25 00:53:35.494] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/test/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (alloc: 339968), источник: 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe'
+[2026-11-25 00:53:35.497] [INFO ] [WinFsp] Обновлены системные даты для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID -7): Изменен: 2014-03-05 22:33:09.177, Создан: 2026-11-24 22:53:35.494
+[2026-11-25 00:53:35.499] [INFO ] [WinFsp] Отправка файла 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (328,1 КБ (335 976 байт)) из памяти в Telegram (Zero-Temp), канал: 4377159476...
+[2026-11-25 00:53:35.499] [INFO ] [TelegramService] Прямая потоковая передача файла 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (335976 байт) в Telegram...
+[2026-11-25 00:53:35.578] [INFO ] [TelegramService] Файл 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /test/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5_v1.exe
+#latest')...
+[2026-11-25 00:53:35.592] [INFO ] [TrayProgressOverlay] Показ окна прогресса [Upload] для Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe (335976/335976)
+[2026-11-25 00:53:35.725] [INFO ] [TelegramService] Файл 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' успешно сохранен в Telegram. Message ID: 2190
+[2026-11-25 00:53:35.726] [INFO ] [TrayContext] Событие OnUploadCompleted для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' получено из TelegramService.
+[2026-11-25 00:53:35.726] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe'. Запуск _completionTimer...
+[2026-11-25 00:53:35.943] [INFO ] [WinFsp] Файл 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' успешно сохранен в Telegram (Msg ID: 2190, дата изменения: 2014-03-05 22:33:09).
+[2026-11-25 00:53:36.207] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'test' (/test) (ID 3469), элементов: 1
+[2026-11-25 00:53:36.402] [INFO ] [MtprotoWorkerPool] [Воркер #1] Запрос чанка #1/1 для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (/test/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe) (смещение 0 б, размер 339 968 б) [Остаток 332,00 КБ]...
+[2026-11-25 00:53:36.667] [INFO ] [MtprotoWorkerPool] [Воркер #1] Получен чанк #1/1 для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (/test/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe) (335 976 б за 264 мс) [Остаток 328,10 КБ].
+[2026-11-25 00:53:36.693] [INFO ] [TelegramService] [NetworkAudit] Завершено для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (/test/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe): Размер: 335 976 б (0,32 МБ) | Из сети TG: 335 976 б (0,32 МБ) | Из ОЗУ: 0 б (0,00 МБ) | Эффективность сети: 1.00x (Идеально — 0% дублирования)
+[2026-11-25 00:53:36.693] [INFO ] [TrayContext] Событие OnDownloadCompleted для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' получено из TelegramService.
+[2026-11-25 00:53:36.694] [INFO ] [TrayProgressOverlay] CompleteTransfer [Download] вызван для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe'. Запуск _completionTimer...
+[2026-11-25 00:53:36.708] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:53:36.709] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка' (/Новая папка) (ID 1890), элементов: 103
+[2026-11-25 00:53:36.713] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:53:36.714] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:53:36.725] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:53:36.726] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:53:36.738] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:53:36.739] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:53:37.213] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 00:53:37.509] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:53:37.524] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:53:37.525] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:53:37.528] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:53:37.540] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:53:37.541] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:53:37.546] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 236 544, 32 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:53:37.547] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 335 944, 32 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:53:37.560] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:53:37.562] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:53:37.562] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:53:37.572] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:53:37.573] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:53:37.573] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:53:37.584] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:53:37.585] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:53:37.586] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:53:37.715] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка' (/Новая папка) (ID 1890), элементов: 103
+[2026-11-25 00:53:38.092] [INFO ] [TrayProgressOverlay] _completionTimer Tick! _isTransferring=False, _isCompleted=True, Visible=True
+[2026-11-25 00:53:38.094] [INFO ] [TrayProgressOverlay] Оверлей успешно скрыт по завершению таймаута.
+[2026-11-25 00:53:40.888] [INFO ] [WinFsp] Открыт каталог: '/test' (ID 3469)
+[2026-11-25 00:53:40.913] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 00:53:40.925] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (виртуальный путь: '/test/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe')...
+[2026-11-25 00:53:40.925] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' существует и доступен для чтения (размер: 3,68 МБ (3 863 765 байт)).
+[2026-11-25 00:53:40.925] [INFO ] [WinFsp] [Источник] Найдено совпадение в активной сессии для папки '/test': 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe'
+[2026-11-25 00:53:40.925] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/test/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (alloc: 3866624), источник: 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe'
+[2026-11-25 00:53:41.049] [INFO ] [WinFsp] [Write] Начинаем извлечение метаданных из оригинального файла: 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe'
+[2026-11-25 00:53:41.049] [INFO ] [WinFsp] Запуск прямой потоковой передачи 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (3,68 МБ (3 863 765 байт)) в Telegram, канал: 4377159476...
+[2026-11-25 00:53:41.051] [INFO ] [TelegramService] Прямая потоковая передача файла 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (3863765 байт) в Telegram...
+[2026-11-25 00:53:41.144] [INFO ] [WinFsp] Обновлены системные даты для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID -8): Изменен: 2014-03-05 22:21:04.030, Создан: 2026-11-24 22:53:40.925
+[2026-11-25 00:53:41.177] [INFO ] [TrayProgressOverlay] Показ окна прогресса [Upload] для Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe (524288/3863765)
+[2026-11-25 00:53:41.413] [INFO ] [TelegramService] Файл 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /test/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4_v1.exe
+#latest')...
+[2026-11-25 00:53:41.599] [INFO ] [TelegramService] Файл 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' успешно сохранен в Telegram. Message ID: 2191
+[2026-11-25 00:53:41.599] [INFO ] [TrayContext] Событие OnUploadCompleted для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' получено из TelegramService.
+[2026-11-25 00:53:41.599] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe'. Запуск _completionTimer...
+[2026-11-25 00:53:41.660] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'test' (/test) (ID 3469), элементов: 1
+[2026-11-25 00:53:41.691] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:53:41.692] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:53:41.700] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:53:41.700] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:53:41.708] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:53:41.709] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:53:41.810] [INFO ] [WinFsp] Файл 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' успешно сохранен в Telegram (Msg ID: 2191, дата изменения: 2014-03-05 22:21:04). Загрузка на лету (Zero-Temp) завершена.
+[2026-11-25 00:53:42.193] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 00:53:42.370] [INFO ] [MtprotoWorkerPool] [Воркер #2] Запрос чанка #1/4 для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (/test/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe) (смещение 0 б, размер 1 048 576 б) [Полный чанк]...
+[2026-11-25 00:53:42.657] [INFO ] [MtprotoWorkerPool] [Воркер #2] Получен чанк #1/4 для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (/test/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe) (1 048 576 б за 286 мс) [Полный чанк].
+[2026-11-25 00:53:42.667] [INFO ] [TrayProgressOverlay] CompleteMetadata вызван для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe'. Показ оверлея 'МЕТАДАННЫЕ ПОЛУЧЕНЫ'...
+[2026-11-25 00:53:42.667] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:53:42.681] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:53:42.681] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:53:42.695] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка' (/Новая папка) (ID 1890), элементов: 103
+[2026-11-25 00:53:42.696] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:53:42.696] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:53:43.242] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 00:53:43.688] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:53:43.689] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:53:43.693] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:53:43.704] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:53:43.704] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:53:43.705] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 236 544, 32 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:53:43.707] [INFO ] [MtprotoWorkerPool] [Воркер #3] Запрос чанка #4/4 для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (/test/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe) (смещение 3 145 728 б, размер 720 896 б) [Остаток 704,00 КБ]...
+[2026-11-25 00:53:43.742] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка' (/Новая папка) (ID 1890), элементов: 103
+[2026-11-25 00:53:43.857] [INFO ] [MtprotoWorkerPool] [Воркер #3] Получен чанк #4/4 для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (/test/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe) (718 037 б за 150 мс) [Остаток 701,21 КБ].
+[2026-11-25 00:53:43.870] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:53:43.871] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:53:43.871] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:53:43.879] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:53:43.880] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:53:43.880] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:53:43.889] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:53:43.889] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:53:43.890] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:53:44.078] [INFO ] [TrayProgressOverlay] _completionTimer Tick! _isTransferring=False, _isCompleted=True, Visible=True
+[2026-11-25 00:53:44.080] [INFO ] [TrayProgressOverlay] Оверлей успешно скрыт по завершению таймаута.
+[2026-11-25 00:53:51.706] [INFO ] [WinFsp] Открыт каталог: '/test' (ID 3469)
+[2026-11-25 00:53:51.730] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 00:53:51.742] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 1.pdf' (виртуальный путь: '/test/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 1.pdf')...
+[2026-11-25 00:53:51.742] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 1.pdf' существует и доступен для чтения (размер: 7,19 МБ (7 541 924 байт)).
+[2026-11-25 00:53:51.742] [INFO ] [WinFsp] [Источник] Найдено совпадение в активной сессии для папки '/test': 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 1.pdf'
+[2026-11-25 00:53:51.742] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/test/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 1.pdf' (alloc: 7544832), источник: 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 1.pdf'
+[2026-11-25 00:53:51.843] [INFO ] [WinFsp] [Write] Начинаем извлечение метаданных из оригинального файла: 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 1.pdf'
+[2026-11-25 00:53:51.844] [INFO ] [WinFsp] Запуск прямой потоковой передачи 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 1.pdf' (7,19 МБ (7 541 924 байт)) в Telegram, канал: 4377159476...
+[2026-11-25 00:53:51.845] [INFO ] [TelegramService] Прямая потоковая передача файла 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 1.pdf' (7541924 байт) в Telegram...
+[2026-11-25 00:53:51.978] [INFO ] [TrayProgressOverlay] Показ окна прогресса [Upload] для Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 1.pdf (524288/7541924)
+[2026-11-25 00:53:52.110] [INFO ] [WinFsp] Обновлены системные даты для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 1.pdf' (ID -9): Изменен: 2013-09-20 23:09:45.299, Создан: 2026-11-24 22:53:51.742
+[2026-11-25 00:53:52.629] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'test' (/test) (ID 3469), элементов: 2
+[2026-11-25 00:53:52.654] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:53:52.654] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:53:52.655] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:53:52.655] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:53:52.665] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:53:52.666] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:53:52.666] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:53:52.667] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:53:52.678] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:53:52.679] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:53:52.679] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:53:52.680] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:53:52.773] [INFO ] [TelegramService] Файл 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 1.pdf' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /test/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 1_v1.pdf
+#latest')...
+[2026-11-25 00:53:52.989] [INFO ] [TelegramService] Файл 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 1.pdf' успешно сохранен в Telegram. Message ID: 2192
+[2026-11-25 00:53:52.989] [INFO ] [TrayContext] Событие OnUploadCompleted для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 1.pdf' получено из TelegramService.
+[2026-11-25 00:53:52.989] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 1.pdf'. Запуск _completionTimer...
+[2026-11-25 00:53:53.188] [INFO ] [WinFsp] Файл 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 1.pdf' успешно сохранен в Telegram (Msg ID: 2192, дата изменения: 2013-09-20 23:09:45). Загрузка на лету (Zero-Temp) завершена.
+[2026-11-25 00:53:53.559] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 00:53:54.060] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка' (/Новая папка) (ID 1890), элементов: 103
+[2026-11-25 00:53:54.393] [INFO ] [TrayProgressOverlay] _completionTimer Tick! _isTransferring=False, _isCompleted=True, Visible=True
+[2026-11-25 00:53:54.399] [INFO ] [TrayProgressOverlay] Оверлей успешно скрыт по завершению таймаута.
+[2026-11-25 00:53:54.567] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 00:53:55.068] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка' (/Новая папка) (ID 1890), элементов: 103
+[2026-11-25 00:53:58.010] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'test' (/test) (ID 3469), элементов: 3
+[2026-11-25 00:53:58.036] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:53:58.037] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:53:58.037] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:53:58.037] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:53:58.045] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:53:58.046] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:53:58.046] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:53:58.046] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:53:58.055] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:53:58.056] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:53:58.056] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:53:58.057] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:54:01.020] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:54:01.021] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:54:01.023] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:01.023] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:01.031] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:54:01.031] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 00:54:01.031] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:54:01.033] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:01.033] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:01.039] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:54:01.041] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:54:01.043] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:01.043] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:02.160] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'test' (/test) (ID 3469), элементов: 3
+[2026-11-25 00:54:02.189] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:54:02.189] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:54:02.190] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:02.190] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:02.198] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:54:02.199] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:54:02.200] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:02.201] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:02.210] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:02.210] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:54:02.210] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:02.211] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:54:02.998] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:54:02.999] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:54:03.000] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:03.001] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:03.006] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 00:54:03.007] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:54:03.008] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:54:03.010] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:03.010] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:03.017] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:54:03.018] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:54:03.019] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:03.019] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:03.750] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:54:03.751] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:54:16.657] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'test' (/test) (ID 3469), элементов: 3
+[2026-11-25 00:54:16.684] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:16.685] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:16.722] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:16.723] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:16.723] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:16.732] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:16.733] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:16.734] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:16.748] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:16.748] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:16.749] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:17.538] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 00:54:17.561] [INFO ] [WinFsp] Перемещение элемента 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3470) в корзину (.Trash)...
+[2026-11-25 00:54:18.320] [INFO ] [Database] Поставлено в фоновую очередь обновление подписей Telegram для 1 элементов.
+[2026-11-25 00:54:18.753] [INFO ] [TelegramService] Подпись сообщения #2190 в Telegram успешно обновлена на: '🗑️ /.Trash/test/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5_v1.exe
+ID: 2190
+#trash'.
+[2026-11-25 00:54:23.929] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка '.Trash' (/.Trash) (ID 2), элементов: 2
+[2026-11-25 00:54:25.778] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'test' (/.Trash/test) (ID 3473), элементов: 1
+[2026-11-25 00:54:26.198] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:26.198] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:26.202] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:26.203] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:26.207] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:26.208] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:26.210] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:26.211] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:26.212] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:26.216] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:26.216] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:26.217] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 236 544, 32 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:26.217] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 335 944, 32 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:26.223] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:26.223] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 8 192 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:26.224] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:26.228] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:26.228] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:26.228] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:26.232] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:26.233] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:26.233] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:26.241] [WARN ] [NodeRepository] [GetNodeByPath NOT FOUND] Не найдена системная корзина '.Trash' в корне (Root ID=1).
+[2026-11-25 00:54:26.241] [WARN ] [NodeRepository] [GetNodeByPath NULL] Поиск пути '/.trash/test/арнольд шварценеггер. энциклопедия современного бодибилдинга. книга 5.exe' прерван: родительский узел равен null на элементе 'test'.
+[2026-11-25 00:54:26.242] [WARN ] [NodeRepository] [GetNodeByPath NOT FOUND] Не найдена системная корзина '.Trash' в корне (Root ID=1).
+[2026-11-25 00:54:26.242] [WARN ] [NodeRepository] [GetNodeByPath NULL] Поиск пути '/.trash/test/арнольд шварценеггер. энциклопедия современного бодибилдинга. книга 5.exe' прерван: родительский узел равен null на элементе 'test'.
+[2026-11-25 00:54:26.243] [WARN ] [NodeRepository] [GetNodeByPath NOT FOUND] Не найдена системная корзина '.Trash' в корне (Root ID=1).
+[2026-11-25 00:54:26.243] [WARN ] [NodeRepository] [GetNodeByPath NULL] Поиск пути '/.trash/test/арнольд шварценеггер. энциклопедия современного бодибилдинга. книга 5.exe' прерван: родительский узел равен null на элементе 'test'.
+[2026-11-25 00:54:26.244] [WARN ] [NodeRepository] [GetNodeByPath NOT FOUND] Не найдена системная корзина '.Trash' в корне (Root ID=1).
+[2026-11-25 00:54:26.244] [WARN ] [NodeRepository] [GetNodeByPath NULL] Поиск пути '/.trash/test/арнольд шварценеггер. энциклопедия современного бодибилдинга. книга 5.exe' прерван: родительский узел равен null на элементе 'test'.
+[2026-11-25 00:54:27.001] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка '.Trash' (/.Trash) (ID 2), элементов: 2
+[2026-11-25 00:54:27.152] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:27.153] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:27.157] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:27.157] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:27.161] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:27.161] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:27.164] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:27.165] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:27.168] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:27.168] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:27.172] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:27.173] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:27.185] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:27.186] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:27.193] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:27.193] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:27.284] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:27.285] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:40.000] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 00:54:40.656] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:40.657] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:40.660] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:40.661] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:40.664] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:40.665] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:40.669] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:40.670] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:40.674] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:40.675] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:40.678] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:40.679] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:40.686] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка '.Trash' (/.Trash) (ID 2), элементов: 2
+[2026-11-25 00:54:40.690] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:40.690] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:40.696] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:40.696] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:40.715] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:40.716] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:46.843] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 00:54:47.415] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка '.Trash' (/.Trash) (ID 2), элементов: 2
+[2026-11-25 00:54:47.595] [WARN ] [NodeRepository] [GetNodeByPath NOT FOUND] Не найдена системная корзина '.Trash' в корне (Root ID=1).
+[2026-11-25 00:54:47.596] [WARN ] [NodeRepository] [GetNodeByPath NULL] Поиск пути '/.trash/test/арнольд шварценеггер. энциклопедия современного бодибилдинга. книга 5.exe' прерван: родительский узел равен null на элементе 'test'.
+[2026-11-25 00:54:47.597] [WARN ] [NodeRepository] [GetNodeByPath NOT FOUND] Не найдена системная корзина '.Trash' в корне (Root ID=1).
+[2026-11-25 00:54:47.597] [WARN ] [NodeRepository] [GetNodeByPath NULL] Поиск пути '/.trash/test/арнольд шварценеггер. энциклопедия современного бодибилдинга. книга 5.exe' прерван: родительский узел равен null на элементе 'test'.
+[2026-11-25 00:54:47.598] [WARN ] [NodeRepository] [GetNodeByPath NOT FOUND] Не найдена системная корзина '.Trash' в корне (Root ID=1).
+[2026-11-25 00:54:47.598] [WARN ] [NodeRepository] [GetNodeByPath NULL] Поиск пути '/.trash/test/арнольд шварценеггер. энциклопедия современного бодибилдинга. книга 5.exe' прерван: родительский узел равен null на элементе 'test'.
+[2026-11-25 00:54:47.599] [WARN ] [NodeRepository] [GetNodeByPath NOT FOUND] Не найдена системная корзина '.Trash' в корне (Root ID=1).
+[2026-11-25 00:54:47.599] [WARN ] [NodeRepository] [GetNodeByPath NULL] Поиск пути '/.trash/test/арнольд шварценеггер. энциклопедия современного бодибилдинга. книга 5.exe' прерван: родительский узел равен null на элементе 'test'.
+[2026-11-25 00:54:47.599] [WARN ] [NodeRepository] [GetNodeByPath NOT FOUND] Не найдена системная корзина '.Trash' в корне (Root ID=1).
+[2026-11-25 00:54:47.599] [WARN ] [NodeRepository] [GetNodeByPath NULL] Поиск пути '/.trash/test/арнольд шварценеггер. энциклопедия современного бодибилдинга. книга 5.exe' прерван: родительский узел равен null на элементе 'test'.
+[2026-11-25 00:54:47.601] [WARN ] [NodeRepository] [GetNodeByPath NOT FOUND] Не найдена системная корзина '.Trash' в корне (Root ID=1).
+[2026-11-25 00:54:47.601] [WARN ] [NodeRepository] [GetNodeByPath NULL] Поиск пути '/.trash/test/арнольд шварценеггер. энциклопедия современного бодибилдинга. книга 5.exe' прерван: родительский узел равен null на элементе 'test'.
+[2026-11-25 00:54:47.626] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:47.627] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:47.727] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:47.728] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:50.425] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:50.426] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:53.497] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:53.498] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:54.245] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'test' (/.Trash/test) (ID 3473), элементов: 1
+[2026-11-25 00:54:54.304] [INFO ] [WinFsp] Открыт каталог: '/test' (ID 3469)
+[2026-11-25 00:54:54.878] [INFO ] [Database] Поставлено в фоновую очередь обновление подписей Telegram для 1 элементов.
+[2026-11-25 00:54:54.879] [INFO ] [WinFsp] Переименование/перемещение: '/.Trash/test/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' -> '/test/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe'
+[2026-11-25 00:54:54.890] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 00:54:54.953] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:54:54.954] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:54:54.956] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:54.956] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:54.961] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:54:54.963] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:54:54.963] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:54.966] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:54.966] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:54.971] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:54:54.971] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 2191): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:54:54.973] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:54.974] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:54.978] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:54.979] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:54.979] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:54.987] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:54.987] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:54.987] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:54.995] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:54.995] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:54.996] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:55.036] [INFO ] [TelegramService] Подпись сообщения #2190 в Telegram успешно обновлена на: '🟢 /test/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5_v1.exe
+ID: 2190
+#latest'.
+[2026-11-25 00:54:55.392] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка' (/Новая папка) (ID 1890), элементов: 103
+[2026-11-25 00:54:55.935] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 00:54:56.420] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:56.421] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:56.432] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:56.432] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:56.436] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка' (/Новая папка) (ID 1890), элементов: 103
+[2026-11-25 00:54:56.443] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:54:56.443] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 2190): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:55:02.642] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 00:55:03.355] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'качалка' (/качалка) (ID 1088), элементов: 16
+[2026-11-25 00:55:03.860] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'images' (/качалка/Арнольд Шварценеггер - Энциклопедия бодибилдинга/arnold_schwarzenegger_encyclopedia_book_4/images) (ID 1846), элементов: 0
+[2026-11-25 00:55:05.228] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 00:55:07.578] [INFO ] [TelegramService] Создание нового приватного канала 'test'...
+[2026-11-25 00:55:07.905] [INFO ] [TelegramService] Создан новый кастомный канал 'test' (ID: 5754358961). Записан в SQLite.
+[2026-11-25 00:55:08.067] [INFO ] [TelegramService] Установлена стандартная иконка для канала 'test' (ID: 5754358961).
+[2026-11-25 00:55:08.288] [INFO ] [TelegramService] [Migration] Добавление 3 файлов папки ID 3469 в очередь фоновой миграции в канал ID 5754358961...
+[2026-11-25 00:55:08.533] [INFO ] [TelegramService] [Migration] Папка ID 3469 успешно привязана к каналу ID 5754358961. Поставлено в очередь фоновой миграции: 3 файлов.
+[2026-11-25 00:55:08.534] [INFO ] [TelegramService] [MigrationQueue] Фоновая обработка пачки из 3 файлов миграции каналов...
+[2026-11-25 00:55:08.707] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'test' (/test) (ID 3469), элементов: 4
+[2026-11-25 00:55:08.768] [INFO ] [TelegramService] Пакет из 1 сообщений успешно удален из Telegram.
+[2026-11-25 00:55:09.486] [INFO ] [TelegramService] [MigrationQueue] Файл 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' успешно перенесен: старый msg #2190 -> новый msg #3 в канале ID 5754358961.
+[2026-11-25 00:55:09.755] [INFO ] [TelegramService] Пакет из 1 сообщений успешно удален из Telegram.
+[2026-11-25 00:55:10.183] [INFO ] [TelegramService] [MigrationQueue] Файл 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' успешно перенесен: старый msg #2191 -> новый msg #4 в канале ID 5754358961.
+[2026-11-25 00:55:10.426] [INFO ] [TelegramService] Подпись сообщения #3 в Telegram успешно обновлена на: '🟢 /test/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5_v1.exe
+ID: 3
+#latest'.
+[2026-11-25 00:55:10.596] [INFO ] [TelegramService] Пакет из 1 сообщений успешно удален из Telegram.
+[2026-11-25 00:55:10.712] [INFO ] [TelegramService] [MigrationQueue] Файл 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 1.pdf' успешно перенесен: старый msg #2192 -> новый msg #5 в канале ID 5754358961.
+[2026-11-25 00:55:10.932] [INFO ] [TelegramService] Подпись сообщения #4 в Telegram успешно обновлена на: '🟢 /test/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4_v1.exe
+ID: 4
+#latest'.
+[2026-11-25 00:55:11.245] [INFO ] [TelegramService] Подпись сообщения #5 в Telegram успешно обновлена на: '🟢 /test/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 1_v1.pdf
+ID: 5
+#latest'.
+[2026-11-25 00:55:20.259] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 00:55:20.761] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка '1990 - 2 Brothers On The 4th Floor - Can't Help Myself CDM' (/Новая папка/2 Brothers On The 4th Floor Full Discography/Singles/1990 - 2 Brothers On The 4th Floor - Can't Help Myself CDM) (ID 2078), элементов: 5
+[2026-11-25 00:55:21.262] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка '2001 - 2 Brothers On The 4th Floor - Stand Up And Live CDS' (/Новая папка/2 Brothers On The 4th Floor Full Discography/Singles/2001 - 2 Brothers On The 4th Floor - Stand Up And Live CDS) (ID 2237), элементов: 2
+[2026-11-25 00:55:22.128] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 00:55:22.309] [INFO ] [MtprotoWorkerPool] [Воркер #1] Запрос чанка #1/1 для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (/test/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe) (смещение 0 б, размер 339 968 б) [Остаток 332,00 КБ]...
+[2026-11-25 00:55:22.385] [INFO ] [MtprotoWorkerPool] [Воркер #1] Получен чанк #1/1 для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (/test/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe) (335 976 б за 76 мс) [Остаток 328,10 КБ].
+[2026-11-25 00:55:22.386] [INFO ] [TelegramService] [NetworkAudit] Завершено для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (/test/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe): Размер: 335 976 б (0,32 МБ) | Из сети TG: 335 976 б (0,32 МБ) | Из ОЗУ: 0 б (0,00 МБ) | Эффективность сети: 1.00x (Идеально — 0% дублирования)
+[2026-11-25 00:55:22.386] [INFO ] [TrayContext] Событие OnDownloadCompleted для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' получено из TelegramService.
+[2026-11-25 00:55:22.386] [INFO ] [TrayProgressOverlay] CompleteTransfer [Download] вызван для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe'. Запуск _completionTimer...
+[2026-11-25 00:55:22.387] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:55:22.392] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:55:22.392] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:55:22.398] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:55:22.399] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:55:22.404] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:55:22.405] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:55:22.405] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:55:22.414] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:55:22.415] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:55:22.415] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:55:22.423] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:55:22.424] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:55:22.424] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:55:22.489] [INFO ] [MtprotoWorkerPool] [Воркер #2] Запрос чанка #1/4 для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (/test/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe) (смещение 0 б, размер 1 048 576 б) [Полный чанк]...
+[2026-11-25 00:55:22.614] [INFO ] [MtprotoWorkerPool] [Воркер #2] Получен чанк #1/4 для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (/test/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe) (1 048 576 б за 125 мс) [Полный чанк].
+[2026-11-25 00:55:22.615] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:55:22.617] [INFO ] [TrayProgressOverlay] CompleteMetadata вызван для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe'. Показ оверлея 'МЕТАДАННЫЕ ПОЛУЧЕНЫ'...
+[2026-11-25 00:55:22.619] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:55:22.620] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:55:22.624] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:55:22.625] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:55:22.631] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:55:22.632] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:55:22.632] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:55:22.640] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:55:22.641] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:55:22.641] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:55:22.648] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:55:22.649] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:55:22.649] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:55:23.654] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:55:23.655] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:55:24.016] [INFO ] [TrayProgressOverlay] _completionTimer Tick! _isTransferring=False, _isCompleted=True, Visible=True
+[2026-11-25 00:55:24.022] [INFO ] [TrayProgressOverlay] Оверлей успешно скрыт по завершению таймаута.
+[2026-11-25 00:55:30.620] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'test' (/test) (ID 3469), элементов: 3
+[2026-11-25 00:55:30.731] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:55:30.731] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:55:30.740] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:55:30.740] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:55:30.749] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:55:30.749] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:55:30.757] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:55:30.757] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 8 192 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:55:30.765] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:55:30.765] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:55:30.773] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:55:30.774] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:55:32.474] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 00:55:34.005] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'test' (/test) (ID 3469), элементов: 3
+[2026-11-25 00:55:34.043] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:55:34.044] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:55:34.093] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:55:34.094] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:55:34.095] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:55:34.109] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:55:34.110] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:55:34.111] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:55:34.124] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:55:34.125] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:55:34.126] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:55:35.263] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 00:55:35.281] [INFO ] [WinFsp] Перемещение элемента 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 3471) в корзину (.Trash)...
+[2026-11-25 00:55:35.605] [INFO ] [Database] Поставлено в фоновую очередь обновление подписей Telegram для 1 элементов.
+[2026-11-25 00:55:36.532] [INFO ] [TelegramService] Подпись сообщения #4 в Telegram успешно обновлена на: '🗑️ /.Trash/test/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4_v1.exe
+ID: 4
+#trash'.
+[2026-11-25 00:55:39.218] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'test' (/.Trash/test) (ID 3473), элементов: 1
+[2026-11-25 00:55:39.244] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:55:39.245] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:55:39.250] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:55:39.250] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:55:39.253] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:55:39.253] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:55:39.256] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:55:39.257] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:55:39.259] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:55:39.260] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:55:39.260] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 236 544, 32 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 00:55:39.261] [INFO ] [MtprotoWorkerPool] [Воркер #3] Запрос чанка #4/4 для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (/.Trash/test/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe) (смещение 3 145 728 б, размер 720 896 б) [Остаток 704,00 КБ]...
+[2026-11-25 00:55:39.358] [INFO ] [MtprotoWorkerPool] [Воркер #3] Получен чанк #4/4 для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (/.Trash/test/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe) (718 037 б за 96 мс) [Остаток 701,21 КБ].
+[2026-11-25 00:55:39.365] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:55:39.366] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:55:39.366] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:55:39.370] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:55:39.371] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:55:39.371] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:55:39.376] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:55:39.376] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:55:39.377] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 4): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 00:55:39.384] [WARN ] [NodeRepository] [GetNodeByPath NOT FOUND] Не найдена системная корзина '.Trash' в корне (Root ID=1).
+[2026-11-25 00:55:39.384] [WARN ] [NodeRepository] [GetNodeByPath NULL] Поиск пути '/.trash/test/арнольд шварценеггер. энциклопедия современного бодибилдинга. книга 4.exe' прерван: родительский узел равен null на элементе 'test'.
+[2026-11-25 00:55:39.385] [WARN ] [NodeRepository] [GetNodeByPath NOT FOUND] Не найдена системная корзина '.Trash' в корне (Root ID=1).
+[2026-11-25 00:55:39.385] [WARN ] [NodeRepository] [GetNodeByPath NULL] Поиск пути '/.trash/test/арнольд шварценеггер. энциклопедия современного бодибилдинга. книга 4.exe' прерван: родительский узел равен null на элементе 'test'.
+[2026-11-25 00:55:39.386] [WARN ] [NodeRepository] [GetNodeByPath NOT FOUND] Не найдена системная корзина '.Trash' в корне (Root ID=1).
+[2026-11-25 00:55:39.386] [WARN ] [NodeRepository] [GetNodeByPath NULL] Поиск пути '/.trash/test/арнольд шварценеггер. энциклопедия современного бодибилдинга. книга 4.exe' прерван: родительский узел равен null на элементе 'test'.
+[2026-11-25 00:55:39.387] [WARN ] [NodeRepository] [GetNodeByPath NOT FOUND] Не найдена системная корзина '.Trash' в корне (Root ID=1).
+[2026-11-25 00:55:39.387] [WARN ] [NodeRepository] [GetNodeByPath NULL] Поиск пути '/.trash/test/арнольд шварценеггер. энциклопедия современного бодибилдинга. книга 4.exe' прерван: родительский узел равен null на элементе 'test'.
+[2026-11-25 00:55:40.822] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка '.Trash' (/.Trash) (ID 2), элементов: 2
+[2026-11-25 00:55:43.603] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 00:55:46.917] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка '.Trash' (/.Trash) (ID 2), элементов: 2
+[2026-11-25 00:55:46.936] [INFO ] [WinFsp] Перманентное удаление элемента 'test' (ID 3473) из корзины...
+[2026-11-25 00:55:46.937] [INFO ] [Database] [EnqueuePermanentDeletion] Транзакция перманентного удаления: 2 узлов из БД, 1 уникальных сообщений Telegram в очередь pending_deletions.
+[2026-11-25 00:55:47.179] [INFO ] [Database] [EnqueuePermanentDeletion] Транзакция успешно зафиксирована.
+[2026-11-25 00:55:47.180] [INFO ] [WinFsp] Удалено 2 узлов из базы; 1 сообщений отправлено в очередь удаления Telegram.
+[2026-11-25 00:55:47.441] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 00:55:48.656] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка' (/Новая папка) (ID 1890), элементов: 103
+[2026-11-25 00:55:49.280] [INFO ] [TelegramService] [DeletionQueue] Фоновое перманентное удаление 1 сообщений из Telegram...
+[2026-11-25 00:55:49.344] [INFO ] [TelegramService] Пакет из 1 сообщений успешно удален из Telegram.
+[2026-11-25 00:55:49.562] [INFO ] [TelegramService] [DeletionQueue] Очищено 1 сообщений из очереди.
+[2026-11-25 00:55:50.180] [INFO ] [Database] Запуск оптимизации базы данных SQLite (VACUUM)...
+[2026-11-25 00:55:50.446] [INFO ] [Database] Оптимизация базы данных (VACUUM) успешно завершена.
+[2026-11-25 00:55:50.537] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'test' (/test) (ID 3469), элементов: 2
+[2026-11-25 00:55:50.565] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:55:50.565] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:55:50.574] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:55:50.575] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:55:50.582] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:55:50.583] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 00:56:01.937] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 00:56:03.773] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Music' (/Music) (ID 5), элементов: 2
+[2026-11-25 00:56:06.673] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 00:56:08.344] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'test' (/test) (ID 3469), элементов: 2
+[2026-11-25 00:56:08.588] [INFO ] [WinFsp] Перемещение элемента 'test' (ID 3469) в корзину (.Trash)...
+[2026-11-25 00:56:09.070] [INFO ] [Database] Поставлено в фоновую очередь обновление подписей Telegram для 2 элементов.
+[2026-11-25 00:56:09.201] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 5
+[2026-11-25 00:56:09.942] [INFO ] [TelegramService] Подпись сообщения #3 в Telegram успешно обновлена на: '🗑️ /.Trash/test/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5_v1.exe
 ID: 3
 #trash'.
-[2026-11-21 22:45:50.196] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка' (/Новая папка) (ID 1890), элементов: 103
-[2026-11-21 22:45:50.748] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 5
-[2026-11-21 22:45:51.251] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка' (/Новая папка) (ID 1890), элементов: 103
-[2026-11-21 22:45:55.035] [DEBUG] [WTelegram] 2>Receiving Updates                                  2026-11-21 20:45:53Z  
-[2026-11-21 22:46:02.447] [DEBUG] [WTelegram] 2>Sending   MsgContainer                             2026-11-21 20:46:01Z (svc)
-[2026-11-21 22:46:02.447] [DEBUG] [WTelegram]             → PingDelayDisconnect                    #E687
-[2026-11-21 22:46:02.447] [DEBUG] [WTelegram]             → MsgsAck                               
-[2026-11-21 22:46:02.493] [DEBUG] [WTelegram] 2>Receiving Pong                                     2026-11-21 20:46:01Z (svc) 
-[2026-11-21 22:46:42.207] [INFO ] [DatabaseBackup] Сработал Debounce-таймер резервного копирования (1 мин тишины).
-[2026-11-21 22:46:42.207] [INFO ] [TelegramService] Запрос к Telegram: поиск последней резервной копии базы данных...
-[2026-11-21 22:46:42.208] [DEBUG] [WTelegram] 2>Sending   Messages_GetHistory                      #209F
-[2026-11-21 22:46:42.276] [DEBUG] [WTelegram] 2>Receiving RpcResult                                2026-11-21 20:46:41Z
-[2026-11-21 22:46:42.277] [DEBUG] [WTelegram]              → Messages_ChannelMessages              #209F
-[2026-11-21 22:46:42.278] [DEBUG] [TelegramService] Получено сообщений из канала бэкапов (ID: 4439566709): 20. Проверка файлов...
-[2026-11-21 22:46:42.278] [INFO ] [TelegramService] Найден файл бэкапа базы в Telegram: Message #156, 'base_2026-11-21_22-42-24.db', 580,0 КБ, дата: 2026-11-21 22:42:23
-[2026-11-21 22:46:42.279] [INFO ] [DatabaseBackup] Запуск резервного копирования базы данных. Причина: 'Автоматический бэкап (1 мин тишины)'...
-[2026-11-21 22:46:42.280] [INFO ] [Database] Создание консистентного снимка базы данных в: D:\Temp\TGramFS\backups\base_2026-11-21_22-46-42.db...
-[2026-11-21 22:46:43.070] [INFO ] [Database] Снимок базы данных успешно создан: D:\Temp\TGramFS\backups\base_2026-11-21_22-46-42.db
-[2026-11-21 22:46:43.073] [INFO ] [TelegramService] Загрузка резервной копии 'base_2026-11-21_22-46-42.db' в Telegram (канал ID: 4439566709)...
-[2026-11-21 22:46:43.077] [DEBUG] [WTelegram] 2>Sending   MsgContainer                             2026-11-21 20:46:42Z (svc)
-[2026-11-21 22:46:43.077] [DEBUG] [WTelegram]             → Upload_SaveFilePart                    #3A30
-[2026-11-21 22:46:43.078] [DEBUG] [WTelegram]             → MsgsAck                               
-[2026-11-21 22:46:43.123] [DEBUG] [WTelegram] 2>Sending   Upload_SaveFilePart                      #08A4
-[2026-11-21 22:46:43.204] [DEBUG] [WTelegram] 2>Receiving MsgContainer                             2026-11-21 20:46:42Z (svc)
-[2026-11-21 22:46:43.204] [DEBUG] [WTelegram]             → RpcResult                              2026-11-21 20:46:42Z
-[2026-11-21 22:46:43.204] [DEBUG] [WTelegram]              → Boolean                               #08A4
-[2026-11-21 22:46:43.204] [DEBUG] [WTelegram]             → MsgsAck                                2026-11-21 20:46:42Z (svc) 
-[2026-11-21 22:46:43.206] [DEBUG] [WTelegram] 2>Receiving RpcResult                                2026-11-21 20:46:42Z
-[2026-11-21 22:46:43.207] [DEBUG] [WTelegram]              → Boolean                               #3A30
-[2026-11-21 22:46:43.207] [DEBUG] [WTelegram] 2>Sending   MsgContainer                             2026-11-21 20:46:42Z (svc)
-[2026-11-21 22:46:43.207] [DEBUG] [WTelegram]             → Messages_SendMedia                     #E990
-[2026-11-21 22:46:43.207] [DEBUG] [WTelegram]             → MsgsAck                               
-[2026-11-21 22:46:43.312] [DEBUG] [WTelegram] 2>Receiving RpcResult                                2026-11-21 20:46:42Z
-[2026-11-21 22:46:43.312] [DEBUG] [WTelegram]              → Updates                               #E990
-[2026-11-21 22:46:43.312] [INFO ] [TelegramService] Резервная копия 'base_2026-11-21_22-46-42.db' успешно загружена в Telegram. Message ID: 157
-[2026-11-21 22:46:43.346] [DEBUG] [DatabaseBackup] Удален старый локальный бэкап: base_2026-11-21_18-21-08.db
-[2026-11-21 22:46:43.346] [INFO ] [DatabaseBackup] Резервная копия базы данных успешно отправлена в Telegram! (Размер: 0,57 МБ).
-[2026-11-21 22:47:02.494] [DEBUG] [WTelegram] 2>Sending   MsgContainer                             2026-11-21 20:47:01Z (svc)
-[2026-11-21 22:47:02.495] [DEBUG] [WTelegram]             → PingDelayDisconnect                    #B2B7
-[2026-11-21 22:47:02.495] [DEBUG] [WTelegram]             → MsgsAck                               
-[2026-11-21 22:47:02.558] [DEBUG] [WTelegram] 2>Receiving Pong                                     2026-11-21 20:47:01Z (svc) 
-[2026-11-21 22:48:00.926] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 5
-[2026-11-21 22:48:02.559] [DEBUG] [WTelegram] 2>Sending   PingDelayDisconnect                      #4007
-[2026-11-21 22:48:02.612] [DEBUG] [WTelegram] 2>Receiving Pong                                     2026-11-21 20:48:01Z (svc) 
-[2026-11-21 22:48:03.912] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка '.Trash' (/.Trash) (ID 2), элементов: 15
-[2026-11-21 22:48:04.537] [DEBUG] [WTelegram] 2>Sending   Channels_GetMessages                     #AA9D
-[2026-11-21 22:48:04.605] [DEBUG] [WTelegram] 2>Receiving RpcResult                                2026-11-21 20:48:03Z
-[2026-11-21 22:48:04.605] [DEBUG] [WTelegram]              → Messages_ChannelMessages              #AA9D
-[2026-11-21 22:48:04.609] [INFO ] [MtprotoWorkerPool] [Воркер #2] Запрос чанка #1/1 для 'desktop.ini' (/.Trash/Новая папка (9)/desktop.ini) (смещение 0 б, размер 4 096 б) [Остаток 4,00 КБ]...
-[2026-11-21 22:48:04.610] [DEBUG] [WTelegram] 2>Sending   MsgContainer                             2026-11-21 20:48:03Z (svc)
-[2026-11-21 22:48:04.610] [DEBUG] [WTelegram]             → Upload_GetFile                         #8A35
-[2026-11-21 22:48:04.610] [DEBUG] [WTelegram]             → MsgsAck                               
-[2026-11-21 22:48:04.671] [DEBUG] [WTelegram] 2>Receiving RpcResult                                2026-11-21 20:48:03Z
-[2026-11-21 22:48:04.671] [DEBUG] [WTelegram]              → Upload_File                           #8A35
-[2026-11-21 22:48:04.671] [INFO ] [MtprotoWorkerPool] [Воркер #2] Получен чанк #1/1 для 'desktop.ini' (/.Trash/Новая папка (9)/desktop.ini) (68 б за 61 мс) [Остаток 0,07 КБ].
-[2026-11-21 22:48:04.672] [INFO ] [TelegramService] [NetworkAudit] Завершено для 'desktop.ini' (/.Trash/Новая папка (9)/desktop.ini): Размер: 68 б (0,00 МБ) | Из сети TG: 68 б (0,00 МБ) | Из ОЗУ: 0 б (0,00 МБ) | Эффективность сети: 1.00x (Идеально — 0% дублирования)
-[2026-11-21 22:48:04.672] [INFO ] [TrayContext] Событие OnDownloadCompleted для 'desktop.ini' получено из TelegramService.
-[2026-11-21 22:48:04.672] [INFO ] [TrayProgressOverlay] CompleteTransfer [Download] вызван для 'desktop.ini'. Запуск _completionTimer...
-[2026-11-21 22:48:04.695] [DEBUG] [WTelegram] 2>Sending   MsgContainer                             2026-11-21 20:48:03Z (svc)
-[2026-11-21 22:48:04.695] [DEBUG] [WTelegram]             → Channels_GetMessages                   #1A25
-[2026-11-21 22:48:04.695] [DEBUG] [WTelegram]             → MsgsAck                               
-[2026-11-21 22:48:04.770] [DEBUG] [WTelegram] 2>Receiving RpcResult                                2026-11-21 20:48:03Z
-[2026-11-21 22:48:04.770] [DEBUG] [WTelegram]              → Messages_ChannelMessages              #1A25
-[2026-11-21 22:48:04.791] [INFO ] [MtprotoWorkerPool] [Воркер #3] Запрос чанка #1/1 для 'desktop.ini' (/.Trash/Книги/desktop.ini) (смещение 0 б, размер 4 096 б) [Остаток 4,00 КБ]...
-[2026-11-21 22:48:04.792] [DEBUG] [WTelegram] 2>Sending   MsgContainer                             2026-11-21 20:48:03Z (svc)
-[2026-11-21 22:48:04.792] [DEBUG] [WTelegram]             → Upload_GetFile                         #89E9
-[2026-11-21 22:48:04.792] [DEBUG] [WTelegram]             → MsgsAck                               
-[2026-11-21 22:48:04.808] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка' (/Новая папка) (ID 1890), элементов: 103
-[2026-11-21 22:48:04.900] [DEBUG] [WTelegram] 2>Receiving RpcResult                                2026-11-21 20:48:03Z
-[2026-11-21 22:48:04.900] [DEBUG] [WTelegram]              → Upload_File                           #89E9
-[2026-11-21 22:48:04.900] [INFO ] [MtprotoWorkerPool] [Воркер #3] Получен чанк #1/1 для 'desktop.ini' (/.Trash/Книги/desktop.ini) (134 б за 108 мс) [Остаток 0,13 КБ].
-[2026-11-21 22:48:04.901] [INFO ] [TelegramService] [NetworkAudit] Завершено для 'desktop.ini' (/.Trash/Книги/desktop.ini): Размер: 134 б (0,00 МБ) | Из сети TG: 134 б (0,00 МБ) | Из ОЗУ: 0 б (0,00 МБ) | Эффективность сети: 1.00x (Идеально — 0% дублирования)
-[2026-11-21 22:48:04.901] [INFO ] [TrayContext] Событие OnDownloadCompleted для 'desktop.ini' получено из TelegramService.
-[2026-11-21 22:48:04.901] [INFO ] [TrayProgressOverlay] CompleteTransfer [Download] вызван для 'desktop.ini'. Запуск _completionTimer...
-[2026-11-21 22:48:06.312] [INFO ] [TrayProgressOverlay] _completionTimer Tick! _isTransferring=False, _isCompleted=True, Visible=True
-[2026-11-21 22:48:06.315] [INFO ] [TrayProgressOverlay] Оверлей успешно скрыт по завершению таймаута.
-[2026-11-21 22:48:07.941] [DEBUG] [WTelegram] 2>Sending   MsgContainer                             2026-11-21 20:48:07Z (svc)
-[2026-11-21 22:48:07.941] [DEBUG] [WTelegram]             → Channels_GetMessages                   #1A99
-[2026-11-21 22:48:07.942] [DEBUG] [WTelegram]             → MsgsAck                               
-[2026-11-21 22:48:07.944] [DEBUG] [WTelegram] 2>Sending   Channels_GetMessages                     #8B81
-[2026-11-21 22:48:07.951] [DEBUG] [WTelegram] 2>Sending   Channels_GetMessages                     #5EF5
-[2026-11-21 22:48:08.022] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка '.Trash' (/.Trash) (ID 2), элементов: 15
-[2026-11-21 22:48:08.030] [DEBUG] [WTelegram] 2>Receiving MsgContainer                             2026-11-21 20:48:07Z (svc)
-[2026-11-21 22:48:08.030] [DEBUG] [WTelegram]             → RpcResult                              2026-11-21 20:48:07Z
-[2026-11-21 22:48:08.030] [DEBUG] [WTelegram]              → Messages_ChannelMessages              #1A99
-[2026-11-21 22:48:08.030] [DEBUG] [WTelegram]             → MsgsAck                                2026-11-21 20:48:07Z (svc) 
-[2026-11-21 22:48:08.031] [INFO ] [MtprotoWorkerPool] [Воркер #1] Запрос чанка #1/1 для 'desktop.ini' (/.Trash/Новая папка (10)/desktop.ini) (смещение 0 б, размер 4 096 б) [Остаток 4,00 КБ]...
-[2026-11-21 22:48:08.031] [DEBUG] [WTelegram] 2>Sending   MsgContainer                             2026-11-21 20:48:07Z (svc)
-[2026-11-21 22:48:08.032] [DEBUG] [WTelegram]             → Upload_GetFile                         #5479
-[2026-11-21 22:48:08.032] [DEBUG] [WTelegram]             → MsgsAck                               
-[2026-11-21 22:48:08.067] [DEBUG] [WTelegram] 2>Receiving RpcResult                                2026-11-21 20:48:07Z
-[2026-11-21 22:48:08.067] [DEBUG] [WTelegram]              → Messages_ChannelMessages              #8B81
-[2026-11-21 22:48:08.067] [DEBUG] [WTelegram] 2>Receiving RpcResult                                2026-11-21 20:48:07Z
-[2026-11-21 22:48:08.068] [DEBUG] [WTelegram]              → Messages_ChannelMessages              #5EF5
-[2026-11-21 22:48:08.118] [DEBUG] [WTelegram] 2>Receiving RpcResult                                2026-11-21 20:48:07Z
-[2026-11-21 22:48:08.118] [DEBUG] [WTelegram]              → Upload_File                           #5479
-[2026-11-21 22:48:08.118] [INFO ] [MtprotoWorkerPool] [Воркер #1] Получен чанк #1/1 для 'desktop.ini' (/.Trash/Новая папка (10)/desktop.ini) (68 б за 86 мс) [Остаток 0,07 КБ].
-[2026-11-21 22:48:08.123] [INFO ] [TelegramService] [NetworkAudit] Завершено для 'desktop.ini' (/.Trash/Новая папка (10)/desktop.ini): Размер: 68 б (0,00 МБ) | Из сети TG: 68 б (0,00 МБ) | Из ОЗУ: 0 б (0,00 МБ) | Эффективность сети: 1.00x (Идеально — 0% дублирования)
-[2026-11-21 22:48:08.123] [INFO ] [TrayContext] Событие OnDownloadCompleted для 'desktop.ini' получено из TelegramService.
-[2026-11-21 22:48:08.124] [INFO ] [TrayProgressOverlay] CompleteTransfer [Download] вызван для 'desktop.ini'. Запуск _completionTimer...
-[2026-11-21 22:48:08.210] [INFO ] [MtprotoWorkerPool] [Воркер #2] Запрос чанка #1/1 для '247_1.gif' (/.Trash/247_1.gif) (смещение 0 б, размер 8 192 б) [Остаток 8,00 КБ]...
-[2026-11-21 22:48:08.210] [DEBUG] [WTelegram] 2>Sending   MsgContainer                             2026-11-21 20:48:07Z (svc)
-[2026-11-21 22:48:08.210] [DEBUG] [WTelegram]             → Upload_GetFile                         #A4ED
-[2026-11-21 22:48:08.210] [DEBUG] [WTelegram]             → MsgsAck                               
-[2026-11-21 22:48:08.327] [DEBUG] [WTelegram] 2>Receiving RpcResult                                2026-11-21 20:48:07Z
-[2026-11-21 22:48:08.327] [DEBUG] [WTelegram]              → Upload_File                           #A4ED
-[2026-11-21 22:48:08.329] [INFO ] [MtprotoWorkerPool] [Воркер #2] Получен чанк #1/1 для '247_1.gif' (/.Trash/247_1.gif) (5 524 б за 116 мс) [Остаток 5,39 КБ].
-[2026-11-21 22:48:08.329] [INFO ] [TelegramService] [NetworkAudit] Завершено для '247_1.gif' (/.Trash/247_1.gif): Размер: 5 524 б (0,01 МБ) | Из сети TG: 5 524 б (0,01 МБ) | Из ОЗУ: 0 б (0,00 МБ) | Эффективность сети: 1.00x (Идеально — 0% дублирования)
-[2026-11-21 22:48:08.329] [INFO ] [TrayContext] Событие OnDownloadCompleted для '247_1.gif' получено из TelegramService.
-[2026-11-21 22:48:08.330] [INFO ] [TrayProgressOverlay] CompleteTransfer [Download] вызван для '247_1.gif'. Запуск _completionTimer...
-[2026-11-21 22:48:08.390] [INFO ] [MtprotoWorkerPool] [Воркер #3] Запрос чанка #1/6 для 'anime-girl.gif' (/.Trash/anime-girl.gif) (смещение 0 б, размер 1 048 576 б) [Полный чанк]...
-[2026-11-21 22:48:08.391] [DEBUG] [WTelegram] 2>Sending   MsgContainer                             2026-11-21 20:48:07Z (svc)
-[2026-11-21 22:48:08.391] [DEBUG] [WTelegram]             → Upload_GetFile                         #6379
-[2026-11-21 22:48:08.391] [DEBUG] [WTelegram]             → MsgsAck                               
-[2026-11-21 22:48:08.638] [DEBUG] [WTelegram] 2>Receiving RpcResult                                2026-11-21 20:48:07Z
-[2026-11-21 22:48:08.638] [DEBUG] [WTelegram]              → Upload_File                           #6379
-[2026-11-21 22:48:08.638] [INFO ] [MtprotoWorkerPool] [Воркер #3] Получен чанк #1/6 для 'anime-girl.gif' (/.Trash/anime-girl.gif) (207 508 б за 247 мс) [Зонд 202,64 КБ].
-[2026-11-21 22:48:08.645] [INFO ] [TrayProgressOverlay] CompleteMetadata вызван для 'anime-girl.gif'. Показ оверлея 'МЕТАДАННЫЕ ПОЛУЧЕНЫ'...
-[2026-11-21 22:48:08.726] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка (10)' (/.Trash/Новая папка (10)) (ID 3450), элементов: 1
-[2026-11-21 22:48:10.045] [INFO ] [TrayProgressOverlay] _completionTimer Tick! _isTransferring=False, _isCompleted=True, Visible=True
-[2026-11-21 22:48:10.049] [INFO ] [TrayProgressOverlay] Оверлей успешно скрыт по завершению таймаута.
-[2026-11-21 22:48:10.602] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 5
-[2026-11-21 22:48:21.925] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка '.Trash' (/.Trash) (ID 2), элементов: 15
-[2026-11-21 22:48:23.010] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка (9)' (/.Trash/Новая папка (9)) (ID 3444), элементов: 4
-[2026-11-21 22:48:24.725] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 5
-[2026-11-21 22:48:26.667] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка '.Trash' (/.Trash) (ID 2), элементов: 15
-[2026-11-21 22:48:30.015] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 5
-[2026-11-21 22:48:32.806] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка '.Trash' (/.Trash) (ID 2), элементов: 15
-[2026-11-21 22:48:35.000] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 5
-[2026-11-21 22:48:35.503] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка '.Trash' (/.Trash) (ID 2), элементов: 15
-[2026-11-21 22:48:35.571] [DEBUG] [WinFsp] [SetDelete] Проводник установил deleteFile=True для '\.Trash\Новая папка (4)' (ID 3435, Name 'Новая папка (4)').
-[2026-11-21 22:48:35.571] [DEBUG] [WinFsp] [CleanupDelete] Закрытие с флагом удаления для '\.Trash\Новая папка (4)' (ID 3435, Name 'Новая папка (4)', flags=33, DeleteOnClose=True).
-[2026-11-21 22:48:35.572] [INFO ] [WinFsp] Перманентное удаление элемента 'Новая папка (4)' (ID 3435) из корзины...
-[2026-11-21 22:48:35.620] [INFO ] [Database] [EnqueuePermanentDeletion] Транзакция перманентного удаления: 1 узлов из БД, 0 уникальных сообщений Telegram в очередь pending_deletions.
-[2026-11-21 22:48:35.624] [DEBUG] [Database] [EnqueuePermanentDeletion] Список ID узлов БД для удаления: [3435]
-[2026-11-21 22:48:35.884] [INFO ] [Database] [EnqueuePermanentDeletion] Транзакция успешно зафиксирована.
-[2026-11-21 22:48:35.884] [INFO ] [WinFsp] Удалено 1 узлов из базы; 0 сообщений отправлено в очередь удаления Telegram.
-[2026-11-21 22:48:35.885] [INFO ] [WinFsp] Привязанная папка удалена навсегда, канал Telegram ID 4388461984 больше не используется. Авто-удаление канала и всех его сообщений из Telegram...
-[2026-11-21 22:48:35.889] [DEBUG] [WTelegram] 2>Sending   MsgContainer                             2026-11-21 20:48:34Z (svc)
-[2026-11-21 22:48:35.889] [DEBUG] [WTelegram]             → Channels_DeleteChannel                 #4348
-[2026-11-21 22:48:35.889] [DEBUG] [WTelegram]             → MsgsAck                               
-[2026-11-21 22:48:35.908] [DEBUG] [WinFsp] [SetDelete] Проводник установил deleteFile=True для '\.Trash\Новая папка (5)' (ID 3436, Name 'Новая папка (5)').
-[2026-11-21 22:48:35.908] [DEBUG] [WinFsp] [CleanupDelete] Закрытие с флагом удаления для '\.Trash\Новая папка (5)' (ID 3436, Name 'Новая папка (5)', flags=33, DeleteOnClose=True).
-[2026-11-21 22:48:35.909] [INFO ] [WinFsp] Перманентное удаление элемента 'Новая папка (5)' (ID 3436) из корзины...
-[2026-11-21 22:48:35.911] [INFO ] [Database] [EnqueuePermanentDeletion] Транзакция перманентного удаления: 2 узлов из БД, 0 уникальных сообщений Telegram в очередь pending_deletions.
-[2026-11-21 22:48:35.911] [DEBUG] [Database] [EnqueuePermanentDeletion] Список ID узлов БД для удаления: [3437, 3436]
-[2026-11-21 22:48:35.953] [DEBUG] [WTelegram] 2>Receiving RpcResult                                2026-11-21 20:48:35Z
-[2026-11-21 22:48:35.953] [DEBUG] [WTelegram]              → Updates                               #4348
-[2026-11-21 22:48:35.976] [DEBUG] [WTelegram] 2>Receiving Updates                                  2026-11-21 20:48:35Z  
-[2026-11-21 22:48:36.008] [INFO ] [Database] [EnqueuePermanentDeletion] Транзакция успешно зафиксирована.
-[2026-11-21 22:48:36.009] [INFO ] [WinFsp] Удалено 2 узлов из базы; 0 сообщений отправлено в очередь удаления Telegram.
-[2026-11-21 22:48:36.009] [INFO ] [WinFsp] Привязанная папка удалена навсегда, канал Telegram ID 4338592654 больше не используется. Авто-удаление канала и всех его сообщений из Telegram...
-[2026-11-21 22:48:36.010] [DEBUG] [WTelegram] 2>Sending   MsgContainer                             2026-11-21 20:48:35Z (svc)
-[2026-11-21 22:48:36.010] [DEBUG] [WTelegram]             → Channels_DeleteChannel                 #BA69
-[2026-11-21 22:48:36.010] [DEBUG] [WTelegram]             → MsgsAck                               
-[2026-11-21 22:48:36.016] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 5
-[2026-11-21 22:48:36.042] [DEBUG] [WinFsp] [SetDelete] Проводник установил deleteFile=True для '\.Trash\Новая папка (6)' (ID 3438, Name 'Новая папка (6)').
-[2026-11-21 22:48:36.042] [DEBUG] [WinFsp] [CleanupDelete] Закрытие с флагом удаления для '\.Trash\Новая папка (6)' (ID 3438, Name 'Новая папка (6)', flags=33, DeleteOnClose=True).
-[2026-11-21 22:48:36.042] [INFO ] [WinFsp] Перманентное удаление элемента 'Новая папка (6)' (ID 3438) из корзины...
-[2026-11-21 22:48:36.044] [INFO ] [Database] [EnqueuePermanentDeletion] Транзакция перманентного удаления: 1 узлов из БД, 0 уникальных сообщений Telegram в очередь pending_deletions.
-[2026-11-21 22:48:36.044] [DEBUG] [Database] [EnqueuePermanentDeletion] Список ID узлов БД для удаления: [3438]
-[2026-11-21 22:48:36.074] [DEBUG] [WTelegram] 2>Receiving RpcResult                                2026-11-21 20:48:35Z
-[2026-11-21 22:48:36.074] [DEBUG] [WTelegram]              → Updates                               #BA69
-[2026-11-21 22:48:36.096] [DEBUG] [WTelegram] 2>Receiving Updates                                  2026-11-21 20:48:35Z  
-[2026-11-21 22:48:36.133] [INFO ] [Database] [EnqueuePermanentDeletion] Транзакция успешно зафиксирована.
-[2026-11-21 22:48:36.134] [INFO ] [WinFsp] Удалено 1 узлов из базы; 0 сообщений отправлено в очередь удаления Telegram.
-[2026-11-21 22:48:36.134] [INFO ] [WinFsp] Привязанная папка удалена навсегда, канал Telegram ID 3851605842 больше не используется. Авто-удаление канала и всех его сообщений из Telegram...
-[2026-11-21 22:48:36.135] [DEBUG] [WTelegram] 2>Sending   MsgContainer                             2026-11-21 20:48:35Z (svc)
-[2026-11-21 22:48:36.135] [DEBUG] [WTelegram]             → Channels_DeleteChannel                 #869D
-[2026-11-21 22:48:36.135] [DEBUG] [WTelegram]             → MsgsAck                               
-[2026-11-21 22:48:36.158] [DEBUG] [WinFsp] [SetDelete] Проводник установил deleteFile=True для '\.Trash\Новая папка (7)' (ID 3439, Name 'Новая папка (7)').
-[2026-11-21 22:48:36.158] [DEBUG] [WinFsp] [CleanupDelete] Закрытие с флагом удаления для '\.Trash\Новая папка (7)' (ID 3439, Name 'Новая папка (7)', flags=33, DeleteOnClose=True).
-[2026-11-21 22:48:36.158] [INFO ] [WinFsp] Перманентное удаление элемента 'Новая папка (7)' (ID 3439) из корзины...
-[2026-11-21 22:48:36.159] [INFO ] [Database] [EnqueuePermanentDeletion] Транзакция перманентного удаления: 1 узлов из БД, 0 уникальных сообщений Telegram в очередь pending_deletions.
-[2026-11-21 22:48:36.159] [DEBUG] [Database] [EnqueuePermanentDeletion] Список ID узлов БД для удаления: [3439]
-[2026-11-21 22:48:36.202] [DEBUG] [WTelegram] 2>Receiving RpcResult                                2026-11-21 20:48:35Z
-[2026-11-21 22:48:36.202] [DEBUG] [WTelegram]              → Updates                               #869D
-[2026-11-21 22:48:36.222] [DEBUG] [WTelegram] 2>Receiving Updates                                  2026-11-21 20:48:35Z  
-[2026-11-21 22:48:36.247] [INFO ] [Database] [EnqueuePermanentDeletion] Транзакция успешно зафиксирована.
-[2026-11-21 22:48:36.247] [INFO ] [WinFsp] Удалено 1 узлов из базы; 0 сообщений отправлено в очередь удаления Telegram.
-[2026-11-21 22:48:36.247] [INFO ] [WinFsp] Привязанная папка удалена навсегда, канал Telegram ID 4353275186 больше не используется. Авто-удаление канала и всех его сообщений из Telegram...
-[2026-11-21 22:48:36.248] [DEBUG] [WTelegram] 2>Sending   MsgContainer                             2026-11-21 20:48:35Z (svc)
-[2026-11-21 22:48:36.248] [DEBUG] [WTelegram]             → Channels_DeleteChannel                 #97D9
-[2026-11-21 22:48:36.248] [DEBUG] [WTelegram]             → MsgsAck                               
-[2026-11-21 22:48:36.272] [DEBUG] [WinFsp] [SetDelete] Проводник установил deleteFile=True для '\.Trash\Новая папка (8)' (ID 3440, Name 'Новая папка (8)').
-[2026-11-21 22:48:36.273] [DEBUG] [WinFsp] [CleanupDelete] Закрытие с флагом удаления для '\.Trash\Новая папка (8)' (ID 3440, Name 'Новая папка (8)', flags=33, DeleteOnClose=True).
-[2026-11-21 22:48:36.273] [INFO ] [WinFsp] Перманентное удаление элемента 'Новая папка (8)' (ID 3440) из корзины...
-[2026-11-21 22:48:36.274] [INFO ] [Database] [EnqueuePermanentDeletion] Транзакция перманентного удаления: 2 узлов из БД, 0 уникальных сообщений Telegram в очередь pending_deletions.
-[2026-11-21 22:48:36.274] [DEBUG] [Database] [EnqueuePermanentDeletion] Список ID узлов БД для удаления: [3441, 3440]
-[2026-11-21 22:48:36.300] [DEBUG] [WTelegram] 2>Receiving RpcResult                                2026-11-21 20:48:35Z
-[2026-11-21 22:48:36.301] [ERROR] [WTelegram]              → RpcError 420 FLOOD_WAIT_6             #97D9
-[2026-11-21 22:48:36.349] [INFO ] [TelegramService] Канал Telegram ID 4388461984 полностью удален.
-[2026-11-21 22:48:36.440] [INFO ] [TelegramService] Канал Telegram ID 3851605842 полностью удален.
-[2026-11-21 22:48:36.620] [INFO ] [TelegramService] Канал Telegram ID 4338592654 полностью удален.
-[2026-11-21 22:48:36.812] [INFO ] [Database] [EnqueuePermanentDeletion] Транзакция успешно зафиксирована.
-[2026-11-21 22:48:36.812] [INFO ] [WinFsp] Удалено 2 узлов из базы; 0 сообщений отправлено в очередь удаления Telegram.
-[2026-11-21 22:48:36.812] [INFO ] [WinFsp] Привязанная папка удалена навсегда, канал Telegram ID 3784298949 больше не используется. Авто-удаление канала и всех его сообщений из Telegram...
-[2026-11-21 22:48:36.814] [DEBUG] [WTelegram] 2>Sending   MsgContainer                             2026-11-21 20:48:35Z (svc)
-[2026-11-21 22:48:36.814] [DEBUG] [WTelegram]             → Channels_DeleteChannel                 #6251
-[2026-11-21 22:48:36.814] [DEBUG] [WTelegram]             → MsgsAck                               
-[2026-11-21 22:48:36.851] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка '.Trash' (/.Trash) (ID 2), элементов: 10
-[2026-11-21 22:48:36.857] [DEBUG] [WinFsp] [SetDelete] Проводник установил deleteFile=True для '\.Trash\Новая папка (9)' (ID 3444, Name 'Новая папка (9)').
-[2026-11-21 22:48:36.857] [DEBUG] [WinFsp] [CleanupDelete] Закрытие с флагом удаления для '\.Trash\Новая папка (9)' (ID 3444, Name 'Новая папка (9)', flags=33, DeleteOnClose=True).
-[2026-11-21 22:48:36.858] [INFO ] [WinFsp] Перманентное удаление элемента 'Новая папка (9)' (ID 3444) из корзины...
-[2026-11-21 22:48:36.860] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3447 ('desktop (2).ini'), IsDir=False, InTrash=True, ParentId=3444, TgMessageId=2186, TgPreviewMessageId=NULL
-[2026-11-21 22:48:36.861] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3445 ('desktop.ini'), IsDir=False, InTrash=True, ParentId=3444, TgMessageId=2185, TgPreviewMessageId=NULL
-[2026-11-21 22:48:36.861] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3443 ('desktop_v1.ini'), IsDir=False, InTrash=True, ParentId=3444, TgMessageId=2184, TgPreviewMessageId=NULL
-[2026-11-21 22:48:36.863] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3449 ('Новая папка'), IsDir=True, InTrash=True, ParentId=3444, TgMessageId=NULL, TgPreviewMessageId=NULL
-[2026-11-21 22:48:36.863] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3444 ('Новая папка (9)'), IsDir=True, InTrash=True, ParentId=2, TgMessageId=NULL, TgPreviewMessageId=NULL
-[2026-11-21 22:48:36.867] [INFO ] [Database] [EnqueuePermanentDeletion] Транзакция перманентного удаления: 5 узлов из БД, 3 уникальных сообщений Telegram в очередь pending_deletions.
-[2026-11-21 22:48:36.870] [DEBUG] [Database] [EnqueuePermanentDeletion] Список Telegram Message ID для очистки: [2186 (ch:4377159476), 2185 (ch:4377159476), 2184 (ch:4377159476)]
-[2026-11-21 22:48:36.870] [DEBUG] [Database] [EnqueuePermanentDeletion] Список ID узлов БД для удаления: [3447, 3445, 3443, 3449, 3444]
-[2026-11-21 22:48:36.871] [DEBUG] [WTelegram] 2>Receiving RpcResult                                2026-11-21 20:48:35Z
-[2026-11-21 22:48:36.871] [ERROR] [WTelegram]              → RpcError 420 FLOOD_WAIT_6             #6251
-[2026-11-21 22:48:36.959] [INFO ] [Database] [EnqueuePermanentDeletion] Транзакция успешно зафиксирована.
-[2026-11-21 22:48:36.959] [INFO ] [WinFsp] Удалено 5 узлов из базы; 3 сообщений отправлено в очередь удаления Telegram.
-[2026-11-21 22:48:36.960] [INFO ] [TelegramService] [DeletionQueue] Фоновое перманентное удаление 3 сообщений из Telegram...
-[2026-11-21 22:48:36.983] [DEBUG] [TelegramService] [DeleteBatchWithBisectAsync] Отправка запроса на удаление 3 сообщений: [2184, 2185, 2186]
-[2026-11-21 22:48:36.984] [DEBUG] [WTelegram] 2>Sending   MsgContainer                             2026-11-21 20:48:36Z (svc)
-[2026-11-21 22:48:36.985] [DEBUG] [WTelegram]             → Channels_DeleteMessages                #8286
-[2026-11-21 22:48:36.986] [DEBUG] [WTelegram]             → MsgsAck                               
-[2026-11-21 22:48:36.992] [DEBUG] [WinFsp] [SetDelete] Проводник установил deleteFile=True для '\.Trash\Новая папка (10)' (ID 3450, Name 'Новая папка (10)').
-[2026-11-21 22:48:36.992] [DEBUG] [WinFsp] [CleanupDelete] Закрытие с флагом удаления для '\.Trash\Новая папка (10)' (ID 3450, Name 'Новая папка (10)', flags=33, DeleteOnClose=True).
-[2026-11-21 22:48:36.993] [INFO ] [WinFsp] Перманентное удаление элемента 'Новая папка (10)' (ID 3450) из корзины...
-[2026-11-21 22:48:36.993] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3451 ('desktop.ini'), IsDir=False, InTrash=True, ParentId=3450, TgMessageId=2187, TgPreviewMessageId=NULL
-[2026-11-21 22:48:36.994] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3450 ('Новая папка (10)'), IsDir=True, InTrash=True, ParentId=2, TgMessageId=NULL, TgPreviewMessageId=NULL
-[2026-11-21 22:48:36.994] [INFO ] [Database] [EnqueuePermanentDeletion] Транзакция перманентного удаления: 2 узлов из БД, 1 уникальных сообщений Telegram в очередь pending_deletions.
-[2026-11-21 22:48:36.994] [DEBUG] [Database] [EnqueuePermanentDeletion] Список Telegram Message ID для очистки: [2187 (ch:4377159476)]
-[2026-11-21 22:48:36.994] [DEBUG] [Database] [EnqueuePermanentDeletion] Список ID узлов БД для удаления: [3451, 3450]
-[2026-11-21 22:48:37.050] [DEBUG] [WTelegram] 2>Receiving RpcResult                                2026-11-21 20:48:36Z
-[2026-11-21 22:48:37.050] [DEBUG] [WTelegram]              → Messages_AffectedMessages             #8286
-[2026-11-21 22:48:37.051] [INFO ] [TelegramService] Пакет из 3 сообщений успешно удален из Telegram.
-[2026-11-21 22:48:37.051] [DEBUG] [TelegramService] Удалены Telegram ID: [2184, 2185, 2186]
-[2026-11-21 22:48:37.083] [INFO ] [Database] [EnqueuePermanentDeletion] Транзакция успешно зафиксирована.
-[2026-11-21 22:48:37.084] [INFO ] [WinFsp] Удалено 2 узлов из базы; 1 сообщений отправлено в очередь удаления Telegram.
-[2026-11-21 22:48:37.103] [DEBUG] [WinFsp] [CleanupDelete] Закрытие с флагом удаления для '\.Trash\247_1.gif' (ID 1853, Name '247_1.gif', flags=33, DeleteOnClose=False).
-[2026-11-21 22:48:37.104] [INFO ] [WinFsp] Перманентное удаление элемента '247_1.gif' (ID 1853) из корзины...
-[2026-11-21 22:48:37.104] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 1853 ('247_1.gif'), IsDir=False, InTrash=True, ParentId=2, TgMessageId=9, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.104] [INFO ] [Database] [EnqueuePermanentDeletion] Транзакция перманентного удаления: 1 узлов из БД, 1 уникальных сообщений Telegram в очередь pending_deletions.
-[2026-11-21 22:48:37.104] [DEBUG] [Database] [EnqueuePermanentDeletion] Список Telegram Message ID для очистки: [9 (ch:4377159476)]
-[2026-11-21 22:48:37.104] [DEBUG] [Database] [EnqueuePermanentDeletion] Список ID узлов БД для удаления: [1853]
-[2026-11-21 22:48:37.197] [INFO ] [Database] [EnqueuePermanentDeletion] Транзакция успешно зафиксирована.
-[2026-11-21 22:48:37.197] [INFO ] [WinFsp] Удалено 1 узлов из базы; 1 сообщений отправлено в очередь удаления Telegram.
-[2026-11-21 22:48:37.210] [DEBUG] [WinFsp] [CleanupDelete] Закрытие с флагом удаления для '\.Trash\anime-girl.gif' (ID 1874, Name 'anime-girl.gif', flags=33, DeleteOnClose=False).
-[2026-11-21 22:48:37.210] [INFO ] [WinFsp] Перманентное удаление элемента 'anime-girl.gif' (ID 1874) из корзины...
-[2026-11-21 22:48:37.211] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 1874 ('anime-girl.gif'), IsDir=False, InTrash=True, ParentId=2, TgMessageId=14, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.211] [INFO ] [Database] [EnqueuePermanentDeletion] Транзакция перманентного удаления: 1 узлов из БД, 1 уникальных сообщений Telegram в очередь pending_deletions.
-[2026-11-21 22:48:37.211] [DEBUG] [Database] [EnqueuePermanentDeletion] Список Telegram Message ID для очистки: [14 (ch:4377159476)]
-[2026-11-21 22:48:37.211] [DEBUG] [Database] [EnqueuePermanentDeletion] Список ID узлов БД для удаления: [1874]
-[2026-11-21 22:48:37.299] [INFO ] [TelegramService] [DeletionQueue] Пакет из 3 сообщений успешно очищен из очереди.
-[2026-11-21 22:48:37.300] [INFO ] [TelegramService] [DeletionQueue] Фоновое перманентное удаление 2 сообщений из Telegram...
-[2026-11-21 22:48:37.300] [DEBUG] [TelegramService] [DeleteBatchWithBisectAsync] Отправка запроса на удаление 2 сообщений: [9, 2187]
-[2026-11-21 22:48:37.301] [DEBUG] [WTelegram] 2>Sending   MsgContainer                             2026-11-21 20:48:36Z (svc)
-[2026-11-21 22:48:37.301] [DEBUG] [WTelegram]             → Channels_DeleteMessages                #72A6
-[2026-11-21 22:48:37.301] [DEBUG] [WTelegram]             → MsgsAck                               
-[2026-11-21 22:48:37.379] [DEBUG] [WTelegram] 2>Receiving RpcResult                                2026-11-21 20:48:36Z
-[2026-11-21 22:48:37.379] [DEBUG] [WTelegram]              → Messages_AffectedMessages             #72A6
-[2026-11-21 22:48:37.379] [INFO ] [TelegramService] Пакет из 2 сообщений успешно удален из Telegram.
-[2026-11-21 22:48:37.379] [DEBUG] [TelegramService] Удалены Telegram ID: [9, 2187]
-[2026-11-21 22:48:37.457] [INFO ] [Database] [EnqueuePermanentDeletion] Транзакция успешно зафиксирована.
-[2026-11-21 22:48:37.458] [INFO ] [WinFsp] Удалено 1 узлов из базы; 1 сообщений отправлено в очередь удаления Telegram.
-[2026-11-21 22:48:37.464] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 5
-[2026-11-21 22:48:37.477] [DEBUG] [WinFsp] [SetDelete] Проводник установил deleteFile=True для '\.Trash\Новая папка' (ID 2851, Name 'Новая папка').
-[2026-11-21 22:48:37.477] [DEBUG] [WinFsp] [CleanupDelete] Закрытие с флагом удаления для '\.Trash\Новая папка' (ID 2851, Name 'Новая папка', flags=33, DeleteOnClose=True).
-[2026-11-21 22:48:37.478] [INFO ] [WinFsp] Перманентное удаление элемента 'Новая папка' (ID 2851) из корзины...
-[2026-11-21 22:48:37.479] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 2850 ('218.gif'), IsDir=False, InTrash=True, ParentId=2853, TgMessageId=1137, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.479] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 2849 ('154.gif'), IsDir=False, InTrash=True, ParentId=2853, TgMessageId=1136, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.479] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 2848 ('153.gif'), IsDir=False, InTrash=True, ParentId=2853, TgMessageId=1135, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.479] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 2847 ('151.gif'), IsDir=False, InTrash=True, ParentId=2853, TgMessageId=1134, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.479] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 2846 ('149.gif'), IsDir=False, InTrash=True, ParentId=2853, TgMessageId=1133, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.479] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 2845 ('342_1.gif'), IsDir=False, InTrash=True, ParentId=2853, TgMessageId=1132, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.479] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 2844 ('303.gif'), IsDir=False, InTrash=True, ParentId=2853, TgMessageId=1131, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.479] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 2843 ('301.gif'), IsDir=False, InTrash=True, ParentId=2853, TgMessageId=1130, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.479] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 2842 ('263_2.gif'), IsDir=False, InTrash=True, ParentId=2853, TgMessageId=1129, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.479] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 2841 ('263_1.gif'), IsDir=False, InTrash=True, ParentId=2853, TgMessageId=1128, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.479] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 2840 ('249_2.gif'), IsDir=False, InTrash=True, ParentId=2853, TgMessageId=1127, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.479] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 2839 ('249_1.gif'), IsDir=False, InTrash=True, ParentId=2853, TgMessageId=1126, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.479] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 2838 ('247_2.gif'), IsDir=False, InTrash=True, ParentId=2853, TgMessageId=1125, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.479] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 2837 ('247_1.gif'), IsDir=False, InTrash=True, ParentId=2853, TgMessageId=1124, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.479] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 2836 ('234.gif'), IsDir=False, InTrash=True, ParentId=2853, TgMessageId=1123, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.479] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 2835 ('233.gif'), IsDir=False, InTrash=True, ParentId=2853, TgMessageId=1122, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.480] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 2834 ('232.gif'), IsDir=False, InTrash=True, ParentId=2853, TgMessageId=1121, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.480] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 2833 ('220.gif'), IsDir=False, InTrash=True, ParentId=2853, TgMessageId=1120, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.480] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 2832 ('219.gif'), IsDir=False, InTrash=True, ParentId=2853, TgMessageId=1119, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.480] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3421 ('desktop (8).ini'), IsDir=False, InTrash=True, ParentId=3391, TgMessageId=2181, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.480] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3420 ('desktop_v8.ini'), IsDir=False, InTrash=True, ParentId=3391, TgMessageId=2180, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.480] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3419 ('desktop_v7.ini'), IsDir=False, InTrash=True, ParentId=3391, TgMessageId=2179, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.480] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3417 ('desktop_v6.ini'), IsDir=False, InTrash=True, ParentId=3391, TgMessageId=2177, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.480] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3416 ('desktop_v5.ini'), IsDir=False, InTrash=True, ParentId=3391, TgMessageId=2176, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.480] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3415 ('desktop_v4.ini'), IsDir=False, InTrash=True, ParentId=3391, TgMessageId=2175, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.480] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3414 ('desktop_v3.ini'), IsDir=False, InTrash=True, ParentId=3391, TgMessageId=2174, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.480] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3413 ('desktop_v2.ini'), IsDir=False, InTrash=True, ParentId=3391, TgMessageId=2173, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.480] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3412 ('desktop_v1.ini'), IsDir=False, InTrash=True, ParentId=3391, TgMessageId=2172, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.480] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3411 ('desktop (7).ini'), IsDir=False, InTrash=True, ParentId=3391, TgMessageId=2171, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.480] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3410 ('desktop_v1.ini'), IsDir=False, InTrash=True, ParentId=3391, TgMessageId=2170, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.480] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3409 ('desktop (6).ini'), IsDir=False, InTrash=True, ParentId=3391, TgMessageId=2169, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.480] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3408 ('desktop_v1.ini'), IsDir=False, InTrash=True, ParentId=3391, TgMessageId=2168, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.480] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3407 ('desktop (5).ini'), IsDir=False, InTrash=True, ParentId=3391, TgMessageId=2167, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.480] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3406 ('desktop_v1.ini'), IsDir=False, InTrash=True, ParentId=3391, TgMessageId=2166, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.480] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3405 ('desktop (4).ini'), IsDir=False, InTrash=True, ParentId=3391, TgMessageId=2165, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.480] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3404 ('desktop_v2.ini'), IsDir=False, InTrash=True, ParentId=3391, TgMessageId=2164, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.480] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3403 ('desktop_v1.ini'), IsDir=False, InTrash=True, ParentId=3391, TgMessageId=2163, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.480] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3402 ('desktop (3).ini'), IsDir=False, InTrash=True, ParentId=3391, TgMessageId=2162, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.480] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3401 ('desktop_v1.ini'), IsDir=False, InTrash=True, ParentId=3391, TgMessageId=2161, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.480] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3400 ('desktop (2).ini'), IsDir=False, InTrash=True, ParentId=3391, TgMessageId=2160, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.480] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3399 ('desktop_v7.ini'), IsDir=False, InTrash=True, ParentId=3391, TgMessageId=2159, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.480] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3398 ('desktop_v6.ini'), IsDir=False, InTrash=True, ParentId=3391, TgMessageId=2158, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.480] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3397 ('desktop_v5.ini'), IsDir=False, InTrash=True, ParentId=3391, TgMessageId=2157, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.480] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3396 ('desktop_v4.ini'), IsDir=False, InTrash=True, ParentId=3391, TgMessageId=2156, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.480] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3395 ('desktop_v3.ini'), IsDir=False, InTrash=True, ParentId=3391, TgMessageId=2155, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.480] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3394 ('desktop_v2.ini'), IsDir=False, InTrash=True, ParentId=3391, TgMessageId=2154, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.480] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3393 ('desktop_v1.ini'), IsDir=False, InTrash=True, ParentId=3391, TgMessageId=2153, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.480] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3392 ('desktop.ini'), IsDir=False, InTrash=True, ParentId=3391, TgMessageId=2152, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.480] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3390 ('desktop_v1.ini'), IsDir=False, InTrash=True, ParentId=3391, TgMessageId=2151, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.480] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3388 ('desktop.ini'), IsDir=False, InTrash=True, ParentId=2852, TgMessageId=2150, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.480] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3387 ('desktop_v3.ini'), IsDir=False, InTrash=True, ParentId=2852, TgMessageId=2149, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.480] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3386 ('desktop_v2.ini'), IsDir=False, InTrash=True, ParentId=2852, TgMessageId=2148, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.480] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3385 ('desktop_v1.ini'), IsDir=False, InTrash=True, ParentId=2852, TgMessageId=2147, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.480] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 2853 ('gif'), IsDir=True, InTrash=True, ParentId=2852, TgMessageId=NULL, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.480] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3391 ('2'), IsDir=True, InTrash=True, ParentId=2851, TgMessageId=NULL, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.481] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 2852 ('1'), IsDir=True, InTrash=True, ParentId=2851, TgMessageId=NULL, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.481] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 2851 ('Новая папка'), IsDir=True, InTrash=True, ParentId=2, TgMessageId=NULL, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.482] [INFO ] [Database] [EnqueuePermanentDeletion] Транзакция перманентного удаления: 57 узлов из БД, 53 уникальных сообщений Telegram в очередь pending_deletions.
-[2026-11-21 22:48:37.482] [DEBUG] [Database] [EnqueuePermanentDeletion] Список Telegram Message ID для очистки: [1137 (ch:4377159476), 1136 (ch:4377159476), 1135 (ch:4377159476), 1134 (ch:4377159476), 1133 (ch:4377159476), 1132 (ch:4377159476), 1131 (ch:4377159476), 1130 (ch:4377159476), 1129 (ch:4377159476), 1128 (ch:4377159476), 1127 (ch:4377159476), 1126 (ch:4377159476), 1125 (ch:4377159476), 1124 (ch:4377159476), 1123 (ch:4377159476), 1122 (ch:4377159476), 1121 (ch:4377159476), 1120 (ch:4377159476), 1119 (ch:4377159476), 2181 (ch:4377159476), 2180 (ch:4377159476), 2179 (ch:4377159476), 2177 (ch:4377159476), 2176 (ch:4377159476), 2175 (ch:4377159476), 2174 (ch:4377159476), 2173 (ch:4377159476), 2172 (ch:4377159476), 2171 (ch:4377159476), 2170 (ch:4377159476), 2169 (ch:4377159476), 2168 (ch:4377159476), 2167 (ch:4377159476), 2166 (ch:4377159476), 2165 (ch:4377159476), 2164 (ch:4377159476), 2163 (ch:4377159476), 2162 (ch:4377159476), 2161 (ch:4377159476), 2160 (ch:4377159476), 2159 (ch:4377159476), 2158 (ch:4377159476), 2157 (ch:4377159476), 2156 (ch:4377159476), 2155 (ch:4377159476), 2154 (ch:4377159476), 2153 (ch:4377159476), 2152 (ch:4377159476), 2151 (ch:4377159476), 2150 (ch:4377159476), 2149 (ch:4377159476), 2148 (ch:4377159476), 2147 (ch:4377159476)]
-[2026-11-21 22:48:37.482] [DEBUG] [Database] [EnqueuePermanentDeletion] Список ID узлов БД для удаления: [2850, 2849, 2848, 2847, 2846, 2845, 2844, 2843, 2842, 2841, 2840, 2839, 2838, 2837, 2836, 2835, 2834, 2833, 2832, 3421, 3420, 3419, 3417, 3416, 3415, 3414, 3413, 3412, 3411, 3410, 3409, 3408, 3407, 3406, 3405, 3404, 3403, 3402, 3401, 3400, 3399, 3398, 3397, 3396, 3395, 3394, 3393, 3392, 3390, 3388, 3387, 3386, 3385, 2853, 3391, 2852, 2851]
-[2026-11-21 22:48:37.582] [INFO ] [Database] [EnqueuePermanentDeletion] Транзакция успешно зафиксирована.
-[2026-11-21 22:48:37.582] [INFO ] [WinFsp] Удалено 57 узлов из базы; 53 сообщений отправлено в очередь удаления Telegram.
-[2026-11-21 22:48:37.602] [DEBUG] [WinFsp] [SetDelete] Проводник установил deleteFile=True для '\.Trash\Новая папка (2)' (ID 3433, Name 'Новая папка (2)').
-[2026-11-21 22:48:37.602] [DEBUG] [WinFsp] [CleanupDelete] Закрытие с флагом удаления для '\.Trash\Новая папка (2)' (ID 3433, Name 'Новая папка (2)', flags=33, DeleteOnClose=True).
-[2026-11-21 22:48:37.602] [INFO ] [WinFsp] Перманентное удаление элемента 'Новая папка (2)' (ID 3433) из корзины...
-[2026-11-21 22:48:37.603] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3431 ('010.jpg'), IsDir=False, InTrash=True, ParentId=3433, TgMessageId=4, TgPreviewMessageId=3
-[2026-11-21 22:48:37.603] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3432 ('Новая папка'), IsDir=True, InTrash=True, ParentId=3433, TgMessageId=NULL, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.603] [DEBUG] [WinFsp] [CleanupDelete Subtree] Элемент поддерева: ID 3433 ('Новая папка (2)'), IsDir=True, InTrash=True, ParentId=2, TgMessageId=NULL, TgPreviewMessageId=NULL
-[2026-11-21 22:48:37.603] [INFO ] [Database] [EnqueuePermanentDeletion] Транзакция перманентного удаления: 3 узлов из БД, 2 уникальных сообщений Telegram в очередь pending_deletions.
-[2026-11-21 22:48:37.603] [DEBUG] [Database] [EnqueuePermanentDeletion] Список Telegram Message ID для очистки: [4 (ch:3896225626), 3 (ch:3896225626)]
-[2026-11-21 22:48:37.603] [DEBUG] [Database] [EnqueuePermanentDeletion] Список ID узлов БД для удаления: [3431, 3432, 3433]
-[2026-11-21 22:48:37.695] [INFO ] [Database] [EnqueuePermanentDeletion] Транзакция успешно зафиксирована.
-[2026-11-21 22:48:37.696] [INFO ] [WinFsp] Удалено 3 узлов из базы; 2 сообщений отправлено в очередь удаления Telegram.
-[2026-11-21 22:48:37.720] [DEBUG] [WinFsp] [SetDelete] Проводник установил deleteFile=True для '\.Trash\Новая папка (3)' (ID 3434, Name 'Новая папка (3)').
-[2026-11-21 22:48:37.720] [DEBUG] [WinFsp] [CleanupDelete] Закрытие с флагом удаления для '\.Trash\Новая папка (3)' (ID 3434, Name 'Новая папка (3)', flags=33, DeleteOnClose=True).
-[2026-11-21 22:48:37.720] [INFO ] [WinFsp] Перманентное удаление элемента 'Новая папка (3)' (ID 3434) из корзины...
-[2026-11-21 22:48:37.722] [INFO ] [Database] [EnqueuePermanentDeletion] Транзакция перманентного удаления: 1 узлов из БД, 0 уникальных сообщений Telegram в очередь pending_deletions.
-[2026-11-21 22:48:37.722] [DEBUG] [Database] [EnqueuePermanentDeletion] Список ID узлов БД для удаления: [3434]
-[2026-11-21 22:48:37.809] [INFO ] [Database] [EnqueuePermanentDeletion] Транзакция успешно зафиксирована.
-[2026-11-21 22:48:37.809] [INFO ] [WinFsp] Удалено 1 узлов из базы; 0 сообщений отправлено в очередь удаления Telegram.
-[2026-11-21 22:48:37.809] [INFO ] [WinFsp] Привязанная папка удалена навсегда, канал Telegram ID 4329242642 больше не используется. Авто-удаление канала и всех его сообщений из Telegram...
-[2026-11-21 22:48:37.810] [DEBUG] [WTelegram] 2>Sending   MsgContainer                             2026-11-21 20:48:36Z (svc)
-[2026-11-21 22:48:37.810] [DEBUG] [WTelegram]             → Channels_DeleteChannel                 #B45E
-[2026-11-21 22:48:37.810] [DEBUG] [WTelegram]             → MsgsAck                               
-[2026-11-21 22:48:37.877] [DEBUG] [WTelegram] 2>Receiving RpcResult                                2026-11-21 20:48:36Z
-[2026-11-21 22:48:37.877] [ERROR] [WTelegram]              → RpcError 420 FLOOD_WAIT_5             #B45E
-[2026-11-21 22:48:37.991] [INFO ] [TelegramService] [DeletionQueue] Пакет из 2 сообщений успешно очищен из очереди.
-[2026-11-21 22:48:37.997] [INFO ] [TelegramService] [DeletionQueue] Фоновое перманентное удаление 56 сообщений из Telegram...
-[2026-11-21 22:48:37.998] [DEBUG] [TelegramService] [DeleteBatchWithBisectAsync] Отправка запроса на удаление 2 сообщений: [3, 4]
-[2026-11-21 22:48:37.999] [DEBUG] [WTelegram] 2>Sending   MsgContainer                             2026-11-21 20:48:37Z (svc)
-[2026-11-21 22:48:37.999] [DEBUG] [WTelegram]             → Channels_DeleteMessages                #5B17
-[2026-11-21 22:48:38.001] [DEBUG] [WTelegram]             → MsgsAck                               
-[2026-11-21 22:48:38.063] [DEBUG] [WTelegram] 2>Receiving RpcResult                                2026-11-21 20:48:37Z
-[2026-11-21 22:48:38.063] [DEBUG] [WTelegram]              → Messages_AffectedMessages             #5B17
-[2026-11-21 22:48:38.063] [INFO ] [TelegramService] Пакет из 2 сообщений успешно удален из Telegram.
-[2026-11-21 22:48:38.063] [DEBUG] [TelegramService] Удалены Telegram ID: [3, 4]
-[2026-11-21 22:48:38.180] [DEBUG] [TelegramService] [DeleteBatchWithBisectAsync] Отправка запроса на удаление 54 сообщений: [14, 1119, 1120, 1121, 1122, 1123, 1124, 1125, 1126, 1127, 1128, 1129, 1130, 1131, 1132, 1133, 1134, 1135, 1136, 1137, 2147, 2148, 2149, 2150, 2151, 2152, 2153, 2154, 2155, 2156, 2157, 2158, 2159, 2160, 2161, 2162, 2163, 2164, 2165, 2166, 2167, 2168, 2169, 2170, 2171, 2172, 2173, 2174, 2175, 2176, 2177, 2179, 2180, 2181]
-[2026-11-21 22:48:38.181] [DEBUG] [WTelegram] 2>Sending   MsgContainer                             2026-11-21 20:48:37Z (svc)
-[2026-11-21 22:48:38.181] [DEBUG] [WTelegram]             → Channels_DeleteMessages                #069F
-[2026-11-21 22:48:38.181] [DEBUG] [WTelegram]             → MsgsAck                               
-[2026-11-21 22:48:38.390] [DEBUG] [WTelegram] 2>Receiving RpcResult                                2026-11-21 20:48:37Z
-[2026-11-21 22:48:38.390] [DEBUG] [WTelegram]              → Messages_AffectedMessages             #069F
-[2026-11-21 22:48:38.391] [INFO ] [TelegramService] Пакет из 54 сообщений успешно удален из Telegram.
-[2026-11-21 22:48:38.391] [DEBUG] [TelegramService] Удалены Telegram ID: [14, 1119, 1120, 1121, 1122, 1123, 1124, 1125, 1126, 1127, 1128, 1129, 1130, 1131, 1132, 1133, 1134, 1135, 1136, 1137, 2147, 2148, 2149, 2150, 2151, 2152, 2153, 2154, 2155, 2156, 2157, 2158, 2159, 2160, 2161, 2162, 2163, 2164, 2165, 2166, 2167, 2168, 2169, 2170, 2171, 2172, 2173, 2174, 2175, 2176, 2177, 2179, 2180, 2181]
-[2026-11-21 22:48:38.581] [INFO ] [TelegramService] [DeletionQueue] Пакет из 56 сообщений успешно очищен из очереди.
-[2026-11-21 22:48:40.811] [INFO ] [Database] Запуск оптимизации базы данных SQLite (VACUUM)...
-[2026-11-21 22:48:41.157] [INFO ] [Database] Оптимизация базы данных (VACUUM) успешно завершена.
-[2026-11-21 22:48:42.314] [DEBUG] [WTelegram] 2>Sending   MsgContainer                             2026-11-21 20:48:41Z (svc)
-[2026-11-21 22:48:42.314] [DEBUG] [WTelegram]             → Channels_DeleteChannel                 #EC5F
-[2026-11-21 22:48:42.314] [DEBUG] [WTelegram]             → MsgsAck                               
-[2026-11-21 22:48:42.392] [DEBUG] [WTelegram] 2>Receiving RpcResult                                2026-11-21 20:48:41Z
-[2026-11-21 22:48:42.393] [DEBUG] [WTelegram]              → Updates                               #EC5F
-[2026-11-21 22:48:42.412] [DEBUG] [WTelegram] 2>Receiving Updates                                  2026-11-21 20:48:41Z  
-[2026-11-21 22:48:42.571] [INFO ] [TelegramService] Канал Telegram ID 4353275186 полностью удален.
-[2026-11-21 22:48:42.873] [DEBUG] [WTelegram] 2>Sending   MsgContainer                             2026-11-21 20:48:41Z (svc)
-[2026-11-21 22:48:42.873] [DEBUG] [WTelegram]             → Channels_DeleteChannel                 #DC2B
-[2026-11-21 22:48:42.873] [DEBUG] [WTelegram]             → MsgsAck                               
-[2026-11-21 22:48:42.878] [DEBUG] [WTelegram] 2>Sending   Channels_DeleteChannel                   #093F
-[2026-11-21 22:48:42.939] [DEBUG] [WTelegram] 2>Receiving RpcResult                                2026-11-21 20:48:42Z
-[2026-11-21 22:48:42.939] [DEBUG] [WTelegram]              → Updates                               #DC2B
-[2026-11-21 22:48:42.977] [DEBUG] [WTelegram] 2>Receiving Updates                                  2026-11-21 20:48:42Z  
-[2026-11-21 22:48:43.007] [DEBUG] [WTelegram] 2>Receiving RpcResult                                2026-11-21 20:48:42Z
-[2026-11-21 22:48:43.007] [DEBUG] [WTelegram]              → Updates                               #093F
-[2026-11-21 22:48:43.023] [DEBUG] [WTelegram] 2>Receiving Updates                                  2026-11-21 20:48:42Z  
-[2026-11-21 22:48:43.118] [INFO ] [TelegramService] Канал Telegram ID 3784298949 полностью удален.
-[2026-11-21 22:48:43.376] [INFO ] [TelegramService] Канал Telegram ID 4329242642 полностью удален.
-[2026-11-21 22:48:44.264] [INFO ] [TrayProgressOverlay] _completionTimer Tick! _isTransferring=False, _isCompleted=True, Visible=True
-[2026-11-21 22:48:44.269] [INFO ] [TrayProgressOverlay] Оверлей успешно скрыт по завершению таймаута.
-[2026-11-21 22:48:52.823] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка' (/Новая папка) (ID 1890), элементов: 103
-[2026-11-21 22:48:53.332] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 5
-[2026-11-21 22:48:53.834] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка' (/Новая папка) (ID 1890), элементов: 103
-[2026-11-21 22:49:02.612] [DEBUG] [WTelegram] 2>Sending   MsgContainer                             2026-11-21 20:49:01Z (svc)
-[2026-11-21 22:49:02.613] [DEBUG] [WTelegram]             → PingDelayDisconnect                    #03D7
-[2026-11-21 22:49:02.613] [DEBUG] [WTelegram]             → MsgsAck                               
-[2026-11-21 22:49:02.664] [DEBUG] [WTelegram] 2>Receiving Pong                                     2026-11-21 20:49:01Z (svc) 
-[2026-11-21 22:49:14.181] [DEBUG] [WTelegram] 2>Receiving Updates                                  2026-11-21 20:49:13Z  
-[2026-11-21 22:49:20.992] [DEBUG] [WTelegram] 2>Receiving UpdateShort                              2026-11-21 20:49:20Z  
-[2026-11-21 22:49:37.810] [INFO ] [DatabaseBackup] Сработал Debounce-таймер резервного копирования (1 мин тишины).
-[2026-11-21 22:49:37.810] [INFO ] [TelegramService] Запрос к Telegram: поиск последней резервной копии базы данных...
-[2026-11-21 22:49:37.811] [DEBUG] [WTelegram] 2>Sending   MsgContainer                             2026-11-21 20:49:36Z (svc)
-[2026-11-21 22:49:37.811] [DEBUG] [WTelegram]             → Messages_GetHistory                    #FB2A
-[2026-11-21 22:49:37.811] [DEBUG] [WTelegram]             → MsgsAck                               
-[2026-11-21 22:49:37.911] [DEBUG] [WTelegram] 2>Receiving RpcResult                                2026-11-21 20:49:36Z
-[2026-11-21 22:49:37.912] [DEBUG] [WTelegram]              → Messages_ChannelMessages              #FB2A
-[2026-11-21 22:49:37.912] [DEBUG] [TelegramService] Получено сообщений из канала бэкапов (ID: 4439566709): 20. Проверка файлов...
-[2026-11-21 22:49:37.912] [INFO ] [TelegramService] Найден файл бэкапа базы в Telegram: Message #157, 'base_2026-11-21_22-46-42.db', 580,0 КБ, дата: 2026-11-21 22:46:40
-[2026-11-21 22:49:37.913] [INFO ] [DatabaseBackup] Запуск резервного копирования базы данных. Причина: 'Автоматический бэкап (1 мин тишины)'...
-[2026-11-21 22:49:37.913] [INFO ] [Database] Создание консистентного снимка базы данных в: D:\Temp\TGramFS\backups\base_2026-11-21_22-49-37.db...
-[2026-11-21 22:49:38.661] [INFO ] [Database] Снимок базы данных успешно создан: D:\Temp\TGramFS\backups\base_2026-11-21_22-49-37.db
-[2026-11-21 22:49:38.665] [INFO ] [TelegramService] Загрузка резервной копии 'base_2026-11-21_22-49-37.db' в Telegram (канал ID: 4439566709)...
-[2026-11-21 22:49:38.666] [DEBUG] [WTelegram] 2>Sending   MsgContainer                             2026-11-21 20:49:37Z (svc)
-[2026-11-21 22:49:38.666] [DEBUG] [WTelegram]             → Upload_SaveFilePart                    #164B
-[2026-11-21 22:49:38.666] [DEBUG] [WTelegram]             → MsgsAck                               
-[2026-11-21 22:49:38.769] [DEBUG] [WTelegram] 2>Sending   Upload_SaveFilePart                      #B0A3
-[2026-11-21 22:49:38.897] [DEBUG] [WTelegram] 2>Receiving MsgContainer                             2026-11-21 20:49:37Z (svc)
-[2026-11-21 22:49:38.897] [DEBUG] [WTelegram]             → RpcResult                              2026-11-21 20:49:37Z
-[2026-11-21 22:49:38.897] [DEBUG] [WTelegram]              → Boolean                               #B0A3
-[2026-11-21 22:49:38.897] [DEBUG] [WTelegram]             → MsgsAck                                2026-11-21 20:49:37Z (svc) 
-[2026-11-21 22:49:38.918] [DEBUG] [WTelegram] 2>Receiving RpcResult                                2026-11-21 20:49:37Z
-[2026-11-21 22:49:38.918] [DEBUG] [WTelegram]              → Boolean                               #164B
-[2026-11-21 22:49:38.918] [DEBUG] [WTelegram] 2>Sending   MsgContainer                             2026-11-21 20:49:38Z (svc)
-[2026-11-21 22:49:38.918] [DEBUG] [WTelegram]             → Messages_SendMedia                     #E3A4
-[2026-11-21 22:49:38.919] [DEBUG] [WTelegram]             → MsgsAck                               
-[2026-11-21 22:49:39.027] [DEBUG] [WTelegram] 2>Receiving RpcResult                                2026-11-21 20:49:38Z
-[2026-11-21 22:49:39.027] [DEBUG] [WTelegram]              → Updates                               #E3A4
-[2026-11-21 22:49:39.027] [INFO ] [TelegramService] Резервная копия 'base_2026-11-21_22-49-37.db' успешно загружена в Telegram. Message ID: 158
-[2026-11-21 22:49:39.051] [DEBUG] [DatabaseBackup] Удален старый локальный бэкап: base_2026-11-21_18-27-50.db
-[2026-11-21 22:49:39.051] [INFO ] [DatabaseBackup] Резервная копия базы данных успешно отправлена в Telegram! (Размер: 0,56 МБ).
+[2026-11-25 00:56:10.155] [INFO ] [TelegramService] Подпись сообщения #5 в Telegram успешно обновлена на: '🗑️ /.Trash/test/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 1_v1.pdf
+ID: 5
+#trash'.
+[2026-11-25 00:56:10.725] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка' (/Новая папка) (ID 1890), элементов: 103
+[2026-11-25 00:56:11.226] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 5
+[2026-11-25 00:56:11.727] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка' (/Новая папка) (ID 1890), элементов: 103
+[2026-11-25 00:56:13.480] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 5
+[2026-11-25 00:56:14.844] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка '.Trash' (/.Trash) (ID 2), элементов: 2
+[2026-11-25 00:56:16.500] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 5
+[2026-11-25 00:56:16.536] [INFO ] [WinFsp] Перманентное удаление элемента 'test' (ID 3469) из корзины...
+[2026-11-25 00:56:16.536] [INFO ] [Database] [EnqueuePermanentDeletion] Транзакция перманентного удаления: 3 узлов из БД, 0 уникальных сообщений Telegram в очередь pending_deletions.
+[2026-11-25 00:56:16.762] [INFO ] [Database] [EnqueuePermanentDeletion] Транзакция успешно зафиксирована.
+[2026-11-25 00:56:16.762] [INFO ] [WinFsp] Удалено 3 узлов из базы; 0 сообщений отправлено в очередь удаления Telegram.
+[2026-11-25 00:56:16.762] [INFO ] [WinFsp] Привязанная папка удалена навсегда, канал Telegram ID 5754358961 больше не используется. Авто-удаление канала и всех его сообщений из Telegram...
+[2026-11-25 00:56:17.009] [INFO ] [TelegramService] Канал Telegram ID 5754358961 полностью удален.
+[2026-11-25 00:56:18.417] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка' (/Новая папка) (ID 1890), элементов: 103
+[2026-11-25 00:56:19.763] [INFO ] [Database] Запуск оптимизации базы данных SQLite (VACUUM)...
+[2026-11-25 00:56:20.016] [INFO ] [Database] Оптимизация базы данных (VACUUM) успешно завершена.
+
+
+[2026-11-25 01:00:32.637] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 5
+[2026-11-25 01:00:33.137] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'New 2010 Releases' (/Новая папка/2 Brothers On The 4th Floor Full Discography/New 2010 Releases) (ID 2020), элементов: 12
+[2026-11-25 01:00:33.637] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Unofficial Releases' (/Новая папка/2 Brothers On The 4th Floor Full Discography/Unofficial Releases) (ID 2249), элементов: 7
+[2026-11-25 01:00:34.549] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 5
+[2026-11-25 01:00:35.099] [INFO ] [WinFsp] Создан новый каталог: '/Новая папка (2)' (ID 3474)
+[2026-11-25 01:00:40.326] [INFO ] [WinFsp] Переименование/перемещение: '/Новая папка (2)' -> '/папака с каналом'
+[2026-11-25 01:00:45.829] [INFO ] [WinFsp] Переименование/перемещение: '/папака с каналом' -> '/папка с каналом'
+[2026-11-25 01:00:47.098] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка' (/Новая папка) (ID 1890), элементов: 103
+[2026-11-25 01:00:47.707] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 01:00:48.208] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка' (/Новая папка) (ID 1890), элементов: 103
+[2026-11-25 01:00:50.569] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 01:00:50.798] [INFO ] [WinFsp] Создан новый каталог: '/папка с каналом/Новая папка' (ID 3475)
+[2026-11-25 01:00:55.192] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'папка с каналом' (/папка с каналом) (ID 3474), элементов: 1
+[2026-11-25 01:00:55.447] [INFO ] [WinFsp] Переименование/перемещение: '/папка с каналом/Новая папка' -> '/папка с каналом/привязанная'
+[2026-11-25 01:00:56.201] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 01:00:57.700] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'папка с каналом' (/папка с каналом) (ID 3474), элементов: 1
+[2026-11-25 01:00:59.426] [INFO ] [TelegramService] Создание нового приватного канала 'привязанная'...
+[2026-11-25 01:00:59.872] [INFO ] [TelegramService] Создан новый кастомный канал 'привязанная' (ID: 5745288400). Записан в SQLite.
+[2026-11-25 01:01:00.034] [INFO ] [TelegramService] Установлена стандартная иконка для канала 'привязанная' (ID: 5745288400).
+[2026-11-25 01:01:00.224] [INFO ] [TelegramService] [Migration] В папке ID 3475 нет файлов для миграции.
+[2026-11-25 01:01:00.361] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 01:01:08.828] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'папка с каналом' (/папка с каналом) (ID 3474), элементов: 1
+[2026-11-25 01:01:21.218] [INFO ] [WinFsp] Открыт каталог: '/папка с каналом/привязанная' (ID 3475)
+[2026-11-25 01:01:21.250] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 01:01:21.262] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (виртуальный путь: '/папка с каналом/привязанная/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe')...
+[2026-11-25 01:01:21.262] [INFO ] [WinFsp] [Источник] Предыдущая сессия копирования завершена по таймауту бездействия (20 сек).
+[2026-11-25 01:01:21.263] [INFO ] [WinFsp] [Handles DragDrop] Сканирование хэндлов для 1 процессов (PID: 12292, вызывающий процесс: explorer (PID: 12292))...
+[2026-11-25 01:01:21.278] [INFO ] [WinFsp] [Handles DragDrop] В системе обнаружено 89716 дескрипторов ядра (File Type Index: 36).
+[2026-11-25 01:01:21.286] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/папка с каналом/привязанная/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (alloc: 339968)
+[2026-11-25 01:01:21.287] [INFO ] [WinFsp] Обновлены системные даты для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID -10): Изменен: 2014-03-05 22:33:09.177, Создан: 2026-11-24 23:01:21.286
+[2026-11-25 01:01:21.289] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (виртуальный путь: '/папка с каналом/привязанная/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe')...
+[2026-11-25 01:01:21.289] [INFO ] [WinFsp] [Handles DragDrop] Сканирование хэндлов для 1 процессов (PID: 12292, вызывающий процесс: explorer (PID: 12292))...
+[2026-11-25 01:01:21.305] [INFO ] [WinFsp] [Handles DragDrop] В системе обнаружено 89732 дескрипторов ядра (File Type Index: 36).
+[2026-11-25 01:01:21.340] [INFO ] [WinFsp] Отправка файла 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (328,1 КБ (335 976 байт)) из памяти в Telegram (Zero-Temp), канал: 5745288400...
+[2026-11-25 01:01:21.340] [INFO ] [TelegramService] Прямая потоковая передача файла 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (335976 байт) в Telegram...
+[2026-11-25 01:01:21.417] [INFO ] [TelegramService] Файл 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /папка с каналом/привязанная/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5_v1.exe
+#latest')...
+[2026-11-25 01:01:21.427] [INFO ] [TrayProgressOverlay] Показ окна прогресса [Upload] для Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe (335976/335976)
+[2026-11-25 01:01:21.572] [INFO ] [TelegramService] Файл 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' успешно сохранен в Telegram. Message ID: 3
+[2026-11-25 01:01:21.572] [INFO ] [TrayContext] Событие OnUploadCompleted для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' получено из TelegramService.
+[2026-11-25 01:01:21.573] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe'. Запуск _completionTimer...
+[2026-11-25 01:01:21.778] [INFO ] [WinFsp] Файл 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' успешно сохранен в Telegram (Msg ID: 3, дата изменения: 2014-03-05 22:33:09).
+[2026-11-25 01:01:21.788] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 1.pdf' (виртуальный путь: '/папка с каналом/привязанная/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 1.pdf')...
+[2026-11-25 01:01:21.788] [INFO ] [WinFsp] [Handles DragDrop] Сканирование хэндлов для 1 процессов (PID: 12292, вызывающий процесс: explorer (PID: 12292))...
+[2026-11-25 01:01:21.809] [INFO ] [WinFsp] [Handles DragDrop] В системе обнаружено 89929 дескрипторов ядра (File Type Index: 36).
+[2026-11-25 01:01:21.849] [INFO ] [WinFsp] [Handles DragDrop] Обнаружен открытый файл в процессе PID 12292: 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 1.pdf'
+[2026-11-25 01:01:21.850] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 1.pdf' существует и доступен для чтения (размер: 7,19 МБ (7 541 924 байт)).
+[2026-11-25 01:01:21.850] [INFO ] [WinFsp] [Handles DragDrop] Привязана папка-источник 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга' для виртуального каталога '/папка с каналом/привязанная'
+[2026-11-25 01:01:21.852] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/папка с каналом/привязанная/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 1.pdf' (alloc: 7544832), источник: 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 1.pdf'
+[2026-11-25 01:01:21.855] [INFO ] [WinFsp] [Write] Начинаем извлечение метаданных из оригинального файла: 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 1.pdf'
+[2026-11-25 01:01:21.855] [INFO ] [WinFsp] Запуск прямой потоковой передачи 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 1.pdf' (7,19 МБ (7 541 924 байт)) в Telegram, канал: 5745288400...
+[2026-11-25 01:01:21.856] [INFO ] [TelegramService] Прямая потоковая передача файла 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 1.pdf' (7541924 байт) в Telegram...
+[2026-11-25 01:01:21.962] [INFO ] [TrayProgressOverlay] Остановлен активный _completionTimer для файла Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 1.pdf
+[2026-11-25 01:01:22.040] [INFO ] [WinFsp] Обновлены системные даты для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 1.pdf' (ID -11): Изменен: 2013-09-20 23:09:45.299, Создан: 2026-11-24 23:01:21.851
+[2026-11-25 01:01:22.463] [INFO ] [TelegramService] Файл 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 1.pdf' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /папка с каналом/привязанная/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 1_v1.pdf
+#latest')...
+[2026-11-25 01:01:22.546] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'привязанная' (/папка с каналом/привязанная) (ID 3475), элементов: 1
+[2026-11-25 01:01:22.582] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:01:22.583] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:01:22.590] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:01:22.591] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:01:22.597] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:01:22.597] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:01:22.601] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:01:22.603] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:01:22.604] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:01:22.609] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:01:22.609] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:01:22.611] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 236 544, 32 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:01:22.611] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 335 944, 32 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:01:22.614] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:01:22.615] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:01:22.626] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:01:22.627] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 211 968, 8 192 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:01:22.628] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:01:22.638] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:01:22.638] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:01:22.639] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:01:22.652] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:01:22.653] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:01:22.653] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:01:22.742] [INFO ] [TelegramService] Файл 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 1.pdf' успешно сохранен в Telegram. Message ID: 4
+[2026-11-25 01:01:22.742] [INFO ] [TrayContext] Событие OnUploadCompleted для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 1.pdf' получено из TelegramService.
+[2026-11-25 01:01:22.743] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 1.pdf'. Запуск _completionTimer...
+[2026-11-25 01:01:23.028] [INFO ] [WinFsp] Файл 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 1.pdf' успешно сохранен в Telegram (Msg ID: 4, дата изменения: 2013-09-20 23:09:45). Загрузка на лету (Zero-Temp) завершена.
+[2026-11-25 01:01:23.037] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 2.pdf' (виртуальный путь: '/папка с каналом/привязанная/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 2.pdf')...
+[2026-11-25 01:01:23.037] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 2.pdf' существует и доступен для чтения (размер: 5,27 МБ (5 525 434 байт)).
+[2026-11-25 01:01:23.037] [INFO ] [WinFsp] [Источник] Найдено совпадение в активной сессии для папки '/папка с каналом/привязанная': 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 2.pdf'
+[2026-11-25 01:01:23.038] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/папка с каналом/привязанная/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 2.pdf' (alloc: 5525504), источник: 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 2.pdf'
+[2026-11-25 01:01:23.165] [INFO ] [WinFsp] [Write] Начинаем извлечение метаданных из оригинального файла: 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 2.pdf'
+[2026-11-25 01:01:23.165] [INFO ] [WinFsp] Запуск прямой потоковой передачи 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 2.pdf' (5,27 МБ (5 525 434 байт)) в Telegram, канал: 5745288400...
+[2026-11-25 01:01:23.166] [INFO ] [TelegramService] Прямая потоковая передача файла 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 2.pdf' (5525434 байт) в Telegram...
+[2026-11-25 01:01:23.288] [INFO ] [WinFsp] Обновлены системные даты для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 2.pdf' (ID -12): Изменен: 2013-09-20 23:09:52.752, Создан: 2026-11-24 23:01:23.038
+[2026-11-25 01:01:23.312] [INFO ] [TrayProgressOverlay] Остановлен активный _completionTimer для файла Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 2.pdf
+[2026-11-25 01:01:24.289] [INFO ] [TelegramService] Файл 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 2.pdf' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /папка с каналом/привязанная/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 2_v1.pdf
+#latest')...
+[2026-11-25 01:01:24.510] [INFO ] [TelegramService] Файл 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 2.pdf' успешно сохранен в Telegram. Message ID: 5
+[2026-11-25 01:01:24.510] [INFO ] [TrayContext] Событие OnUploadCompleted для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 2.pdf' получено из TelegramService.
+[2026-11-25 01:01:24.510] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 2.pdf'. Запуск _completionTimer...
+[2026-11-25 01:01:24.700] [INFO ] [WinFsp] Файл 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 2.pdf' успешно сохранен в Telegram (Msg ID: 5, дата изменения: 2013-09-20 23:09:52). Загрузка на лету (Zero-Temp) завершена.
+[2026-11-25 01:01:24.709] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (виртуальный путь: '/папка с каналом/привязанная/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe')...
+[2026-11-25 01:01:24.710] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' существует и доступен для чтения (размер: 9,01 МБ (9 450 611 байт)).
+[2026-11-25 01:01:24.710] [INFO ] [WinFsp] [Источник] Найдено совпадение в активной сессии для папки '/папка с каналом/привязанная': 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe'
+[2026-11-25 01:01:24.711] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/папка с каналом/привязанная/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (alloc: 9453568), источник: 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe'
+[2026-11-25 01:01:24.837] [INFO ] [WinFsp] [Write] Начинаем извлечение метаданных из оригинального файла: 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe'
+[2026-11-25 01:01:24.838] [INFO ] [WinFsp] Запуск прямой потоковой передачи 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (9,01 МБ (9 450 611 байт)) в Telegram, канал: 5745288400...
+[2026-11-25 01:01:24.839] [INFO ] [TelegramService] Прямая потоковая передача файла 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (9450611 байт) в Telegram...
+[2026-11-25 01:01:25.089] [INFO ] [TrayProgressOverlay] Остановлен активный _completionTimer для файла Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe
+[2026-11-25 01:01:26.373] [INFO ] [WinFsp] Обновлены системные даты для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID -13): Изменен: 2014-05-05 20:34:02.519, Создан: 2026-11-24 23:01:24.711
+[2026-11-25 01:01:30.549] [INFO ] [TelegramService] Файл 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /папка с каналом/привязанная/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3_v1.exe
+#latest')...
+[2026-11-25 01:01:30.808] [INFO ] [TelegramService] Файл 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' успешно сохранен в Telegram. Message ID: 6
+[2026-11-25 01:01:30.808] [INFO ] [TrayContext] Событие OnUploadCompleted для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' получено из TelegramService.
+[2026-11-25 01:01:30.808] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe'. Запуск _completionTimer...
+[2026-11-25 01:01:31.044] [INFO ] [WinFsp] Файл 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' успешно сохранен в Telegram (Msg ID: 6, дата изменения: 2014-05-05 20:34:02). Загрузка на лету (Zero-Temp) завершена.
+[2026-11-25 01:01:31.051] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (виртуальный путь: '/папка с каналом/привязанная/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe')...
+[2026-11-25 01:01:31.051] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' существует и доступен для чтения (размер: 3,68 МБ (3 863 765 байт)).
+[2026-11-25 01:01:31.051] [INFO ] [WinFsp] [Источник] Найдено совпадение в активной сессии для папки '/папка с каналом/привязанная': 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe'
+[2026-11-25 01:01:31.052] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/папка с каналом/привязанная/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (alloc: 3866624), источник: 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe'
+[2026-11-25 01:01:31.053] [INFO ] [WinFsp] [Write] Начинаем извлечение метаданных из оригинального файла: 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe'
+[2026-11-25 01:01:31.054] [INFO ] [WinFsp] Запуск прямой потоковой передачи 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (3,68 МБ (3 863 765 байт)) в Telegram, канал: 5745288400...
+[2026-11-25 01:01:31.054] [INFO ] [TelegramService] Прямая потоковая передача файла 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (3863765 байт) в Telegram...
+[2026-11-25 01:01:31.098] [INFO ] [WinFsp] Обновлены системные даты для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID -14): Изменен: 2014-03-05 22:21:04.030, Создан: 2026-11-24 23:01:31.052
+[2026-11-25 01:01:31.664] [INFO ] [TrayProgressOverlay] Остановлен активный _completionTimer для файла Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe
+[2026-11-25 01:01:33.675] [INFO ] [TelegramService] Файл 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /папка с каналом/привязанная/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4_v1.exe
+#latest')...
+[2026-11-25 01:01:33.679] [INFO ] [MtprotoWorkerPool] [Воркер #1] Запрос чанка #1/10 для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (/папка с каналом/привязанная/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe) (смещение 0 б, размер 1 048 576 б) [Полный чанк]...
+[2026-11-25 01:01:33.899] [INFO ] [MtprotoWorkerPool] [Воркер #1] Получен чанк #1/10 для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (/папка с каналом/привязанная/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe) (1 048 576 б за 220 мс) [Полный чанк].
+[2026-11-25 01:01:33.899] [INFO ] [TelegramService] Файл 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' успешно сохранен в Telegram. Message ID: 7
+[2026-11-25 01:01:33.899] [INFO ] [TrayContext] Событие OnUploadCompleted для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' получено из TelegramService.
+[2026-11-25 01:01:33.899] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe'. Запуск _completionTimer...
+[2026-11-25 01:01:33.901] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 10 чанков (10%).
+[2026-11-25 01:01:33.904] [INFO ] [TrayProgressOverlay] CompleteMetadata вызван для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe'. Показ оверлея 'МЕТАДАННЫЕ ПОЛУЧЕНЫ'...
+[2026-11-25 01:01:33.905] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 10 чанков (10%).
+[2026-11-25 01:01:33.906] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 10 чанков (10%).
+[2026-11-25 01:01:33.909] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 10 чанков (10%).
+[2026-11-25 01:01:33.912] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 10 чанков (10%).
+[2026-11-25 01:01:33.919] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 10 чанков (10%).
+[2026-11-25 01:01:33.919] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 10 чанков (10%).
+[2026-11-25 01:01:33.920] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 236 544, 32 байт). Скачано 1 из 10 чанков (10%).
+[2026-11-25 01:01:33.920] [INFO ] [MtprotoWorkerPool] [Воркер #2] Запрос чанка #10/10 для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (/папка с каналом/привязанная/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe) (смещение 9 437 184 б, размер 16 384 б) [Остаток 16,00 КБ]...
+[2026-11-25 01:01:33.982] [INFO ] [MtprotoWorkerPool] [Воркер #2] Получен чанк #10/10 для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (/папка с каналом/привязанная/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe) (13 427 б за 61 мс) [Остаток 13,11 КБ].
+[2026-11-25 01:01:33.993] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 10 чанков (20%).
+[2026-11-25 01:01:33.994] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 10 чанков (20%).
+[2026-11-25 01:01:33.994] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 2 из 10 чанков (20%).
+[2026-11-25 01:01:34.005] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 10 чанков (20%).
+[2026-11-25 01:01:34.005] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 10 чанков (20%).
+[2026-11-25 01:01:34.005] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 2 из 10 чанков (20%).
+[2026-11-25 01:01:34.015] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 10 чанков (20%).
+[2026-11-25 01:01:34.015] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 10 чанков (20%).
+[2026-11-25 01:01:34.015] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 2 из 10 чанков (20%).
+[2026-11-25 01:01:34.085] [INFO ] [WinFsp] Файл 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' успешно сохранен в Telegram (Msg ID: 7, дата изменения: 2014-03-05 22:21:04). Загрузка на лету (Zero-Temp) завершена.
+[2026-11-25 01:01:34.383] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'папка с каналом' (/папка с каналом) (ID 3474), элементов: 1
+[2026-11-25 01:01:34.491] [INFO ] [MtprotoWorkerPool] [Воркер #3] Запрос чанка #1/4 для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (/папка с каналом/привязанная/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe) (смещение 0 б, размер 1 048 576 б) [Полный чанк]...
+[2026-11-25 01:01:34.688] [INFO ] [MtprotoWorkerPool] [Воркер #3] Получен чанк #1/4 для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (/папка с каналом/привязанная/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe) (1 048 576 б за 197 мс) [Полный чанк].
+[2026-11-25 01:01:34.700] [INFO ] [TrayProgressOverlay] CompleteMetadata вызван для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe'. Показ оверлея 'МЕТАДАННЫЕ ПОЛУЧЕНЫ'...
+[2026-11-25 01:01:34.702] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 211 968, 8 192 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 01:01:34.775] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 01:01:34.776] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 01:01:34.801] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 01:01:34.809] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 01:01:34.891] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 01:01:35.393] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка' (/Новая папка) (ID 1890), элементов: 103
+[2026-11-25 01:01:35.845] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 01:01:35.846] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 01:01:35.850] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 01:01:35.877] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 01:01:35.877] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 01:01:35.878] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 236 544, 32 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 01:01:35.879] [INFO ] [MtprotoWorkerPool] [Воркер #1] Запрос чанка #4/4 для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (/папка с каналом/привязанная/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe) (смещение 3 145 728 б, размер 720 896 б) [Остаток 704,00 КБ]...
+[2026-11-25 01:01:35.899] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 01:01:35.978] [INFO ] [MtprotoWorkerPool] [Воркер #1] Получен чанк #4/4 для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (/папка с каналом/привязанная/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe) (718 037 б за 98 мс) [Остаток 701,21 КБ].
+[2026-11-25 01:01:36.006] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:01:36.007] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:01:36.007] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:01:36.021] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:01:36.022] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:01:36.022] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:01:36.037] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:01:36.039] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:01:36.040] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:01:36.113] [INFO ] [TrayProgressOverlay] _completionTimer Tick! _isTransferring=False, _isCompleted=True, Visible=True
+[2026-11-25 01:01:36.115] [INFO ] [TrayProgressOverlay] Оверлей успешно скрыт по завершению таймаута.
+[2026-11-25 01:01:36.400] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка' (/Новая папка) (ID 1890), элементов: 103
+[2026-11-25 01:01:43.030] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:01:43.031] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:01:48.002] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'папка с каналом' (/папка с каналом) (ID 3474), элементов: 1
+[2026-11-25 01:01:49.066] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:01:49.067] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:01:49.077] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:01:49.078] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:01:49.088] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:01:49.089] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:01:49.099] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:01:49.100] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:01:49.112] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:01:49.112] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:01:49.122] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:01:49.123] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:01:49.125] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 01:01:49.141] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:01:49.141] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:01:49.154] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:01:49.154] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:01:49.261] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:01:49.262] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:01:50.405] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:01:50.405] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:01:50.405] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:01:50.416] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:01:50.417] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:01:50.418] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:01:50.432] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:01:50.433] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:01:50.433] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:01:50.466] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'привязанная' (/папка с каналом/привязанная) (ID 3475), элементов: 5
+[2026-11-25 01:01:50.528] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 0, 32 768 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:01:50.528] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 208 896, 32 768 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:02:34.085] [INFO ] [DatabaseBackup] Сработал Debounce-таймер резервного копирования (1 мин тишины).
+[2026-11-25 01:02:34.085] [INFO ] [TelegramService] Запрос к Telegram: поиск последней резервной копии базы данных...
+[2026-11-25 01:02:34.150] [INFO ] [TelegramService] Найден файл бэкапа базы в Telegram: Message #170, 'base_2026-11-25_00-57-16.db', 568,0 КБ, дата: 2026-11-25 00:57:18
+[2026-11-25 01:02:34.150] [INFO ] [DatabaseBackup] Запуск резервного копирования базы данных. Причина: 'Автоматический бэкап (1 мин тишины)'...
+[2026-11-25 01:02:34.151] [INFO ] [Database] Создание консистентного снимка базы данных в: D:\Temp\TGramFS\backups\base_2026-11-25_01-02-34.db...
+[2026-11-25 01:02:35.087] [INFO ] [Database] Снимок базы данных успешно создан: D:\Temp\TGramFS\backups\base_2026-11-25_01-02-34.db
+[2026-11-25 01:02:35.090] [INFO ] [TelegramService] Загрузка резервной копии 'base_2026-11-25_01-02-34.db' в Telegram (канал ID: 4439566709)...
+[2026-11-25 01:02:35.280] [INFO ] [TelegramService] Резервная копия 'base_2026-11-25_01-02-34.db' успешно загружена в Telegram. Message ID: 171
+[2026-11-25 01:02:35.304] [INFO ] [DatabaseBackup] Резервная копия базы данных успешно отправлена в Telegram! (Размер: 0,56 МБ).
+[2026-11-25 01:02:36.923] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'папка с каналом' (/папка с каналом) (ID 3474), элементов: 1
+[2026-11-25 01:02:39.748] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 01:02:44.840] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'папка с каналом' (/папка с каналом) (ID 3474), элементов: 1
+[2026-11-25 01:02:45.460] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 01:02:47.200] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'папка с каналом' (/папка с каналом) (ID 3474), элементов: 1
+[2026-11-25 01:02:47.372] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:02:47.373] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:02:47.384] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:02:47.384] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:02:47.395] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:02:47.395] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:02:47.434] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 10 чанков (20%).
+[2026-11-25 01:02:47.434] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 10 чанков (20%).
+[2026-11-25 01:02:47.443] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 10 чанков (20%).
+[2026-11-25 01:02:47.444] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 10 чанков (20%).
+[2026-11-25 01:02:47.455] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 10 чанков (20%).
+[2026-11-25 01:02:47.456] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 10 чанков (20%).
+[2026-11-25 01:02:49.691] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 01:02:58.231] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'папка с каналом' (/папка с каналом) (ID 3474), элементов: 1
+[2026-11-25 01:02:58.305] [INFO ] [WinFsp] Перемещение элемента 'папка с каналом' (ID 3474) в корзину (.Trash)...
+[2026-11-25 01:02:58.650] [INFO ] [Database] Поставлено в фоновую очередь обновление подписей Telegram для 5 элементов.
+[2026-11-25 01:02:58.652] [WARN ] [NodeRepository] [GetNodeByPath NULL] Поиск пути '/папка с каналом/привязанная' прерван: родительский узел равен null на элементе 'привязанная'.
+[2026-11-25 01:02:58.654] [WARN ] [NodeRepository] [GetNodeByPath NULL] Поиск пути '/папка с каналом/привязанная' прерван: родительский узел равен null на элементе 'привязанная'.
+[2026-11-25 01:02:58.699] [WARN ] [NodeRepository] [GetNodeByPath NULL] Поиск пути '/папка с каналом/привязанная' прерван: родительский узел равен null на элементе 'привязанная'.
+[2026-11-25 01:02:58.700] [WARN ] [NodeRepository] [GetNodeByPath NULL] Поиск пути '/папка с каналом/привязанная' прерван: родительский узел равен null на элементе 'привязанная'.
+[2026-11-25 01:02:58.781] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 5
+[2026-11-25 01:02:59.621] [INFO ] [TelegramService] Подпись сообщения #3 в Telegram успешно обновлена на: '🗑️ /.Trash/папка с каналом/привязанная/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5_v1.exe
+ID: 3
+#trash'.
+[2026-11-25 01:02:59.871] [INFO ] [TelegramService] Подпись сообщения #4 в Telegram успешно обновлена на: '🗑️ /.Trash/папка с каналом/привязанная/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 1_v1.pdf
+ID: 4
+#trash'.
+[2026-11-25 01:03:00.115] [INFO ] [TelegramService] Подпись сообщения #5 в Telegram успешно обновлена на: '🗑️ /.Trash/папка с каналом/привязанная/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 2_v1.pdf
+ID: 5
+#trash'.
+[2026-11-25 01:03:00.418] [INFO ] [TelegramService] Подпись сообщения #6 в Telegram успешно обновлена на: '🗑️ /.Trash/папка с каналом/привязанная/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3_v1.exe
+ID: 6
+#trash'.
+[2026-11-25 01:03:00.523] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка' (/Новая папка) (ID 1890), элементов: 103
+[2026-11-25 01:03:00.699] [INFO ] [TelegramService] Подпись сообщения #7 в Telegram успешно обновлена на: '🗑️ /.Trash/папка с каналом/привязанная/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4_v1.exe
+ID: 7
+#trash'.
+[2026-11-25 01:03:02.963] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 5
+[2026-11-25 01:03:05.353] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Clips' (/Clips) (ID 533), элементов: 52
+[2026-11-25 01:03:07.590] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 5
+[2026-11-25 01:03:12.046] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка '.Trash' (/.Trash) (ID 2), элементов: 2
+[2026-11-25 01:03:14.319] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 5
+[2026-11-25 01:03:16.235] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'папка с каналом' (/.Trash/папка с каналом) (ID 3474), элементов: 1
+[2026-11-25 01:03:17.771] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка '.Trash' (/.Trash) (ID 2), элементов: 2
+[2026-11-25 01:03:18.237] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:03:18.238] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:03:18.243] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:03:18.243] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:03:18.248] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:03:18.249] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:03:18.253] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:03:18.254] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:03:18.254] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:03:18.254] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:03:18.256] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:03:18.259] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:03:18.259] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:03:18.260] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:03:18.260] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:03:18.261] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 236 544, 32 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:03:18.261] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 335 944, 32 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:03:18.264] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:03:18.264] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:03:18.270] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:03:18.270] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 10 чанков (20%).
+[2026-11-25 01:03:18.270] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:03:18.271] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:03:18.271] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 10 чанков (20%).
+[2026-11-25 01:03:18.277] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:03:18.277] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 10 чанков (20%).
+[2026-11-25 01:03:18.277] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:03:18.278] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 10 чанков (20%).
+[2026-11-25 01:03:18.278] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:03:18.282] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 10 чанков (20%).
+[2026-11-25 01:03:18.282] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:03:18.282] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 10 чанков (20%).
+[2026-11-25 01:03:18.282] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:03:18.283] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:03:18.289] [WARN ] [NodeRepository] [GetNodeByPath NOT FOUND] Не найдена системная корзина '.Trash' в корне (Root ID=1).
+[2026-11-25 01:03:18.289] [WARN ] [NodeRepository] [GetNodeByPath NULL] Поиск пути '/.trash/папка с каналом/привязанная/арнольд шварценеггер. энциклопедия современного бодибилдинга. книга 5.exe' прерван: родительский узел равен null на элементе 'папка с каналом'.
+[2026-11-25 01:03:18.290] [WARN ] [NodeRepository] [GetNodeByPath NOT FOUND] Не найдена системная корзина '.Trash' в корне (Root ID=1).
+[2026-11-25 01:03:18.290] [WARN ] [NodeRepository] [GetNodeByPath NULL] Поиск пути '/.trash/папка с каналом/привязанная/арнольд шварценеггер. энциклопедия современного бодибилдинга. книга 5.exe' прерван: родительский узел равен null на элементе 'папка с каналом'.
+[2026-11-25 01:03:18.291] [WARN ] [NodeRepository] [GetNodeByPath NOT FOUND] Не найдена системная корзина '.Trash' в корне (Root ID=1).
+[2026-11-25 01:03:18.291] [WARN ] [NodeRepository] [GetNodeByPath NULL] Поиск пути '/.trash/папка с каналом/привязанная/арнольд шварценеггер. энциклопедия современного бодибилдинга. книга 5.exe' прерван: родительский узел равен null на элементе 'папка с каналом'.
+[2026-11-25 01:03:18.291] [WARN ] [NodeRepository] [GetNodeByPath NOT FOUND] Не найдена системная корзина '.Trash' в корне (Root ID=1).
+[2026-11-25 01:03:18.291] [WARN ] [NodeRepository] [GetNodeByPath NULL] Поиск пути '/.trash/папка с каналом/привязанная/арнольд шварценеггер. энциклопедия современного бодибилдинга. книга 5.exe' прерван: родительский узел равен null на элементе 'папка с каналом'.
+[2026-11-25 01:03:18.296] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:03:18.297] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:03:18.298] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:03:18.303] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:03:18.304] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:03:18.304] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 236 544, 32 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:03:18.305] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #4 (смещение 3 863 733, 32 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:03:18.310] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:03:18.310] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:03:18.311] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:03:18.315] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:03:18.315] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:03:18.316] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:03:18.320] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:03:18.320] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:03:18.320] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 7): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 2 из 4 чанков (50%).
+[2026-11-25 01:03:18.325] [WARN ] [NodeRepository] [GetNodeByPath NOT FOUND] Не найдена системная корзина '.Trash' в корне (Root ID=1).
+[2026-11-25 01:03:18.325] [WARN ] [NodeRepository] [GetNodeByPath NULL] Поиск пути '/.trash/папка с каналом/привязанная/арнольд шварценеггер. энциклопедия современного бодибилдинга. книга 4.exe' прерван: родительский узел равен null на элементе 'папка с каналом'.
+[2026-11-25 01:03:18.325] [WARN ] [NodeRepository] [GetNodeByPath NOT FOUND] Не найдена системная корзина '.Trash' в корне (Root ID=1).
+[2026-11-25 01:03:18.325] [WARN ] [NodeRepository] [GetNodeByPath NULL] Поиск пути '/.trash/папка с каналом/привязанная/арнольд шварценеггер. энциклопедия современного бодибилдинга. книга 4.exe' прерван: родительский узел равен null на элементе 'папка с каналом'.
+[2026-11-25 01:03:18.326] [WARN ] [NodeRepository] [GetNodeByPath NOT FOUND] Не найдена системная корзина '.Trash' в корне (Root ID=1).
+[2026-11-25 01:03:18.326] [WARN ] [NodeRepository] [GetNodeByPath NULL] Поиск пути '/.trash/папка с каналом/привязанная/арнольд шварценеггер. энциклопедия современного бодибилдинга. книга 4.exe' прерван: родительский узел равен null на элементе 'папка с каналом'.
+[2026-11-25 01:03:18.327] [WARN ] [NodeRepository] [GetNodeByPath NOT FOUND] Не найдена системная корзина '.Trash' в корне (Root ID=1).
+[2026-11-25 01:03:18.327] [WARN ] [NodeRepository] [GetNodeByPath NULL] Поиск пути '/.trash/папка с каналом/привязанная/арнольд шварценеггер. энциклопедия современного бодибилдинга. книга 4.exe' прерван: родительский узел равен null на элементе 'папка с каналом'.
+[2026-11-25 01:03:18.333] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 10 чанков (20%).
+[2026-11-25 01:03:18.333] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 10 чанков (20%).
+[2026-11-25 01:03:18.335] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 10 чанков (20%).
+[2026-11-25 01:03:18.339] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 10 чанков (20%).
+[2026-11-25 01:03:18.339] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 10 чанков (20%).
+[2026-11-25 01:03:18.340] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 236 544, 32 байт). Скачано 2 из 10 чанков (20%).
+[2026-11-25 01:03:18.340] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #10 (смещение 9 450 579, 32 байт). Скачано 2 из 10 чанков (20%).
+[2026-11-25 01:03:18.348] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 10 чанков (20%).
+[2026-11-25 01:03:18.348] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 10 чанков (20%).
+[2026-11-25 01:03:18.349] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 2 из 10 чанков (20%).
+[2026-11-25 01:03:18.353] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 10 чанков (20%).
+[2026-11-25 01:03:18.354] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 10 чанков (20%).
+[2026-11-25 01:03:18.354] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 2 из 10 чанков (20%).
+[2026-11-25 01:03:18.360] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 2 из 10 чанков (20%).
+[2026-11-25 01:03:18.361] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 2 из 10 чанков (20%).
+[2026-11-25 01:03:18.361] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 3.exe' (ID 6): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 2 из 10 чанков (20%).
+[2026-11-25 01:03:18.366] [WARN ] [NodeRepository] [GetNodeByPath NOT FOUND] Не найдена системная корзина '.Trash' в корне (Root ID=1).
+[2026-11-25 01:03:18.366] [WARN ] [NodeRepository] [GetNodeByPath NULL] Поиск пути '/.trash/папка с каналом/привязанная/арнольд шварценеггер. энциклопедия современного бодибилдинга. книга 3.exe' прерван: родительский узел равен null на элементе 'папка с каналом'.
+[2026-11-25 01:03:18.367] [WARN ] [NodeRepository] [GetNodeByPath NOT FOUND] Не найдена системная корзина '.Trash' в корне (Root ID=1).
+[2026-11-25 01:03:18.367] [WARN ] [NodeRepository] [GetNodeByPath NULL] Поиск пути '/.trash/папка с каналом/привязанная/арнольд шварценеггер. энциклопедия современного бодибилдинга. книга 3.exe' прерван: родительский узел равен null на элементе 'папка с каналом'.
+[2026-11-25 01:03:18.368] [WARN ] [NodeRepository] [GetNodeByPath NOT FOUND] Не найдена системная корзина '.Trash' в корне (Root ID=1).
+[2026-11-25 01:03:18.368] [WARN ] [NodeRepository] [GetNodeByPath NULL] Поиск пути '/.trash/папка с каналом/привязанная/арнольд шварценеггер. энциклопедия современного бодибилдинга. книга 3.exe' прерван: родительский узел равен null на элементе 'папка с каналом'.
+[2026-11-25 01:03:18.369] [WARN ] [NodeRepository] [GetNodeByPath NOT FOUND] Не найдена системная корзина '.Trash' в корне (Root ID=1).
+[2026-11-25 01:03:18.369] [WARN ] [NodeRepository] [GetNodeByPath NULL] Поиск пути '/.trash/папка с каналом/привязанная/арнольд шварценеггер. энциклопедия современного бодибилдинга. книга 3.exe' прерван: родительский узел равен null на элементе 'папка с каналом'.
+[2026-11-25 01:03:20.223] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'папка с каналом' (/.Trash/папка с каналом) (ID 3474), элементов: 1
+[2026-11-25 01:03:22.096] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка '.Trash' (/.Trash) (ID 2), элементов: 2
+[2026-11-25 01:03:24.789] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'папка с каналом' (/.Trash/папка с каналом) (ID 3474), элементов: 1
+[2026-11-25 01:03:35.248] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 5
+[2026-11-25 01:03:37.825] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка '.Trash' (/.Trash) (ID 2), элементов: 2
+[2026-11-25 01:03:42.945] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 5
+[2026-11-25 01:03:43.533] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка '.Trash' (/.Trash) (ID 2), элементов: 2
+[2026-11-25 01:03:44.751] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 5
+[2026-11-25 01:03:53.623] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка '.Trash' (/.Trash) (ID 2), элементов: 2
+[2026-11-25 01:03:53.659] [INFO ] [WinFsp] Перманентное удаление элемента 'папка с каналом' (ID 3474) из корзины...
+[2026-11-25 01:03:53.660] [INFO ] [Database] [EnqueuePermanentDeletion] Транзакция перманентного удаления: 7 узлов из БД, 0 уникальных сообщений Telegram в очередь pending_deletions.
+[2026-11-25 01:03:53.821] [INFO ] [Database] [EnqueuePermanentDeletion] Транзакция успешно зафиксирована.
+[2026-11-25 01:03:53.821] [INFO ] [WinFsp] Удалено 7 узлов из базы; 0 сообщений отправлено в очередь удаления Telegram.
+[2026-11-25 01:03:53.821] [INFO ] [WinFsp] Привязанная папка удалена навсегда, канал Telegram ID 5745288400 больше не используется. Авто-удаление канала и всех его сообщений из Telegram...
+[2026-11-25 01:03:54.049] [INFO ] [TelegramService] Канал Telegram ID 5745288400 полностью удален.
+[2026-11-25 01:03:54.997] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 5
+[2026-11-25 01:03:55.500] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка' (/Новая папка) (ID 1890), элементов: 103
+[2026-11-25 01:03:56.821] [INFO ] [Database] Запуск оптимизации базы данных SQLite (VACUUM)...
+[2026-11-25 01:03:56.999] [INFO ] [Database] Оптимизация базы данных (VACUUM) успешно завершена.
+
+
+[2026-11-25 01:06:01.973] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 5
+[2026-11-25 01:06:02.728] [INFO ] [WinFsp] Создан новый каталог: '/Новая папка (2)' (ID 3481)
+[2026-11-25 01:06:11.966] [INFO ] [WinFsp] Переименование/перемещение: '/Новая папка (2)' -> '/миграция тест'
+[2026-11-25 01:06:14.748] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'миграция тест' (/миграция тест) (ID 3481), элементов: 0
+[2026-11-25 01:06:17.396] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 01:06:17.561] [INFO ] [TelegramService] Создание нового приватного канала 'миграция тест'...
+[2026-11-25 01:06:17.881] [INFO ] [TelegramService] Создан новый кастомный канал 'миграция тест' (ID: 5600772517). Записан в SQLite.
+[2026-11-25 01:06:18.045] [INFO ] [TelegramService] Установлена стандартная иконка для канала 'миграция тест' (ID: 5600772517).
+[2026-11-25 01:06:18.196] [INFO ] [TelegramService] [Migration] В папке ID 3481 нет файлов для миграции.
+[2026-11-25 01:06:18.339] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'миграция тест' (/миграция тест) (ID 3481), элементов: 1
+[2026-11-25 01:06:21.815] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 01:06:30.302] [INFO ] [WinFsp] Открыт каталог: '/миграция тест' (ID 3481)
+[2026-11-25 01:06:30.341] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (виртуальный путь: '/миграция тест/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe')...
+[2026-11-25 01:06:30.341] [INFO ] [WinFsp] [Источник] Предыдущая сессия копирования завершена по таймауту бездействия (20 сек).
+[2026-11-25 01:06:30.341] [INFO ] [WinFsp] [Handles DragDrop] Сканирование хэндлов для 1 процессов (PID: 12292, вызывающий процесс: explorer (PID: 12292))...
+[2026-11-25 01:06:30.358] [INFO ] [WinFsp] [Handles DragDrop] В системе обнаружено 89697 дескрипторов ядра (File Type Index: 36).
+[2026-11-25 01:06:30.384] [INFO ] [WinFsp] [Handles DragDrop] Обнаружен открытый файл в процессе PID 12292: 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe'
+[2026-11-25 01:06:30.385] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' существует и доступен для чтения (размер: 3,68 МБ (3 863 765 байт)).
+[2026-11-25 01:06:30.385] [INFO ] [WinFsp] [Handles DragDrop] Привязана папка-источник 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга' для виртуального каталога '/миграция тест'
+[2026-11-25 01:06:30.385] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/миграция тест/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (alloc: 3866624), источник: 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe'
+[2026-11-25 01:06:30.387] [INFO ] [WinFsp] [Write] Начинаем извлечение метаданных из оригинального файла: 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe'
+[2026-11-25 01:06:30.387] [INFO ] [WinFsp] Запуск прямой потоковой передачи 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (3,68 МБ (3 863 765 байт)) в Telegram, канал: 5600772517...
+[2026-11-25 01:06:30.388] [INFO ] [TelegramService] Прямая потоковая передача файла 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (3863765 байт) в Telegram...
+[2026-11-25 01:06:30.452] [INFO ] [WinFsp] Обновлены системные даты для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID -15): Изменен: 2014-03-05 22:21:04.030, Создан: 2026-11-24 23:06:30.385
+[2026-11-25 01:06:30.688] [INFO ] [TrayProgressOverlay] Показ окна прогресса [Upload] для Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe (524288/3863765)
+[2026-11-25 01:06:30.895] [INFO ] [TelegramService] Файл 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /миграция тест/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4_v1.exe
+#latest')...
+[2026-11-25 01:06:30.969] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'миграция тест' (/миграция тест) (ID 3481), элементов: 0
+[2026-11-25 01:06:31.093] [INFO ] [TelegramService] Файл 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' успешно сохранен в Telegram. Message ID: 3
+[2026-11-25 01:06:31.093] [INFO ] [TrayContext] Событие OnUploadCompleted для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' получено из TelegramService.
+[2026-11-25 01:06:31.094] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe'. Запуск _completionTimer...
+[2026-11-25 01:06:31.313] [INFO ] [WinFsp] Файл 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' успешно сохранен в Telegram (Msg ID: 3, дата изменения: 2014-03-05 22:21:04). Загрузка на лету (Zero-Temp) завершена.
+[2026-11-25 01:06:31.318] [INFO ] [WinFsp] [Источник] Поиск оригинального файла для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (виртуальный путь: '/миграция тест/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe')...
+[2026-11-25 01:06:31.318] [INFO ] [WinFsp] [Источник] НАЙДЕНО СОВПАДЕНИЕ! Оригинальный файл 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' существует и доступен для чтения (размер: 328,1 КБ (335 976 байт)).
+[2026-11-25 01:06:31.318] [INFO ] [WinFsp] [Источник] Найдено совпадение в активной сессии для папки '/миграция тест': 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe'
+[2026-11-25 01:06:31.319] [INFO ] [WinFsp] Создан файл для записи (в памяти): '/миграция тест/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (alloc: 339968), источник: 'D:\качалка\Арнольд Шварценеггер - Энциклопедия бодибилдинга\Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe'
+[2026-11-25 01:06:31.320] [INFO ] [WinFsp] Обновлены системные даты для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID -16): Изменен: 2014-03-05 22:33:09.177, Создан: 2026-11-24 23:06:31.319
+[2026-11-25 01:06:31.322] [INFO ] [WinFsp] Отправка файла 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (328,1 КБ (335 976 байт)) из памяти в Telegram (Zero-Temp), канал: 5600772517...
+[2026-11-25 01:06:31.322] [INFO ] [TelegramService] Прямая потоковая передача файла 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (335976 байт) в Telegram...
+[2026-11-25 01:06:31.400] [INFO ] [TelegramService] Файл 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' загружен в MTProto, финализация сообщения в канале (подпись: '🟢 /миграция тест/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5_v1.exe
+#latest')...
+[2026-11-25 01:06:31.400] [INFO ] [TrayProgressOverlay] Остановлен активный _completionTimer для файла Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe
+[2026-11-25 01:06:31.549] [INFO ] [TelegramService] Файл 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' успешно сохранен в Telegram. Message ID: 4
+[2026-11-25 01:06:31.549] [INFO ] [TrayContext] Событие OnUploadCompleted для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' получено из TelegramService.
+[2026-11-25 01:06:31.549] [INFO ] [TrayProgressOverlay] CompleteTransfer [Upload] вызван для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe'. Запуск _completionTimer...
+[2026-11-25 01:06:31.751] [INFO ] [WinFsp] Файл 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' успешно сохранен в Telegram (Msg ID: 4, дата изменения: 2014-03-05 22:33:09).
+[2026-11-25 01:06:32.145] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 01:06:32.204] [INFO ] [MtprotoWorkerPool] [Воркер #2] Запрос чанка #1/1 для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (/миграция тест/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe) (смещение 0 б, размер 339 968 б) [Остаток 332,00 КБ]...
+[2026-11-25 01:06:32.280] [INFO ] [MtprotoWorkerPool] [Воркер #2] Получен чанк #1/1 для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (/миграция тест/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe) (339 968 б за 75 мс) [Остаток 332,00 КБ].
+[2026-11-25 01:06:32.287] [INFO ] [TelegramService] [NetworkAudit] Завершено для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (/миграция тест/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe): Размер: 335 976 б (0,32 МБ) | Из сети TG: 339 968 б (0,32 МБ) | Из ОЗУ: 0 б (0,00 МБ) | Эффективность сети: 1.00x (Идеально — 0% дублирования)
+[2026-11-25 01:06:32.287] [INFO ] [TrayContext] Событие OnDownloadCompleted для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' получено из TelegramService.
+[2026-11-25 01:06:32.287] [INFO ] [TrayProgressOverlay] CompleteTransfer [Download] вызван для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe'. Запуск _completionTimer...
+[2026-11-25 01:06:32.289] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:32.298] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:32.299] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:32.303] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:32.305] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:32.315] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:32.316] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:32.317] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 236 544, 32 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:32.317] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 335 944, 32 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:32.332] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:32.332] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:32.333] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:32.341] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:32.341] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:32.342] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:32.352] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:32.352] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:32.352] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:32.384] [INFO ] [MtprotoWorkerPool] [Воркер #3] Запрос чанка #1/4 для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (/миграция тест/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe) (смещение 0 б, размер 1 048 576 б) [Полный чанк]...
+[2026-11-25 01:06:32.453] [INFO ] [MtprotoWorkerPool] [Воркер #3] Получен чанк #1/4 для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (/миграция тест/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe) (335 976 б за 69 мс) [Зонд 328,10 КБ].
+[2026-11-25 01:06:32.461] [INFO ] [TrayProgressOverlay] CompleteMetadata вызван для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe'. Показ оверлея 'МЕТАДАННЫЕ ПОЛУЧЕНЫ'...
+[2026-11-25 01:06:32.466] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 01:06:32.466] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 3): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 01:06:32.471] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 01:06:32.482] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 01:06:32.483] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 3): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 01:06:32.484] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 3): Глобальный Чанк #1 (смещение 236 544, 32 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 01:06:32.631] [INFO ] [MtprotoWorkerPool] [Воркер #1] Запрос чанка #4/4 для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (/миграция тест/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe) (смещение 3 145 728 б, размер 720 896 б) [Остаток 704,00 КБ]...
+[2026-11-25 01:06:32.646] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка' (/Новая папка) (ID 1890), элементов: 103
+[2026-11-25 01:06:32.696] [WARN ] [MtprotoWorkerPool] [Воркер #1] Пустой ответ для чанка #4 для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (/миграция тест/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe). Повтор 1/3...
+[2026-11-25 01:06:32.896] [INFO ] [MtprotoWorkerPool] [Воркер #1] Запрос чанка #4/4 для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (/миграция тест/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe) (смещение 3 145 728 б, размер 720 896 б) [Остаток 704,00 КБ]...
+[2026-11-25 01:06:32.945] [WARN ] [MtprotoWorkerPool] [Воркер #1] Пустой ответ для чанка #4 для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (/миграция тест/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe). Повтор 2/3...
+[2026-11-25 01:06:33.150] [INFO ] [MtprotoWorkerPool] [Воркер #1] Запрос чанка #4/4 для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (/миграция тест/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe) (смещение 3 145 728 б, размер 720 896 б) [Остаток 704,00 КБ]...
+[2026-11-25 01:06:33.199] [WARN ] [MtprotoWorkerPool] [Воркер #1] Пустой ответ для чанка #4 для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (/миграция тест/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe). Повтор 3/3...
+[2026-11-25 01:06:33.253] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 01:06:33.432] [INFO ] [MtprotoWorkerPool] [Воркер #1] Запрос чанка #4/4 для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (/миграция тест/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe) (смещение 3 145 728 б, размер 720 896 б) [Остаток 704,00 КБ]...
+[2026-11-25 01:06:33.485] [WARN ] [MtprotoWorkerPool] [Воркер #1] Исчерпаны попытки для Чанка #4/4 для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (/миграция тест/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe).
+[2026-11-25 01:06:33.485] [WARN ] [TelegramService] Не удалось получить чанк смещением 3145728 для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 3) из пула воркеров.
+[2026-11-25 01:06:33.499] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 01:06:33.499] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 3): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 01:06:33.507] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 01:06:33.508] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 3): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 01:06:33.508] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 3): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 01:06:33.522] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 01:06:33.523] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 3): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 01:06:33.523] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 3): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 01:06:33.548] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 01:06:33.548] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 3): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 01:06:33.549] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 3): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 01:06:33.754] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка' (/Новая папка) (ID 1890), элементов: 103
+[2026-11-25 01:06:33.860] [INFO ] [TrayProgressOverlay] _completionTimer Tick! _isTransferring=False, _isCompleted=True, Visible=True
+[2026-11-25 01:06:33.865] [INFO ] [TrayProgressOverlay] Оверлей успешно скрыт по завершению таймаута.
+[2026-11-25 01:06:43.099] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 01:06:44.033] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:44.033] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:44.040] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:44.040] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:44.049] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:44.049] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:44.057] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:44.058] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:44.064] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:44.064] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:44.071] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:44.072] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:44.076] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'миграция тест' (/миграция тест) (ID 3481), элементов: 2
+[2026-11-25 01:06:44.082] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:44.082] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:44.090] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:44.090] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:44.120] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:44.121] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:45.476] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 01:06:45.508] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:45.508] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:45.536] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:45.537] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:45.537] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:45.543] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:45.543] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:45.544] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:45.552] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:45.552] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:45.552] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:46.951] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'миграция тест' (/миграция тест) (ID 3481), элементов: 2
+[2026-11-25 01:06:46.965] [INFO ] [WinFsp] Перемещение элемента 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 3483) в корзину (.Trash)...
+[2026-11-25 01:06:47.660] [INFO ] [Database] Поставлено в фоновую очередь обновление подписей Telegram для 1 элементов.
+[2026-11-25 01:06:47.667] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 01:06:48.132] [INFO ] [TelegramService] Подпись сообщения #4 в Telegram успешно обновлена на: '🗑️ /.Trash/миграция тест/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5_v1.exe
+ID: 4
+#trash'.
+[2026-11-25 01:06:50.977] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка '.Trash' (/.Trash) (ID 2), элементов: 2
+[2026-11-25 01:06:51.614] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка (2)5' (/.Trash/Новая папка (2)5) (ID 3455), элементов: 2
+[2026-11-25 01:06:52.150] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 01:06:52.504] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:52.504] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:52.508] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:52.509] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:52.512] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:52.513] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:52.515] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:52.515] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:52.517] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:52.521] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:52.521] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:52.522] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 236 544, 32 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:52.522] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 335 944, 32 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:52.527] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:52.527] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:52.527] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:52.531] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:52.532] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:52.533] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:52.536] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:52.536] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:52.537] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:06:52.543] [WARN ] [NodeRepository] [GetNodeByPath NOT FOUND] Не найдена системная корзина '.Trash' в корне (Root ID=1).
+[2026-11-25 01:06:52.543] [WARN ] [NodeRepository] [GetNodeByPath NULL] Поиск пути '/.trash/миграция тест/арнольд шварценеггер. энциклопедия современного бодибилдинга. книга 5.exe' прерван: родительский узел равен null на элементе 'миграция тест'.
+[2026-11-25 01:06:52.544] [WARN ] [NodeRepository] [GetNodeByPath NOT FOUND] Не найдена системная корзина '.Trash' в корне (Root ID=1).
+[2026-11-25 01:06:52.544] [WARN ] [NodeRepository] [GetNodeByPath NULL] Поиск пути '/.trash/миграция тест/арнольд шварценеггер. энциклопедия современного бодибилдинга. книга 5.exe' прерван: родительский узел равен null на элементе 'миграция тест'.
+[2026-11-25 01:06:52.544] [WARN ] [NodeRepository] [GetNodeByPath NOT FOUND] Не найдена системная корзина '.Trash' в корне (Root ID=1).
+[2026-11-25 01:06:52.544] [WARN ] [NodeRepository] [GetNodeByPath NULL] Поиск пути '/.trash/миграция тест/арнольд шварценеггер. энциклопедия современного бодибилдинга. книга 5.exe' прерван: родительский узел равен null на элементе 'миграция тест'.
+[2026-11-25 01:06:52.545] [WARN ] [NodeRepository] [GetNodeByPath NOT FOUND] Не найдена системная корзина '.Trash' в корне (Root ID=1).
+[2026-11-25 01:06:52.545] [WARN ] [NodeRepository] [GetNodeByPath NULL] Поиск пути '/.trash/миграция тест/арнольд шварценеггер. энциклопедия современного бодибилдинга. книга 5.exe' прерван: родительский узел равен null на элементе 'миграция тест'.
+[2026-11-25 01:07:18.153] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка '.Trash' (/.Trash) (ID 2), элементов: 2
+[2026-11-25 01:07:18.529] [WARN ] [NodeRepository] [GetNodeByPath NOT FOUND] Не найдена системная корзина '.Trash' в корне (Root ID=1).
+[2026-11-25 01:07:18.529] [WARN ] [NodeRepository] [GetNodeByPath NULL] Поиск пути '/.trash/миграция тест/арнольд шварценеггер. энциклопедия современного бодибилдинга. книга 5.exe' прерван: родительский узел равен null на элементе 'миграция тест'.
+[2026-11-25 01:07:18.530] [WARN ] [NodeRepository] [GetNodeByPath NOT FOUND] Не найдена системная корзина '.Trash' в корне (Root ID=1).
+[2026-11-25 01:07:18.530] [WARN ] [NodeRepository] [GetNodeByPath NULL] Поиск пути '/.trash/миграция тест/арнольд шварценеггер. энциклопедия современного бодибилдинга. книга 5.exe' прерван: родительский узел равен null на элементе 'миграция тест'.
+[2026-11-25 01:07:18.532] [WARN ] [NodeRepository] [GetNodeByPath NOT FOUND] Не найдена системная корзина '.Trash' в корне (Root ID=1).
+[2026-11-25 01:07:18.532] [WARN ] [NodeRepository] [GetNodeByPath NULL] Поиск пути '/.trash/миграция тест/арнольд шварценеггер. энциклопедия современного бодибилдинга. книга 5.exe' прерван: родительский узел равен null на элементе 'миграция тест'.
+[2026-11-25 01:07:18.533] [WARN ] [NodeRepository] [GetNodeByPath NOT FOUND] Не найдена системная корзина '.Trash' в корне (Root ID=1).
+[2026-11-25 01:07:18.533] [WARN ] [NodeRepository] [GetNodeByPath NULL] Поиск пути '/.trash/миграция тест/арнольд шварценеггер. энциклопедия современного бодибилдинга. книга 5.exe' прерван: родительский узел равен null на элементе 'миграция тест'.
+[2026-11-25 01:07:18.534] [WARN ] [NodeRepository] [GetNodeByPath NOT FOUND] Не найдена системная корзина '.Trash' в корне (Root ID=1).
+[2026-11-25 01:07:18.534] [WARN ] [NodeRepository] [GetNodeByPath NULL] Поиск пути '/.trash/миграция тест/арнольд шварценеггер. энциклопедия современного бодибилдинга. книга 5.exe' прерван: родительский узел равен null на элементе 'миграция тест'.
+[2026-11-25 01:07:18.536] [WARN ] [NodeRepository] [GetNodeByPath NOT FOUND] Не найдена системная корзина '.Trash' в корне (Root ID=1).
+[2026-11-25 01:07:18.536] [WARN ] [NodeRepository] [GetNodeByPath NULL] Поиск пути '/.trash/миграция тест/арнольд шварценеггер. энциклопедия современного бодибилдинга. книга 5.exe' прерван: родительский узел равен null на элементе 'миграция тест'.
+[2026-11-25 01:07:18.560] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:07:18.561] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:07:20.681] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'миграция тест' (/.Trash/миграция тест) (ID 3484), элементов: 1
+[2026-11-25 01:07:20.744] [INFO ] [WinFsp] Открыт каталог: '/миграция тест' (ID 3481)
+[2026-11-25 01:07:21.268] [INFO ] [Database] Поставлено в фоновую очередь обновление подписей Telegram для 1 элементов.
+[2026-11-25 01:07:21.268] [INFO ] [WinFsp] Переименование/перемещение: '/.Trash/миграция тест/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' -> '/миграция тест/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe'
+[2026-11-25 01:07:21.280] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 01:07:21.334] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 01:07:21.335] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 3): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 01:07:21.337] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:07:21.337] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:07:21.341] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:07:21.342] [INFO ] [TelegramService] Подпись сообщения #4 в Telegram успешно обновлена на: '🟢 /миграция тест/Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5_v1.exe
+ID: 4
+#latest'.
+[2026-11-25 01:07:21.342] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:07:21.345] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 01:07:21.346] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 3): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 01:07:21.347] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:07:21.348] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:07:21.353] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 3): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 01:07:21.354] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 4.exe' (ID 3): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 4 чанков (25%).
+[2026-11-25 01:07:21.354] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:07:21.355] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:07:21.355] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:07:21.362] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:07:21.363] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:07:21.363] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:07:21.371] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:07:21.371] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:07:21.372] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 228 352, 8 192 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:07:21.780] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка' (/Новая папка) (ID 1890), элементов: 103
+[2026-11-25 01:07:22.338] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Root' (/) (ID 1), элементов: 6
+[2026-11-25 01:07:22.620] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:07:22.621] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:07:22.632] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:07:22.633] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:07:22.647] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 0, 4 096 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:07:22.648] [INFO ] [TelegramService] [Cache RAM] Точечное чтение из ОЗУ для 'Арнольд Шварценеггер. Энциклопедия современного бодибилдинга. Книга 5.exe' (ID 4): Глобальный Чанк #1 (смещение 211 968, 16 384 байт). Скачано 1 из 1 чанков (100%).
+[2026-11-25 01:07:22.840] [INFO ] [WinFsp] [ReadDirectoryEntry] Открыта папка 'Новая папка' (/Новая папка) (ID 1890), элементов: 103
+

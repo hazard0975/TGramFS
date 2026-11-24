@@ -4465,5 +4465,37 @@ _telegramService.UpdateSettings(_settings);
    - В `ProcessDeletionQueueAsync` добавлен скользящий дебаунс `2 сек` (с потолком `10 сек`) после последнего вызова `TriggerDeletionQueueProcessing()`.
    - Добавлен трекинг `_channelsPendingDeletion` (`MarkChannelPendingDeletion` при постановке канала на снос) и метод `NodeRepository.RemovePendingDeletionsForChannel(channelId)`: пока канал ждёт удаления (`_channelDeleteSemaphore` с паузой `350 мс`), воркер не удаляет его сообщения поштучно, а после успешного `Channels_DeleteChannel` очищает оставшиеся записи `pending_deletions` этого канала.
 
+---
 
+## 147. Составные ключи `(channelId, messageId)` во всех кэшах чтения, воркер-пуле и `pending_caption_updates`, а также регистронезависимый поиск путей `GetNodeByPath` (`TelegramService.cs`, `MtprotoDownloadWorkerPool.cs`, `NodeRepository.cs`, `DatabaseManager.cs`, `Schema.sql`)
+
+### Контекст и симптомы (выявлено при разборе `log.MD` после теста `#146`):
+1. **Подмена файла при чтении из нового кастомного канала (`log.MD`, строки `1246–1265`)**:
+   - В канале `5745288400` файл `Книга 5.exe` (`335 976` байт) имел `Message ID: 3` и попал в `_documentCache` на `15` минут.
+   - Через `5` минут в новом канале `5600772517` (`/миграция тест`) файл `Книга 4.exe` (`3 863 765` байт) тоже получил `Message ID: 3` (нумерация каждого нового канала начинается заново с `2, 3, 4...`).
+   - При обращении Проводника к `Книга 4.exe` запрос чанка `#1/4` (`0..1 048 576`) вернул **`335 976` байт (`[Зонд 328,10 КБ]`)** — дескриптор `Книга 5.exe`, а запрос чанка `#4/4` со смещением `3 145 728` завершился `3` пустыми ответами и `[WARN] Не удалось получить чанк смещением 3145728`.
+2. **Множественные предупреждения `[WARN] Не найдена системная корзина '.Trash'` (`log.MD`, строки `497–504`, `730–737`, `1099–1154`, `1344–1364`)**:
+   - Фоновые компоненты Windows (Defender / SmartScreen / Shell) передавали в WinFsp пути в нижнем регистре (`/.trash/test/...`, `/.trash/миграция тест/...`), из-за чего поиск корзины и вложенных путей падал с `null`.
+
+### Первопричины:
+1. **Одинарные ключи `int messageId` без `channelId`**:
+   - В `TelegramService` словари `_documentCache`, `_fileDownloadLocks`, `_networkAudits`, `_fileReadSequences`, ключ `_chunkMemoryCache` (`$"{messageId}:{offset}:{length}"`) и имя дискового кэша (`{messageId}.bin`) не учитывали `channelId`.
+   - В `MtprotoDownloadWorkerPool` ключи дедупликации (`$"{messageId}:{chunkOffset}"`), `_existingChunkProvider` и `_documentRefresher` также работали без `channelId`.
+   - При сносе канала в `DeleteChannelAsync` кэши удалённого канала в памяти и в `%TEMP%\TGramFS_ReadCache` не очищались.
+   - В таблице `pending_caption_updates` (`Schema.sql` / `DatabaseManager.cs`) ограничение `UNIQUE` стояло только на `tg_message_id` (без `channel_id`), а `GetNodePartsByMessageId` и `HandleLostFileByMessageId` не принимали `channelId`.
+2. **Регистрозависимое сравнение SQLite в `NodeRepository.GetNodeByPath`**:
+   - Проверка `part.Equals(".Trash", StringComparison.OrdinalIgnoreCase)` пропускала `".trash"`, но следующий SQL-запрос (`WHERE parent_id = @parentId AND name = @name`) выполнялся в дефолтной `BINARY`-коллации SQLite без `COLLATE NOCASE` и не находил `'.Trash'` (и аналогично на строке поиска обычных элементов).
+
+### Принятое решение:
+1. **Полный переход на составной ключ `(long channelId, int messageId)` (`TelegramService.cs`, `MtprotoDownloadWorkerPool.cs`)**:
+   - В `TelegramService` добавлен хелпер `ResolveEffectiveChannelId(messageId, channelId)` для единого определения канала (переданный `channelId` -> `GetChannelIdByTgMessageId` -> основной канал).
+   - `_documentCache`, `_fileDownloadLocks`, `_networkAudits`, `_fileReadSequences` переведены на ключ `(long channelId, int messageId)`; `_chunkMemoryCache` использует ключ `$"{channelId}:{messageId}:{offset}:{length}"`; дисковый кэш — `$"{effectiveChannelId}_{messageId}.bin"`.
+   - `MtprotoDownloadWorkerPool` (`ChunkDownloadRequest`, `IsChunkInFlight`, `EnqueueChunk`, `CancelPendingChunksForFile`, `_existingChunkProvider`, `_documentRefresher`) переведён на составной ключ с `ChannelId`; добавлен `CancelPendingChunksForChannel(long channelId)`.
+   - В `TelegramService.DeleteChannelAsync` добавлен вызов `EvictChannelCaches(channelId)`, немедленно сбрасывающий кэши ОЗУ, ожидания пула и дисковый кэш удалённого канала.
+2. **Составная уникальность `pending_caption_updates` и фильтрация по `channelId` в БД (`Schema.sql`, `DatabaseManager.cs`, `NodeRepository.cs`)**:
+   - В `pending_caption_updates` столбец `channel_id` переведён в `INTEGER NOT NULL DEFAULT 0` с ограничением `UNIQUE(channel_id, tg_message_id)` (чтобы `NULL` в SQLite не ломал `ON CONFLICT`) и безопасной пересборкой существующей таблицы в `DatabaseManager.ApplySchema`; все `ON CONFLICT` в `NodeRepository` обновлены на `(channel_id, tg_message_id)`.
+   - Методы `NodeRepository.GetNodePartsByMessageId` и `HandleLostFileByMessageId` дополнены опциональным фильтром `long? channelId = null`.
+3. **Регистронезависимый `GetNodeByPath` (`NodeRepository.cs`)**:
+   - В оба SQL-запроса `GetNodeByPath` (поиск `.Trash` и дочерних узлов) добавлен `COLLATE NOCASE`.
+   - Лог `[GetNodeByPath NULL]` при обращении к отсутствующему родительскому узлу переведён с `Warn` на `Debug` для исключения шума при штатном опросе Проводника сразу после перемещения/удаления.
 

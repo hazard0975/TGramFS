@@ -135,13 +135,13 @@ namespace TGramFS.Services
         /// </summary>
         public int PendingUploadsCount => _pendingUploadsCount;
 
-        // Кэш дескрипторов документов Telegram (TL.Document) для устранения лишних сетевых вызовов Channels_GetMessages (включая негативный кэш)
-        private readonly System.Collections.Concurrent.ConcurrentDictionary<int, (TL.Document? document, DateTime expiresAt)> _documentCache = new();
+        // Кэш дескрипторов документов Telegram (TL.Document) по составному ключу (channelId, messageId) для исключения межканальных коллизий
+        private readonly System.Collections.Concurrent.ConcurrentDictionary<(long channelId, int messageId), (TL.Document? document, DateTime expiresAt)> _documentCache = new();
 
         // Быстрый кольцевой кэш чанков MTProto в оперативной памяти (настраивается в UI, по умолчанию 128 МБ) для мгновенного чтения плеерами без повторных обращений к сети
         private readonly System.Collections.Concurrent.ConcurrentDictionary<string, (byte[] data, DateTime expiresAt)> _chunkMemoryCache = new();
-        private readonly System.Collections.Concurrent.ConcurrentDictionary<int, SemaphoreSlim> _fileDownloadLocks = new();
-        private readonly System.Collections.Concurrent.ConcurrentDictionary<int, NetworkTransferAudit> _networkAudits = new();
+        private readonly System.Collections.Concurrent.ConcurrentDictionary<(long channelId, int messageId), SemaphoreSlim> _fileDownloadLocks = new();
+        private readonly System.Collections.Concurrent.ConcurrentDictionary<(long channelId, int messageId), NetworkTransferAudit> _networkAudits = new();
         private MtprotoDownloadWorkerPool? _workerPool;
 
         private class FileReadSequence
@@ -153,7 +153,7 @@ namespace TGramFS.Services
             public System.Collections.Concurrent.ConcurrentDictionary<long, long> ChunkBytesRead { get; } = new();
         }
 
-        private readonly System.Collections.Concurrent.ConcurrentDictionary<int, FileReadSequence> _fileReadSequences = new();
+        private readonly System.Collections.Concurrent.ConcurrentDictionary<(long channelId, int messageId), FileReadSequence> _fileReadSequences = new();
 
         public class NetworkTransferAudit
         {
@@ -286,7 +286,7 @@ namespace TGramFS.Services
             }
         }
 
-        private void StoreChunkInMemoryCache(int messageId, long chunkOffset, byte[] raw, int cacheTtlMinutes)
+        private void StoreChunkInMemoryCache(long channelId, int messageId, long chunkOffset, byte[] raw, int cacheTtlMinutes)
         {
             EnsureChunkCacheCapacity();
             long megaStart = (chunkOffset / 1048576) * 1048576;
@@ -301,7 +301,10 @@ namespace TGramFS.Services
             foreach (var kvp in _chunkMemoryCache)
             {
                 var parts = kvp.Key.Split(':');
-                if (parts.Length == 3 && int.TryParse(parts[0], out var mId) && mId == messageId && long.TryParse(parts[1], out var start))
+                if (parts.Length == 4
+                    && long.TryParse(parts[0], out var chId) && chId == channelId
+                    && int.TryParse(parts[1], out var mId) && mId == messageId
+                    && long.TryParse(parts[2], out var start))
                 {
                     if (start >= megaStart && start < megaStart + 1048576 && kvp.Value.data != null)
                     {
@@ -346,7 +349,7 @@ namespace TGramFS.Services
                     }
                 }
 
-                string mergedKey = $"{messageId}:{mergedStart}:{mergedLength}";
+                string mergedKey = $"{channelId}:{messageId}:{mergedStart}:{mergedLength}";
                 _chunkMemoryCache[mergedKey] = (mergedBuffer, DateTime.UtcNow.AddMinutes(cacheTtlMinutes));
                 return;
             }
@@ -357,7 +360,10 @@ namespace TGramFS.Services
                 foreach (var key in _chunkMemoryCache.Keys)
                 {
                     var parts = key.Split(':');
-                    if (parts.Length == 3 && int.TryParse(parts[0], out var mId) && mId == messageId && long.TryParse(parts[1], out var cStart) && cStart >= megaStart && cStart < megaStart + 1048576)
+                    if (parts.Length == 4
+                        && long.TryParse(parts[0], out var chId) && chId == channelId
+                        && int.TryParse(parts[1], out var mId) && mId == messageId
+                        && long.TryParse(parts[2], out var cStart) && cStart >= megaStart && cStart < megaStart + 1048576)
                     {
                         _chunkMemoryCache.TryRemove(key, out _);
                     }
@@ -365,23 +371,25 @@ namespace TGramFS.Services
             }
             else
             {
-                string exactKey = $"{messageId}:{chunkOffset}:{raw.Length}";
+                string exactKey = $"{channelId}:{messageId}:{chunkOffset}:{raw.Length}";
                 _chunkMemoryCache.TryRemove(exactKey, out _);
             }
 
-            string canonicalKey = $"{messageId}:{chunkOffset}:{raw.Length}";
+            string canonicalKey = $"{channelId}:{messageId}:{chunkOffset}:{raw.Length}";
             _chunkMemoryCache[canonicalKey] = (raw, DateTime.UtcNow.AddMinutes(cacheTtlMinutes));
         }
 
-        private bool TryGetFromMemoryCache(int messageId, long pos, out byte[]? data, out int offsetInChunk)
+        private bool TryGetFromMemoryCache(long channelId, int messageId, long pos, out byte[]? data, out int offsetInChunk)
         {
             var now = DateTime.UtcNow;
             foreach (var kvp in _chunkMemoryCache)
             {
                 var parts = kvp.Key.Split(':');
-                if (parts.Length == 3 && int.TryParse(parts[0], out var mId) && mId == messageId)
+                if (parts.Length == 4
+                    && long.TryParse(parts[0], out var chId) && chId == channelId
+                    && int.TryParse(parts[1], out var mId) && mId == messageId)
                 {
-                    if (long.TryParse(parts[1], out var chunkStart) && int.TryParse(parts[2], out var _))
+                    if (long.TryParse(parts[2], out var chunkStart) && int.TryParse(parts[3], out var _))
                     {
                         var chunkData = kvp.Value.data;
                         if (pos >= chunkStart && pos < chunkStart + chunkData.Length && kvp.Value.expiresAt > now)
@@ -1441,6 +1449,67 @@ namespace TGramFS.Services
             }
         }
 
+        private void EvictChannelCaches(long channelId)
+        {
+            if (channelId == 0) return;
+
+            _workerPool?.CancelPendingChunksForChannel(channelId);
+
+            foreach (var key in _documentCache.Keys)
+            {
+                if (key.channelId == channelId)
+                {
+                    _documentCache.TryRemove(key, out _);
+                }
+            }
+
+            string chunkPrefix = $"{channelId}:";
+            foreach (var key in _chunkMemoryCache.Keys)
+            {
+                if (key.StartsWith(chunkPrefix, StringComparison.Ordinal))
+                {
+                    _chunkMemoryCache.TryRemove(key, out _);
+                }
+            }
+
+            foreach (var key in _networkAudits.Keys)
+            {
+                if (key.channelId == channelId)
+                {
+                    _networkAudits.TryRemove(key, out _);
+                }
+            }
+
+            foreach (var key in _fileReadSequences.Keys)
+            {
+                if (key.channelId == channelId)
+                {
+                    _fileReadSequences.TryRemove(key, out _);
+                }
+            }
+
+            foreach (var key in _fileDownloadLocks.Keys)
+            {
+                if (key.channelId == channelId)
+                {
+                    _fileDownloadLocks.TryRemove(key, out _);
+                }
+            }
+
+            try
+            {
+                string cacheDir = Path.Combine(Path.GetTempPath(), "TGramFS_ReadCache");
+                if (Directory.Exists(cacheDir))
+                {
+                    foreach (var file in Directory.EnumerateFiles(cacheDir, $"{channelId}_*.bin"))
+                    {
+                        try { File.Delete(file); } catch { }
+                    }
+                }
+            }
+            catch { }
+        }
+
         /// <summary>
         /// Перманентно удаляет канал из Telegram при полном уничтожении привязанной папки.
         /// </summary>
@@ -1468,6 +1537,7 @@ namespace TGramFS.Services
                     await _client.Invoke(req);
                     _repository?.DeleteTelegramChannel(channelId);
                     int purged = _repository?.RemovePendingDeletionsForChannel(channelId) ?? 0;
+                    EvictChannelCaches(channelId);
                     AppLogger.Info("TelegramService", purged > 0
                         ? $"Канал Telegram ID {channelId} полностью удален (очищено {purged} ожидающих сообщений из очереди)."
                         : $"Канал Telegram ID {channelId} полностью удален.");
@@ -1478,6 +1548,7 @@ namespace TGramFS.Services
             {
                 _repository?.DeleteTelegramChannel(channelId);
                 int purged = _repository?.RemovePendingDeletionsForChannel(channelId) ?? 0;
+                EvictChannelCaches(channelId);
                 AppLogger.Info("TelegramService", $"Канал Telegram ID {channelId} уже недоступен/удален (очищено {purged} записей очереди).");
             }
             catch (Exception ex)
@@ -1939,8 +2010,8 @@ namespace TGramFS.Services
                 _client,
                 workerCount: configuredWorkers,
                 clientProvider: GetWorkerClientAsync,
-                existingChunkProvider: (msgId, off) => TryGetFromMemoryCache(msgId, off, out var d, out _) ? d : null,
-                documentRefresher: async (msgId) => await GetDocumentFromMessageAsync(msgId, forceRefresh: true)
+                existingChunkProvider: (chId, msgId, off) => TryGetFromMemoryCache(chId, msgId, off, out var d, out _) ? d : null,
+                documentRefresher: async (chId, msgId) => await GetDocumentFromMessageAsync(msgId, chId != 0 ? chId : (long?)null, forceRefresh: true)
             );
         }
 
@@ -4047,7 +4118,7 @@ namespace TGramFS.Services
                     (sourceChannelId != targetChannelId ? $" (канал {sourceChannelId} -> {targetChannelId})" : " (в пределах канала)"));
 
                 // 3. Проверяем, является ли файл составным (multi-part > 2 ГБ / 4 ГБ)
-                var partsToForward = sourceParts ?? _repository?.GetNodePartsByMessageId(sourceMessageId);
+                var partsToForward = sourceParts ?? _repository?.GetNodePartsByMessageId(sourceMessageId, sourceChannelId);
                 List<Models.NodePart>? newParts = null;
 
                 if (partsToForward != null && partsToForward.Count > 1)
@@ -4321,9 +4392,24 @@ namespace TGramFS.Services
             return null;
         }
 
+        private long ResolveEffectiveChannelId(int messageId, long? channelId)
+        {
+            if (channelId.HasValue && channelId.Value != 0)
+                return channelId.Value;
+
+            long? dbChannelId = _repository?.GetChannelIdByTgMessageId(messageId);
+            if (dbChannelId.HasValue && dbChannelId.Value != 0)
+                return dbChannelId.Value;
+
+            return _repository?.GetPrimaryTelegramChannel()?.ChannelId ?? 0L;
+        }
+
         private async Task<TL.Document?> GetDocumentFromMessageAsync(int messageId, long? channelId = null, bool forceRefresh = false)
         {
-            if (!forceRefresh && _documentCache.TryGetValue(messageId, out var cached) && cached.expiresAt > DateTime.UtcNow)
+            long effectiveChannelId = ResolveEffectiveChannelId(messageId, channelId);
+            var cacheKey = (effectiveChannelId, messageId);
+
+            if (!forceRefresh && _documentCache.TryGetValue(cacheKey, out var cached) && cached.expiresAt > DateTime.UtcNow)
             {
                 return cached.document;
             }
@@ -4334,11 +4420,8 @@ namespace TGramFS.Services
                 if (!reconnected || _client == null) return null;
             }
 
-            long? effectiveChannelId = (channelId.HasValue && channelId.Value != 0)
-                ? channelId.Value
-                : _repository?.GetChannelIdByTgMessageId(messageId);
-
-            var peer = await GetStoragePeerAsync(effectiveChannelId);
+            long? peerChannelId = effectiveChannelId != 0 ? effectiveChannelId : (long?)null;
+            var peer = await GetStoragePeerAsync(peerChannelId);
             TL.Messages_MessagesBase messagesBase;
             try
             {
@@ -4348,7 +4431,7 @@ namespace TGramFS.Services
             {
                 AppLogger.Warn("TelegramService", "Канал недоступен по сохраненному хэшу. Сброс хэша и повторный поиск...");
                 InvalidateStoragePeer();
-                peer = await GetStoragePeerAsync(effectiveChannelId);
+                peer = await GetStoragePeerAsync(peerChannelId);
                 messagesBase = await _client.GetMessages(peer, new TL.InputMessage[] { new TL.InputMessageID { id = messageId } });
             }
             catch (Exception ex) when (ex is SocketException || ex.InnerException is SocketException || ex is IOException || ex is TelegramNetworkException)
@@ -4377,13 +4460,13 @@ namespace TGramFS.Services
 
             if (document != null)
             {
-                _documentCache[messageId] = (document, DateTime.UtcNow.AddMinutes(15));
+                _documentCache[cacheKey] = (document, DateTime.UtcNow.AddMinutes(15));
             }
             else
             {
                 // Негативный кэш: фиксируем отсутствие документа на 10 минут, предотвращая шквал повторных RPC-запросов и FLOOD_WAIT
-                _documentCache[messageId] = (null, DateTime.UtcNow.AddMinutes(10));
-                AppLogger.Warn("TelegramService", $"[GetDocumentFromMessageAsync] Медиа-документ для сообщения ID {messageId} не найден в Telegram. Сохранено в негативный кэш.");
+                _documentCache[cacheKey] = (null, DateTime.UtcNow.AddMinutes(10));
+                AppLogger.Warn("TelegramService", $"[GetDocumentFromMessageAsync] Медиа-документ для сообщения ID {messageId} (канал {effectiveChannelId}) не найден в Telegram. Сохранено в негативный кэш.");
             }
 
             return document;
@@ -4434,7 +4517,7 @@ namespace TGramFS.Services
             }
             else if (messageId > 0)
             {
-                parts = _repository?.GetNodePartsByMessageId(messageId);
+                parts = _repository?.GetNodePartsByMessageId(messageId, channelId);
             }
 
             if (parts != null && parts.Count > 1)
@@ -4514,13 +4597,15 @@ namespace TGramFS.Services
             }
 
             bool enableDiskCache = _configManager?.CurrentSettings?.Server?.EnableDiskReadCache ?? false;
+            long effectiveChannelId = ResolveEffectiveChannelId(messageId, channelId);
+            var fileKey = (effectiveChannelId, messageId);
 
             // 1. Если дисковый кэш включен и файл уже закэширован на диске полностью
             if (enableDiskCache)
             {
                 string cacheDir = Path.Combine(Path.GetTempPath(), "TGramFS_ReadCache");
                 Directory.CreateDirectory(cacheDir);
-                string cacheFilePath = Path.Combine(cacheDir, $"{messageId}.bin");
+                string cacheFilePath = Path.Combine(cacheDir, $"{effectiveChannelId}_{messageId}.bin");
 
                 if (File.Exists(cacheFilePath))
                 {
@@ -4530,11 +4615,11 @@ namespace TGramFS.Services
             }
 
             // 2. Запрашиваем дескриптор документа
-            var document = await GetDocumentFromMessageAsync(messageId, channelId);
+            var document = await GetDocumentFromMessageAsync(messageId, effectiveChannelId);
             if (document == null)
             {
-                string reason = $"Не удалось найти медиа-документ для сообщения ID {messageId} в Telegram.";
-                _repository?.HandleLostFileByMessageId(messageId, reason, nodeId);
+                string reason = $"Не удалось найти медиа-документ для сообщения ID {messageId} (канал {effectiveChannelId}) в Telegram.";
+                _repository?.HandleLostFileByMessageId(messageId, reason, nodeId, effectiveChannelId != 0 ? effectiveChannelId : (long?)null);
                 throw new FileNotFoundException(reason);
             }
 
@@ -4546,18 +4631,18 @@ namespace TGramFS.Services
             EnsureAuditCacheCapacity();
 
             int cacheTtlMinutes = _currentSettings.Server.ChunkMemoryCacheTtlMinutes;
-            if (_networkAudits.TryGetValue(messageId, out var existingAudit) && (DateTime.UtcNow - existingAudit.LastActivityTime).TotalMinutes > cacheTtlMinutes)
+            if (_networkAudits.TryGetValue(fileKey, out var existingAudit) && (DateTime.UtcNow - existingAudit.LastActivityTime).TotalMinutes > cacheTtlMinutes)
             {
-                _networkAudits.TryRemove(messageId, out _);
+                _networkAudits.TryRemove(fileKey, out _);
             }
 
-            var audit = _networkAudits.GetOrAdd(messageId, _ => new NetworkTransferAudit { FileName = fileName, FileSize = actualTotalSize, FullVirtualPath = fullVirtualPath });
+            var audit = _networkAudits.GetOrAdd(fileKey, _ => new NetworkTransferAudit { FileName = fileName, FileSize = actualTotalSize, FullVirtualPath = fullVirtualPath });
             audit.FileName = fileName;
             if (!string.IsNullOrEmpty(fullVirtualPath)) audit.FullVirtualPath = fullVirtualPath;
             audit.FileSize = actualTotalSize;
             audit.TouchActivity();
 
-            var readSeq = _fileReadSequences.GetOrAdd(messageId, _ => new FileReadSequence());
+            var readSeq = _fileReadSequences.GetOrAdd(fileKey, _ => new FileReadSequence());
             long activationThresholdBytes = Math.Max(1, _currentSettings.Server.StreamingActivationThresholdMb) * 1048576L;
             lock (readSeq)
             {
@@ -4586,7 +4671,7 @@ namespace TGramFS.Services
                     readSeq.ChunkBytesRead.Clear();
                     if (readSeq.LastChunkIndex != -1)
                     {
-                        _workerPool?.CancelPendingChunksForFile(messageId);
+                        _workerPool?.CancelPendingChunksForFile(effectiveChannelId, messageId);
                     }
                 }
 
@@ -4616,16 +4701,16 @@ namespace TGramFS.Services
             {
                 string cacheDir = Path.Combine(Path.GetTempPath(), "TGramFS_ReadCache");
                 Directory.CreateDirectory(cacheDir);
-                string cacheFilePath = Path.Combine(cacheDir, $"{messageId}.bin");
+                string cacheFilePath = Path.Combine(cacheDir, $"{effectiveChannelId}_{messageId}.bin");
 
-                var fileLock = _fileDownloadLocks.GetOrAdd(messageId, _ => new SemaphoreSlim(1, 1));
+                var fileLock = _fileDownloadLocks.GetOrAdd(fileKey, _ => new SemaphoreSlim(1, 1));
                 await fileLock.WaitAsync();
                 try
                 {
                     if (!File.Exists(cacheFilePath))
                     {
                         int diskWorkers = Math.Clamp(_currentSettings.Server.DownloadWorkerCount > 0 ? _currentSettings.Server.DownloadWorkerCount : 1, 1, 3);
-                        AppLogger.Info("TelegramService", $"[Disk Cache Mode] Скачивание файла '{fileName}' (ID {messageId}, {actualTotalSize:N0} байт) через {diskWorkers} воркеров в дисковый кэш...");
+                        AppLogger.Info("TelegramService", $"[Disk Cache Mode] Скачивание файла '{fileName}' (ID {messageId}, канал {effectiveChannelId}, {actualTotalSize:N0} байт) через {diskWorkers} воркеров в дисковый кэш...");
                         if (_workerPool == null) InitWorkerPool();
                         bool success = _workerPool != null && await _workerPool.DownloadFileAsync(
                             document,
@@ -4661,7 +4746,7 @@ namespace TGramFS.Services
             }
 
             // 1. Проверяем, есть ли запрашиваемый чанк уже в ОЗУ (был ранее упреждающе выкачан воркером)
-            if (!enableDiskCache && TryGetFromMemoryCache(messageId, offset, out var ramCachedRaw, out var ramCachedOffset) && ramCachedRaw != null)
+            if (!enableDiskCache && TryGetFromMemoryCache(effectiveChannelId, messageId, offset, out var ramCachedRaw, out var ramCachedOffset) && ramCachedRaw != null)
             {
                 int availableInChunk = ramCachedRaw.Length - ramCachedOffset;
                 int bytesToSend = (int)Math.Min(availableInChunk, length);
@@ -4689,7 +4774,7 @@ namespace TGramFS.Services
                         // Запускаем непрерывный фоновый конвейер скачивания оставшихся чанков файла только при реальном воспроизведении/скачивании
                         if (!isMetadataProbe)
                         {
-                            TriggerContinuousPrefetch(messageId, document, fileName, actualTotalSize, offset, audit, fullVirtualPath);
+                            TriggerContinuousPrefetch(effectiveChannelId, messageId, document, fileName, actualTotalSize, offset, audit, fullVirtualPath);
                         }
                         return;
                     }
@@ -4710,7 +4795,7 @@ namespace TGramFS.Services
                 await EnsureFloodWaitDelayAsync();
 
                 // 1. Проверяем, есть ли уже нужные байты в быстром кэше оперативной памяти
-                if (TryGetFromMemoryCache(messageId, currentPos, out var cachedRaw, out var cachedOffset) && cachedRaw != null)
+                if (TryGetFromMemoryCache(effectiveChannelId, messageId, currentPos, out var cachedRaw, out var cachedOffset) && cachedRaw != null)
                 {
                     int available = cachedRaw.Length - cachedOffset;
                     int toSend = (int)Math.Min(available, remainingBytes);
@@ -4750,7 +4835,7 @@ namespace TGramFS.Services
                     // Если мы в режиме стриминга, проверяем необходимость запуска префетча
                     if (!enableDiskCache && !isSmallFile && (!isMetadataProbe || readSeq.AccumulatedSequentialBytes >= 1048576) && remainingBytes > 0)
                     {
-                        TriggerContinuousPrefetch(messageId, document, fileName, actualTotalSize, currentPos, audit, fullVirtualPath);
+                        TriggerContinuousPrefetch(effectiveChannelId, messageId, document, fileName, actualTotalSize, currentPos, audit, fullVirtualPath);
                     }
 
                     continue;
@@ -4782,6 +4867,7 @@ namespace TGramFS.Services
                 if (_workerPool != null)
                 {
                     var chunkTask = _workerPool.EnqueueChunk(
+                        effectiveChannelId,
                         messageId,
                         document,
                         fileName,
@@ -4793,7 +4879,7 @@ namespace TGramFS.Services
                         {
                             audit.AddNetworkBytes(chunkBytes.Length);
                             bool allReceived = audit.MarkRangeReceived(offset, chunkBytes.Length);
-                            StoreChunkInMemoryCache(messageId, offset, chunkBytes, cacheTtlMinutes);
+                            StoreChunkInMemoryCache(effectiveChannelId, messageId, offset, chunkBytes, cacheTtlMinutes);
                             OnChunkCached?.Invoke(fileName, offset + chunkBytes.Length, actualTotalSize);
                             if (allReceived && audit.LogCompletionOnce())
                             {
@@ -4861,7 +4947,7 @@ namespace TGramFS.Services
 
                         if (!enableDiskCache && !isSmallFile && !isCurrentChunkProbe && remainingBytes > 0)
                         {
-                            TriggerContinuousPrefetch(messageId, document, fileName, actualTotalSize, currentPos, audit, fullVirtualPath);
+                            TriggerContinuousPrefetch(effectiveChannelId, messageId, document, fileName, actualTotalSize, currentPos, audit, fullVirtualPath);
                         }
 
                         continue;
@@ -4891,7 +4977,7 @@ namespace TGramFS.Services
             else if (!enableDiskCache && !isSmallFile)
             {
                 // Запускаем непрерывный фоновый конвейер воркеров MTProto строго ПОСЛЕ того, как текущий чанк скачан и готов в RAM
-                TriggerContinuousPrefetch(messageId, document, fileName, actualTotalSize, currentPos, audit, fullVirtualPath);
+                TriggerContinuousPrefetch(effectiveChannelId, messageId, document, fileName, actualTotalSize, currentPos, audit, fullVirtualPath);
             }
         }
 
@@ -4899,14 +4985,14 @@ namespace TGramFS.Services
         /// Постановка упреждающих чанков в единый глобальный пул воркеров MTProto.
         /// Не создает новых пулов и исключает дублирование сетевых запросов.
         /// </summary>
-        private void TriggerContinuousPrefetch(int messageId, TL.Document document, string fileName, long actualTotalSize, long currentReadOffset, NetworkTransferAudit audit, string? fullVirtualPath = null)
+        private void TriggerContinuousPrefetch(long channelId, int messageId, TL.Document document, string fileName, long actualTotalSize, long currentReadOffset, NetworkTransferAudit audit, string? fullVirtualPath = null)
         {
             bool enableDiskCache = _currentSettings.Server.EnableDiskReadCache;
             if (enableDiskCache || document == null || actualTotalSize <= 1048576 || _client == null) return;
 
             // Проверяем порог активации упреждения: пока не вычитано N МБ от точки старта/перемотки, префетч не запускается
             long activationThresholdBytes = Math.Max(1, _currentSettings.Server.StreamingActivationThresholdMb) * 1048576L;
-            if (_fileReadSequences.TryGetValue(messageId, out var seq))
+            if (_fileReadSequences.TryGetValue((channelId, messageId), out var seq))
             {
                 lock (seq)
                 {
@@ -4937,8 +5023,8 @@ namespace TGramFS.Services
 
             // 1. Проверяем текущий чанк: если он скачан лишь частично (например, 256 КБ зонд), сначала докачиваем его!
             int startExpectedSize = (int)Math.Min(1048576L, actualTotalSize - startChunkOffset);
-            bool currentInRam = TryGetFromMemoryCache(messageId, startChunkOffset, out var currData, out _) && (currData != null && currData.Length >= startExpectedSize);
-            bool currentInFlight = _workerPool.IsChunkInFlight(messageId, startChunkOffset);
+            bool currentInRam = TryGetFromMemoryCache(channelId, messageId, startChunkOffset, out var currData, out _) && (currData != null && currData.Length >= startExpectedSize);
+            bool currentInFlight = _workerPool.IsChunkInFlight(channelId, messageId, startChunkOffset);
 
             if (!currentInRam && !currentInFlight)
             {
@@ -4953,8 +5039,8 @@ namespace TGramFS.Services
             while (scanOffset < maxPrefetchLimit)
             {
                 int expectedSize = (int)Math.Min(1048576L, actualTotalSize - scanOffset);
-                bool inRam = TryGetFromMemoryCache(messageId, scanOffset, out var cachedData, out _) && (cachedData != null && cachedData.Length >= expectedSize);
-                bool inFlight = _workerPool.IsChunkInFlight(messageId, scanOffset);
+                bool inRam = TryGetFromMemoryCache(channelId, messageId, scanOffset, out var cachedData, out _) && (cachedData != null && cachedData.Length >= expectedSize);
+                bool inFlight = _workerPool.IsChunkInFlight(channelId, messageId, scanOffset);
 
                 if (!inRam && !inFlight)
                 {
@@ -4988,6 +5074,7 @@ namespace TGramFS.Services
                 foreach (var chunkOffsetToQueue in newChunksToQueue)
                 {
                     _workerPool.EnqueueChunk(
+                        channelId,
                         messageId,
                         document,
                         fileName,
@@ -4999,7 +5086,7 @@ namespace TGramFS.Services
                         {
                             audit.AddNetworkBytes(chunkBytes.Length);
                             bool allReceived = audit.MarkRangeReceived(chunkOffset, chunkBytes.Length);
-                            StoreChunkInMemoryCache(messageId, chunkOffset, chunkBytes, cacheTtlMinutes);
+                            StoreChunkInMemoryCache(channelId, messageId, chunkOffset, chunkBytes, cacheTtlMinutes);
 
                             OnChunkCached?.Invoke(fileName, chunkOffset + chunkBytes.Length, actualTotalSize);
 

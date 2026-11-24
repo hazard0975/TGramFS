@@ -78,13 +78,13 @@ CREATE INDEX IF NOT EXISTS idx_pending_migrations_node ON pending_channel_migrat
 CREATE TABLE IF NOT EXISTS pending_caption_updates (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     node_id INTEGER NOT NULL,
-    tg_message_id INTEGER NOT NULL UNIQUE,
+    tg_message_id INTEGER NOT NULL,
     new_caption TEXT NOT NULL,
-    channel_id INTEGER,
+    channel_id INTEGER NOT NULL DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    status INTEGER NOT NULL DEFAULT 0
+    status INTEGER NOT NULL DEFAULT 0,
+    UNIQUE(channel_id, tg_message_id)
 );
-CREATE UNIQUE INDEX IF NOT EXISTS idx_pending_caption_tg_msg ON pending_caption_updates(tg_message_id);
 
 -- Таблица составных частей крупногабаритных файлов (> 2 ГБ / 4 ГБ)
 CREATE TABLE IF NOT EXISTS node_parts (

@@ -81,7 +81,7 @@ namespace TGramFS.Database
             {
                 if (currentNode == null)
                 {
-                    AppLogger.Warn("NodeRepository", $"[GetNodeByPath NULL] Поиск пути '{path}' прерван: родительский узел равен null на элементе '{part}'.");
+                    AppLogger.Debug("NodeRepository", $"[GetNodeByPath NULL] Поиск пути '{path}' прерван: родительский узел равен null на элементе '{part}'.");
                     return null;
                 }
 
@@ -91,7 +91,7 @@ namespace TGramFS.Database
                     using (var connection = _dbManager.GetConnection())
                     using (var command = connection.CreateCommand())
                     {
-                        command.CommandText = "SELECT * FROM nodes WHERE parent_id = @parentId AND name = @name AND in_trash = 0 LIMIT 1;";
+                        command.CommandText = "SELECT * FROM nodes WHERE parent_id = @parentId AND name = @name COLLATE NOCASE AND in_trash = 0 LIMIT 1;";
                         command.Parameters.AddWithValue("@parentId", rootId);
                         command.Parameters.AddWithValue("@name", part);
                         currentNode = ReadNode(command);
@@ -109,7 +109,7 @@ namespace TGramFS.Database
                 using (var connection = _dbManager.GetConnection())
                 using (var command = connection.CreateCommand())
                 {
-                    command.CommandText = "SELECT * FROM nodes WHERE parent_id = @parentId AND name = @name AND in_trash = @inTrash LIMIT 1;";
+                    command.CommandText = "SELECT * FROM nodes WHERE parent_id = @parentId AND name = @name COLLATE NOCASE AND in_trash = @inTrash LIMIT 1;";
                     command.Parameters.AddWithValue("@parentId", parentIdForSearch);
                     command.Parameters.AddWithValue("@name", part);
                     command.Parameters.AddWithValue("@inTrash", expectedInTrash);
@@ -680,7 +680,7 @@ namespace TGramFS.Database
         /// Обрабатывает обнаружение утраченного в Telegram сообщения по его Message ID:
         /// находит все ассоциированные узлы и перемещает их в .Trash
         /// </summary>
-        public void HandleLostFileByMessageId(int messageId, string reason, int? specificNodeId = null)
+        public void HandleLostFileByMessageId(int messageId, string reason, int? specificNodeId = null, long? channelId = null)
         {
             if (specificNodeId.HasValue && specificNodeId.Value > 0)
             {
@@ -690,7 +690,19 @@ namespace TGramFS.Database
 
             using var connection = _dbManager.GetConnection();
             using var command = connection.CreateCommand();
-            command.CommandText = "SELECT id FROM nodes WHERE tg_message_id = @msgId AND in_trash = 0;";
+            if (channelId.HasValue && channelId.Value != 0)
+            {
+                long? primaryId = GetPrimaryTelegramChannel()?.ChannelId;
+                bool isPrimary = primaryId.HasValue && primaryId.Value == channelId.Value;
+                command.CommandText = isPrimary
+                    ? "SELECT id FROM nodes WHERE tg_message_id = @msgId AND in_trash = 0 AND (tg_channel_id = @chId OR tg_channel_id IS NULL OR tg_channel_id = 0);"
+                    : "SELECT id FROM nodes WHERE tg_message_id = @msgId AND in_trash = 0 AND tg_channel_id = @chId;";
+                command.Parameters.AddWithValue("@chId", channelId.Value);
+            }
+            else
+            {
+                command.CommandText = "SELECT id FROM nodes WHERE tg_message_id = @msgId AND in_trash = 0;";
+            }
             command.Parameters.AddWithValue("@msgId", messageId);
             var nodeIds = new List<int>();
             using (var reader = command.ExecuteReader())
@@ -1589,15 +1601,15 @@ namespace TGramFS.Database
                                 captionCmd.CommandText = @"
                                     INSERT INTO pending_caption_updates (node_id, tg_message_id, new_caption, channel_id)
                                     VALUES (@nodeId, @tgMessageId, @newCaption, @channelId)
-                                    ON CONFLICT(tg_message_id) DO UPDATE SET
+                                    ON CONFLICT(channel_id, tg_message_id) DO UPDATE SET
+                                        node_id = excluded.node_id,
                                         new_caption = excluded.new_caption,
-                                        channel_id = COALESCE(excluded.channel_id, pending_caption_updates.channel_id),
                                         status = 0;
                                 ";
                                 captionCmd.Parameters.AddWithValue("@nodeId", existingNode.Id);
                                 captionCmd.Parameters.AddWithValue("@tgMessageId", existingNode.TgMessageId.Value);
                                 captionCmd.Parameters.AddWithValue("@newCaption", trashCaption);
-                                captionCmd.Parameters.AddWithValue("@channelId", (object?)existingEffectiveChannelId ?? DBNull.Value);
+                                captionCmd.Parameters.AddWithValue("@channelId", existingEffectiveChannelId ?? 0L);
                                 captionCmd.ExecuteNonQuery();
                             }
                         }
@@ -1609,22 +1621,22 @@ namespace TGramFS.Database
                                 if (part.TgMessageId <= 1) continue;
                                 int partDisplayNum = part.PartIndex + 1;
                                 string childTrashCaption = $"🗑️ ↳ {oldPathWithVersion} [Часть {partDisplayNum} из {oldParts.Count}]\nID: {part.TgMessageId}\n#trash";
-                                long effectivePartChannelId = part.TgChannelId > 0 ? part.TgChannelId : (existingEffectiveChannelId ?? 0);
+                                long effectivePartChannelId = part.TgChannelId > 0 ? part.TgChannelId : (existingEffectiveChannelId ?? 0L);
                                 using (var captionCmd = connection.CreateCommand())
                                 {
                                     captionCmd.Transaction = transaction;
                                     captionCmd.CommandText = @"
                                         INSERT INTO pending_caption_updates (node_id, tg_message_id, new_caption, channel_id)
                                         VALUES (@nodeId, @tgMessageId, @newCaption, @channelId)
-                                        ON CONFLICT(tg_message_id) DO UPDATE SET
+                                        ON CONFLICT(channel_id, tg_message_id) DO UPDATE SET
+                                            node_id = excluded.node_id,
                                             new_caption = excluded.new_caption,
-                                            channel_id = COALESCE(excluded.channel_id, pending_caption_updates.channel_id),
                                             status = 0;
                                     ";
                                     captionCmd.Parameters.AddWithValue("@nodeId", existingNode.Id);
                                     captionCmd.Parameters.AddWithValue("@tgMessageId", part.TgMessageId);
                                     captionCmd.Parameters.AddWithValue("@newCaption", childTrashCaption);
-                                    captionCmd.Parameters.AddWithValue("@channelId", effectivePartChannelId > 0 ? (object)effectivePartChannelId : DBNull.Value);
+                                    captionCmd.Parameters.AddWithValue("@channelId", effectivePartChannelId);
                                     captionCmd.ExecuteNonQuery();
                                 }
                             }
@@ -1639,15 +1651,15 @@ namespace TGramFS.Database
                                 captionCmd.CommandText = @"
                                     INSERT INTO pending_caption_updates (node_id, tg_message_id, new_caption, channel_id)
                                     VALUES (@nodeId, @tgMessageId, @newCaption, @channelId)
-                                    ON CONFLICT(tg_message_id) DO UPDATE SET
+                                    ON CONFLICT(channel_id, tg_message_id) DO UPDATE SET
+                                        node_id = excluded.node_id,
                                         new_caption = excluded.new_caption,
-                                        channel_id = COALESCE(excluded.channel_id, pending_caption_updates.channel_id),
                                         status = 0;
                                 ";
                                 captionCmd.Parameters.AddWithValue("@nodeId", existingNode.Id);
                                 captionCmd.Parameters.AddWithValue("@tgMessageId", existingNode.TgPreviewMessageId.Value);
                                 captionCmd.Parameters.AddWithValue("@newCaption", trashPreviewCaption);
-                                captionCmd.Parameters.AddWithValue("@channelId", (object?)existingEffectiveChannelId ?? DBNull.Value);
+                                captionCmd.Parameters.AddWithValue("@channelId", existingEffectiveChannelId ?? 0L);
                                 captionCmd.ExecuteNonQuery();
                             }
                         }
@@ -1844,21 +1856,25 @@ namespace TGramFS.Database
         public void EnqueueCaptionUpdate(int nodeId, int tgMessageId, string newCaption, long? channelId = null)
         {
             if (tgMessageId <= 1 || string.IsNullOrEmpty(newCaption)) return;
+            long resolvedChannelId = (channelId.HasValue && channelId.Value != 0)
+                ? channelId.Value
+                : (GetNodeById(nodeId)?.TgChannelId ?? 0L);
+
             using (var connection = _dbManager.GetConnection())
             using (var command = connection.CreateCommand())
             {
                 command.CommandText = @"
                     INSERT INTO pending_caption_updates (node_id, tg_message_id, new_caption, channel_id)
                     VALUES (@nodeId, @tgMessageId, @newCaption, @channelId)
-                    ON CONFLICT(tg_message_id) DO UPDATE SET
+                    ON CONFLICT(channel_id, tg_message_id) DO UPDATE SET
+                        node_id = excluded.node_id,
                         new_caption = excluded.new_caption,
-                        channel_id = COALESCE(excluded.channel_id, pending_caption_updates.channel_id),
                         status = 0;
                 ";
                 command.Parameters.AddWithValue("@nodeId", nodeId);
                 command.Parameters.AddWithValue("@tgMessageId", tgMessageId);
                 command.Parameters.AddWithValue("@newCaption", newCaption);
-                command.Parameters.AddWithValue("@channelId", (object?)channelId ?? DBNull.Value);
+                command.Parameters.AddWithValue("@channelId", resolvedChannelId);
                 command.ExecuteNonQuery();
             }
         }
@@ -1929,16 +1945,16 @@ namespace TGramFS.Database
                                 cmd.CommandText = @"
                                     INSERT INTO pending_caption_updates (node_id, tg_message_id, new_caption, channel_id)
                                     VALUES (@nodeId, @tgMessageId, @newCaption, @channelId)
-                                    ON CONFLICT(tg_message_id) DO UPDATE SET
+                                    ON CONFLICT(channel_id, tg_message_id) DO UPDATE SET
+                                        node_id = excluded.node_id,
                                         new_caption = excluded.new_caption,
-                                        channel_id = COALESCE(excluded.channel_id, pending_caption_updates.channel_id),
                                         status = 0
                                     WHERE pending_caption_updates.new_caption != excluded.new_caption;
                                 ";
                                 cmd.Parameters.AddWithValue("@nodeId", freshFile.Id);
                                 cmd.Parameters.AddWithValue("@tgMessageId", freshFile.TgMessageId.Value);
                                 cmd.Parameters.AddWithValue("@newCaption", newCaption);
-                                cmd.Parameters.AddWithValue("@channelId", (object?)freshFile.TgChannelId ?? DBNull.Value);
+                                cmd.Parameters.AddWithValue("@channelId", freshFile.TgChannelId ?? 0L);
                                 int affected = cmd.ExecuteNonQuery();
                                 if (affected > 0) queuedCount++;
                             }
@@ -1966,17 +1982,17 @@ namespace TGramFS.Database
                                     cmd.CommandText = @"
                                         INSERT INTO pending_caption_updates (node_id, tg_message_id, new_caption, channel_id)
                                         VALUES (@nodeId, @tgMessageId, @newCaption, @channelId)
-                                        ON CONFLICT(tg_message_id) DO UPDATE SET
+                                        ON CONFLICT(channel_id, tg_message_id) DO UPDATE SET
+                                            node_id = excluded.node_id,
                                             new_caption = excluded.new_caption,
-                                            channel_id = COALESCE(excluded.channel_id, pending_caption_updates.channel_id),
                                             status = 0
                                         WHERE pending_caption_updates.new_caption != excluded.new_caption;
                                     ";
                                     cmd.Parameters.AddWithValue("@nodeId", freshFile.Id);
                                     cmd.Parameters.AddWithValue("@tgMessageId", part.TgMessageId);
                                     cmd.Parameters.AddWithValue("@newCaption", childCaption);
-                                    long effectivePartChannelId = part.TgChannelId > 0 ? part.TgChannelId : (freshFile.TgChannelId ?? 0);
-                                    cmd.Parameters.AddWithValue("@channelId", effectivePartChannelId > 0 ? (object)effectivePartChannelId : DBNull.Value);
+                                    long effectivePartChannelId = part.TgChannelId > 0 ? part.TgChannelId : (freshFile.TgChannelId ?? 0L);
+                                    cmd.Parameters.AddWithValue("@channelId", effectivePartChannelId);
                                     int affected = cmd.ExecuteNonQuery();
                                     if (affected > 0) queuedCount++;
                                 }
@@ -1992,16 +2008,16 @@ namespace TGramFS.Database
                                 cmd.CommandText = @"
                                     INSERT INTO pending_caption_updates (node_id, tg_message_id, new_caption, channel_id)
                                     VALUES (@nodeId, @tgMessageId, @newCaption, @channelId)
-                                    ON CONFLICT(tg_message_id) DO UPDATE SET
+                                    ON CONFLICT(channel_id, tg_message_id) DO UPDATE SET
+                                        node_id = excluded.node_id,
                                         new_caption = excluded.new_caption,
-                                        channel_id = COALESCE(excluded.channel_id, pending_caption_updates.channel_id),
                                         status = 0
                                     WHERE pending_caption_updates.new_caption != excluded.new_caption;
                                 ";
                                 cmd.Parameters.AddWithValue("@nodeId", freshFile.Id);
                                 cmd.Parameters.AddWithValue("@tgMessageId", freshFile.TgPreviewMessageId.Value);
                                 cmd.Parameters.AddWithValue("@newCaption", previewCaption);
-                                cmd.Parameters.AddWithValue("@channelId", (object?)freshFile.TgChannelId ?? DBNull.Value);
+                                cmd.Parameters.AddWithValue("@channelId", freshFile.TgChannelId ?? 0L);
                                 int affected = cmd.ExecuteNonQuery();
                                 if (affected > 0) queuedCount++;
                             }
@@ -2063,7 +2079,7 @@ namespace TGramFS.Database
             using (var command = connection.CreateCommand())
             {
                 command.CommandText = @"
-                    SELECT p.id, p.node_id, p.tg_message_id, p.new_caption, COALESCE(p.channel_id, n.tg_channel_id) as channel_id
+                    SELECT p.id, p.node_id, p.tg_message_id, p.new_caption, COALESCE(NULLIF(p.channel_id, 0), n.tg_channel_id) as channel_id
                     FROM pending_caption_updates p
                     LEFT JOIN nodes n ON p.node_id = n.id
                     ORDER BY p.id ASC LIMIT 1;";
@@ -2619,24 +2635,41 @@ namespace TGramFS.Database
             return list;
         }
 
-        public List<NodePart> GetNodePartsByMessageId(int tgMessageId)
+        public List<NodePart> GetNodePartsByMessageId(int tgMessageId, long? channelId = null)
         {
             var list = new List<NodePart>();
             if (tgMessageId <= 0) return list;
 
             using var connection = _dbManager.GetConnection();
             using var command = connection.CreateCommand();
-            // Ищем node_id, у которого tgMessageId либо в nodes, либо в node_parts
-            command.CommandText = @"
-                SELECT np.id, np.node_id, np.part_index, np.part_size, np.tg_message_id, np.tg_channel_id, np.created_at
-                FROM node_parts np
-                WHERE np.node_id = (
-                    SELECT id FROM nodes WHERE tg_message_id = @msgId LIMIT 1
-                )
-                OR np.node_id = (
-                    SELECT node_id FROM node_parts WHERE tg_message_id = @msgId LIMIT 1
-                )
-                ORDER BY np.part_index ASC;";
+            // Ищем node_id, у которого tgMessageId либо в nodes, либо в node_parts (с учётом channelId при наличии)
+            if (channelId.HasValue && channelId.Value > 0)
+            {
+                command.CommandText = @"
+                    SELECT np.id, np.node_id, np.part_index, np.part_size, np.tg_message_id, np.tg_channel_id, np.created_at
+                    FROM node_parts np
+                    WHERE np.node_id = (
+                        SELECT id FROM nodes WHERE tg_message_id = @msgId AND tg_channel_id = @chId LIMIT 1
+                    )
+                    OR np.node_id = (
+                        SELECT node_id FROM node_parts WHERE tg_message_id = @msgId AND tg_channel_id = @chId LIMIT 1
+                    )
+                    ORDER BY np.part_index ASC;";
+                command.Parameters.AddWithValue("@chId", channelId.Value);
+            }
+            else
+            {
+                command.CommandText = @"
+                    SELECT np.id, np.node_id, np.part_index, np.part_size, np.tg_message_id, np.tg_channel_id, np.created_at
+                    FROM node_parts np
+                    WHERE np.node_id = (
+                        SELECT id FROM nodes WHERE tg_message_id = @msgId LIMIT 1
+                    )
+                    OR np.node_id = (
+                        SELECT node_id FROM node_parts WHERE tg_message_id = @msgId LIMIT 1
+                    )
+                    ORDER BY np.part_index ASC;";
+            }
             command.Parameters.AddWithValue("@msgId", tgMessageId);
             using var reader = command.ExecuteReader();
             while (reader.Read())

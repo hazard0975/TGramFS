@@ -195,13 +195,13 @@ CREATE INDEX IF NOT EXISTS idx_pending_migrations_node ON pending_channel_migrat
 CREATE TABLE IF NOT EXISTS pending_caption_updates (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     node_id INTEGER NOT NULL,
-    tg_message_id INTEGER NOT NULL UNIQUE,
+    tg_message_id INTEGER NOT NULL,
     new_caption TEXT NOT NULL,
-    channel_id INTEGER,
+    channel_id INTEGER NOT NULL DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    status INTEGER NOT NULL DEFAULT 0
+    status INTEGER NOT NULL DEFAULT 0,
+    UNIQUE(channel_id, tg_message_id)
 );
-CREATE UNIQUE INDEX IF NOT EXISTS idx_pending_caption_tg_msg ON pending_caption_updates(tg_message_id);
 
 CREATE TABLE IF NOT EXISTS pending_deletions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -286,13 +286,81 @@ CREATE INDEX IF NOT EXISTS idx_node_parts_node ON node_parts(node_id);
             {
                 using (var command = connection.CreateCommand())
                 {
-                    command.CommandText = "ALTER TABLE pending_caption_updates ADD COLUMN channel_id INTEGER;";
+                    command.CommandText = "ALTER TABLE pending_caption_updates ADD COLUMN channel_id INTEGER NOT NULL DEFAULT 0;";
                     command.ExecuteNonQuery();
                 }
             }
             catch
             {
                 // Колонка уже существует, игнорируем ошибку
+            }
+
+            // Миграция: перевод pending_caption_updates с одиночного UNIQUE(tg_message_id) на составной UNIQUE(channel_id, tg_message_id)
+            try
+            {
+                bool needsCaptionTableRebuild = false;
+                using (var checkCmd = connection.CreateCommand())
+                {
+                    checkCmd.CommandText = "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'pending_caption_updates' LIMIT 1;";
+                    string? tableSql = checkCmd.ExecuteScalar()?.ToString();
+                    if (!string.IsNullOrEmpty(tableSql) &&
+                        !tableSql.Contains("UNIQUE(channel_id, tg_message_id)", StringComparison.OrdinalIgnoreCase))
+                    {
+                        needsCaptionTableRebuild = true;
+                    }
+                }
+
+                if (!needsCaptionTableRebuild)
+                {
+                    using (var idxCheckCmd = connection.CreateCommand())
+                    {
+                        idxCheckCmd.CommandText = "SELECT 1 FROM sqlite_master WHERE type = 'index' AND name = 'idx_pending_caption_tg_msg' LIMIT 1;";
+                        if (idxCheckCmd.ExecuteScalar() != null)
+                        {
+                            needsCaptionTableRebuild = true;
+                        }
+                    }
+                }
+
+                if (needsCaptionTableRebuild)
+                {
+                    using var tx = connection.BeginTransaction();
+                    using (var migCmd = connection.CreateCommand())
+                    {
+                        migCmd.Transaction = tx;
+                        migCmd.CommandText = @"
+                            DROP INDEX IF EXISTS idx_pending_caption_tg_msg;
+                            CREATE TABLE IF NOT EXISTS pending_caption_updates_new (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                node_id INTEGER NOT NULL,
+                                tg_message_id INTEGER NOT NULL,
+                                new_caption TEXT NOT NULL,
+                                channel_id INTEGER NOT NULL DEFAULT 0,
+                                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                                status INTEGER NOT NULL DEFAULT 0,
+                                UNIQUE(channel_id, tg_message_id)
+                            );
+                            INSERT OR IGNORE INTO pending_caption_updates_new (id, node_id, tg_message_id, new_caption, channel_id, created_at, status)
+                            SELECT p.id, p.node_id, p.tg_message_id, p.new_caption, COALESCE(p.channel_id, n.tg_channel_id, 0), p.created_at, p.status
+                            FROM pending_caption_updates p
+                            LEFT JOIN nodes n ON p.node_id = n.id;
+                            DROP TABLE pending_caption_updates;
+                            ALTER TABLE pending_caption_updates_new RENAME TO pending_caption_updates;
+                        ";
+                        migCmd.ExecuteNonQuery();
+                    }
+                    tx.Commit();
+                }
+
+                using (var ensureIdxCmd = connection.CreateCommand())
+                {
+                    ensureIdxCmd.CommandText = "CREATE UNIQUE INDEX IF NOT EXISTS idx_pending_caption_channel_msg ON pending_caption_updates(channel_id, tg_message_id);";
+                    ensureIdxCmd.ExecuteNonQuery();
+                }
+            }
+            catch
+            {
+                // Игнорируем ошибку миграции при штатном запуске
             }
 
             // Миграция: удаление устаревших фиктивных записей каналов-заглушек с channel_id = 0

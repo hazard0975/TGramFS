@@ -1486,4 +1486,7 @@
   - `NodeRepository.EnsureTrashHierarchyForParent` переиспользует только незакреплённые зеркала (без кастомного `tg_channel_id`).
   - `WinFspServer.Rename` и `WebDavMiddleware.HandleMoveAsync` берут реальный `node.TgChannelId` файла и `GetFilesForChannelMigration` для папок.
   - В `TelegramService.ProcessDeletionQueueAsync` добавлен скользящий 2-сек дебаунс и пропуск `_channelsPendingDeletion`, а в `DeleteChannelAsync` — `RemovePendingDeletionsForChannel`.
-
+- [x] **8.139. Составные ключи `(channelId, messageId)` в кэшах чтения, пуле воркеров и `pending_caption_updates`, плюс `COLLATE NOCASE` в `GetNodeByPath` (`DECISIONS_LOG #147`, `TelegramService.cs`, `MtprotoDownloadWorkerPool.cs`, `NodeRepository.cs`, `DatabaseManager.cs`, `Schema.sql`)**:
+  - Все кэши и трекеры чтения (`_documentCache`, `_chunkMemoryCache`, `_networkAudits`, `_fileReadSequences`, `_fileDownloadLocks`, дисковый кэш) и очередь `MtprotoDownloadWorkerPool` переведены на составной ключ с `channelId`, добавлена очистка кэшей канала `EvictChannelCaches` в `DeleteChannelAsync`.
+  - В `pending_caption_updates` (`Schema.sql`, `DatabaseManager.cs`, `NodeRepository.cs`) выполнена миграция уникальности с `tg_message_id` на `(channel_id, tg_message_id)`; добавлен опциональный `channelId` в `GetNodePartsByMessageId` и `HandleLostFileByMessageId`.
+  - В `NodeRepository.GetNodeByPath` добавлен `COLLATE NOCASE` (фикс `/.trash/...`), а `[GetNodeByPath NULL]` переведён в `Debug`.

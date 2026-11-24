@@ -21,8 +21,8 @@ namespace TGramFS.Services
     {
         private Client _mainClient;
         private readonly Func<int, int, Task<Client>>? _clientProvider;
-        private readonly Func<int, long, byte[]?>? _existingChunkProvider;
-        private readonly Func<int, Task<Document?>>? _documentRefresher;
+        private readonly Func<long, int, long, byte[]?>? _existingChunkProvider;
+        private readonly Func<long, int, Task<Document?>>? _documentRefresher;
 
         /// <summary>
         /// Бесшовное обновление ссылки на активный клиент Telegram после реконнекта без уничтожения пула и очереди задач.
@@ -45,6 +45,7 @@ namespace TGramFS.Services
 
         public class ChunkDownloadRequest
         {
+            public long ChannelId { get; set; }
             public int MessageId { get; set; }
             public Document Document { get; set; } = null!;
             public string FileName { get; set; } = string.Empty;
@@ -64,8 +65,8 @@ namespace TGramFS.Services
             Client mainClient,
             int workerCount = 1,
             Func<int, int, Task<Client>>? clientProvider = null,
-            Func<int, long, byte[]?>? existingChunkProvider = null,
-            Func<int, Task<Document?>>? documentRefresher = null)
+            Func<long, int, long, byte[]?>? existingChunkProvider = null,
+            Func<long, int, Task<Document?>>? documentRefresher = null)
         {
             _mainClient = mainClient ?? throw new ArgumentNullException(nameof(mainClient));
             _workerCount = Math.Clamp(workerCount, 1, 3);
@@ -78,12 +79,17 @@ namespace TGramFS.Services
 
         public int ActiveWorkerCount => _workerCount;
 
+        private static string BuildChunkKey(long channelId, int messageId, long chunkOffset)
+        {
+            return $"{channelId}:{messageId}:{chunkOffset}";
+        }
+
         /// <summary>
         /// Проверяет, находится ли данный чанк уже в очереди ожидания или в процессе активной загрузки воркером.
         /// </summary>
-        public bool IsChunkInFlight(int messageId, long chunkOffset)
+        public bool IsChunkInFlight(long channelId, int messageId, long chunkOffset)
         {
-            string key = $"{messageId}:{chunkOffset}";
+            string key = BuildChunkKey(channelId, messageId, chunkOffset);
             lock (_queueLock)
             {
                 return _waitingRequests.ContainsKey(key) || _inProgressRequests.ContainsKey(key);
@@ -134,6 +140,7 @@ namespace TGramFS.Services
         /// Если чанк уже качается или стоит в очереди — возвращается существующая задача без создания повторных сетевых запросов.
         /// </summary>
         public Task<byte[]?> EnqueueChunk(
+            long channelId,
             int messageId,
             Document document,
             string fileName,
@@ -145,7 +152,7 @@ namespace TGramFS.Services
             Action<long, long>? onProgress = null,
             string? fullVirtualPath = null)
         {
-            string key = $"{messageId}:{chunkOffset}";
+            string key = BuildChunkKey(channelId, messageId, chunkOffset);
 
             lock (_queueLock)
             {
@@ -184,6 +191,7 @@ namespace TGramFS.Services
                 var tcs = new TaskCompletionSource<byte[]?>(TaskCreationOptions.RunContinuationsAsynchronously);
                 var request = new ChunkDownloadRequest
                 {
+                    ChannelId = channelId,
                     MessageId = messageId,
                     Document = document,
                     FileName = fileName,
@@ -227,7 +235,7 @@ namespace TGramFS.Services
         /// Отменяет и физически удаляет из очереди все ожидающие низкоприоритетные чанки упреждения для указанного файла (например, при перемотке в плеере).
         /// Срочные чанки чтения плеера и чанки, уже скачивающиеся воркерами прямо сейчас, не затрагиваются.
         /// </summary>
-        public void CancelPendingChunksForFile(int messageId)
+        public void CancelPendingChunksForFile(long channelId, int messageId)
         {
             lock (_queueLock)
             {
@@ -235,9 +243,33 @@ namespace TGramFS.Services
                 while (node != null)
                 {
                     var next = node.Next;
-                    if (node.Value.MessageId == messageId && !node.Value.IsHighPriority)
+                    if (node.Value.ChannelId == channelId && node.Value.MessageId == messageId && !node.Value.IsHighPriority)
                     {
-                        string key = $"{node.Value.MessageId}:{node.Value.ChunkOffset}";
+                        string key = BuildChunkKey(node.Value.ChannelId, node.Value.MessageId, node.Value.ChunkOffset);
+                        _waitingRequests.Remove(key);
+                        node.Value.Completion.TrySetResult(null);
+                        _queue.Remove(node);
+                    }
+                    node = next;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Отменяет все ожидающие в очереди чанки удаляемого канала Telegram.
+        /// </summary>
+        public void CancelPendingChunksForChannel(long channelId)
+        {
+            if (channelId == 0) return;
+            lock (_queueLock)
+            {
+                var node = _queue.First;
+                while (node != null)
+                {
+                    var next = node.Next;
+                    if (node.Value.ChannelId == channelId)
+                    {
+                        string key = BuildChunkKey(node.Value.ChannelId, node.Value.MessageId, node.Value.ChunkOffset);
                         _waitingRequests.Remove(key);
                         node.Value.Completion.TrySetResult(null);
                         _queue.Remove(node);
@@ -276,7 +308,7 @@ namespace TGramFS.Services
                         var node = _queue.First;
                         request = node.Value;
                         _queue.RemoveFirst();
-                        key = $"{request.MessageId}:{request.ChunkOffset}";
+                        key = BuildChunkKey(request.ChannelId, request.MessageId, request.ChunkOffset);
                         _waitingRequests.Remove(key);
                         _inProgressRequests[key] = request;
                     }
@@ -325,7 +357,7 @@ namespace TGramFS.Services
             // 1. Проверяем, не появился ли чанк в ОЗУ пока задача стояла в очереди
             if (_existingChunkProvider != null)
             {
-                var existingBytes = _existingChunkProvider(request.MessageId, request.ChunkOffset);
+                var existingBytes = _existingChunkProvider(request.ChannelId, request.MessageId, request.ChunkOffset);
                 if (existingBytes != null && existingBytes.Length == expectedChunkSize)
                 {
                     request.OnChunkReceived?.Invoke(existingBytes, request.ChunkOffset);
@@ -356,7 +388,7 @@ namespace TGramFS.Services
                 byte[]? partialExisting = null;
                 if (_existingChunkProvider != null)
                 {
-                    var existingBytes = _existingChunkProvider(request.MessageId, request.ChunkOffset);
+                    var existingBytes = _existingChunkProvider(request.ChannelId, request.MessageId, request.ChunkOffset);
                     if (existingBytes != null && existingBytes.Length > 0 && existingBytes.Length < expectedChunkSize)
                     {
                         partialExisting = existingBytes;
@@ -446,7 +478,7 @@ namespace TGramFS.Services
                     if (_documentRefresher != null)
                     {
                         AppLogger.Warn("MtprotoWorkerPool", $"[Воркер #{workerId}] FILE_REFERENCE_EXPIRED для '{request.FileName}'. Обновление дескриптора документа...");
-                        var refreshedDoc = await _documentRefresher(request.MessageId);
+                        var refreshedDoc = await _documentRefresher(request.ChannelId, request.MessageId);
                         if (refreshedDoc != null)
                         {
                             request.Document = refreshedDoc;
