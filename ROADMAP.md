@@ -1279,7 +1279,6 @@
       1. **Каталог и проект**: Каталог переименован в `TGramFS/`, проект — в `TGramFS.csproj`, `<RootNamespace>` переведен на `TGramFS`.
       2. **Рефакторинг исходников**: Все 36 файлов `.cs` переведены на `namespace TGramFS.*` и `using TGramFS.*`.
       3. **Синхронизация CI/CD и правил**: Обновлен `.github/workflows/release.yml`, правила `AGENTS.md` и карта `MAP.md`.
-      4. **Валидация**: `dotnet build` завершен с 0 предупреждений и 0 ошибок.
 
 - [x] **8.104. Защита от спама в Telegram API, усыпление FLOOD_WAIT и улучшение UI авторизации**:
     - **Реализовано**:
@@ -1366,25 +1365,21 @@
     - **Реализовано**:
       1. Базовые размеры уменьшены ещё на `25–30 px` (`BaseClientWidth`: `595` → `565`, `UITheme.ContentWidth`: `545` → `515`, `UIFactory.DefaultInnerWidth`: `520` → `495`).
       2. Ширина карточки профиля `_pnlUserDetails` в `AuthSettingsForm.cs` увеличена с `UIFactory.DefaultInnerWidth - 135` до полного `UIFactory.DefaultInnerWidth` (во всю внутреннюю ширину рамки `«Текущая сессия Telegram»`).
-      3. Валидация: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
 - [x] **8.118. Единая стандартная высота `28 px` для кнопок в `CreateActionInputRow` (`UIFactory.cs`)**:
     - **Проблема**: В строках переименования каналов (`«Авторизация Telegram»`, `«База»`) кнопка `«Переименовать»` принудительно сжималась под высоту `TextBox` (`23 px` при `96 DPI`) через `tbl.Layout` и `applyScale`. Из-за внутренних отступов темы Windows нативные кнопки при `23 px` выглядели визуально ниже поля ввода и мельче остальных кнопок формы (`28 px`).
     - **Реализовано**:
       1. В `UIFactory.CreateActionInputRow` удалён обработчик `tbl.Layout` с пересчётом под `textBox.Height` и снято ограничение `MaximumSize`.
       2. Высота кнопки в `applyScale` переведена на единый стандарт `UITheme.ButtonHeightDefault` (`28 px` при `96 DPI`, т.е. `+5 px`) с пропорциональным масштабированием под DPI и вертикальным центрированием строки.
-      3. Валидация: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
 - [x] **8.119. Точная калибровка высоты inline-кнопок рядом с `TextBox` до `25 px` (`UITheme.ButtonHeightInline`)**:
     - **Задача**: По результатам визуальной проверки `28 px` кнопки `«Переименовать»` рядом с `23 px` полем `TextBox` выступали сверху и снизу примерно на `2 px`; потребовалась «золотая середина» между `23 px` (казалось меньше поля) и `28 px` (казалось выше поля).
     - **Реализовано**:
       1. В `UITheme.cs` добавлена константа `ButtonHeightInline = 25` (`23 px + 2 px` компенсации `1px`-отступа рамки нативной темы `UxTheme` сверху и снизу).
       2. В `UIFactory.CreateActionInputRow` и при создании обеих кнопок `«Переименовать»` в `AuthSettingsForm.cs` задана единая высота `UITheme.ButtonHeightInline` (`25 px` при `96 DPI` с масштабированием под DPI) без дублирования между `CreateButton` и `CreateActionInputRow`.
-      3. Валидация: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
 - [x] **8.120. Адаптивная синхронизация высоты кнопок `CreateActionInputRow` с реальной высотой `TextBox` на всех масштабах DPI (`100%–200%`) (`UIFactory.cs`, `AuthSettingsForm.cs`)**:
     - **Проблема**: При линейном масштабировании `UITheme.ButtonHeightInline` (`25 * scale`) кнопка совпадала с `TextBox` пиксель-в-пиксель при `100%` (`96 DPI`), но на `125%` (`31 px`) и `175%` (`44 px`) начинала выступать над/под полем ввода, так как высота системного `TextBox` (`Шрифт + рамка`) растёт сублинейно относительно `25 * scale`.
     - **Реализовано**:
       1. В `UIFactory.CreateActionInputRow` добавлен `SyncButtonSize(scale)` (вызывается в `applyScale`, `tbl.Layout` и `textBox.SizeChanged`), вычисляющий высоту кнопки от фактической высоты поля ввода (`textBox.Height` при созданном `HWND` / `textBox.PreferredHeight`) плюс `UITheme.Scale(2, scale)` на внешний `1px`-контур нативной темы `UxTheme` без блокирующего `MaximumSize`.
       2. В `AuthSettingsForm.cs` убрана передача `registerScaler` в `CreateButton` для `_btnRenamePrimaryChannel` и `_btnRenameBackupChannel`, чтобы размером этих кнопок единолично управлял `CreateActionInputRow` без двойного ресайза.
-      3. Валидация: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
 - [x] **8.121. Исправление начальной позиции `AuthSettingsForm` и оптическое центрирование в `WorkingArea` (`AuthSettingsForm.cs`)**:
     - **Проблема**: Окно настроек при открытии смещалось вниз на ~35% от верха экрана, из-за чего нижняя панель кнопок `«Сохранить»` / `«Закрыть»` уходила под панель задач.
     - **Первопричина**: В `InitializeComponents()` до расчёта финального `ClientSize` вызывался `CreateHandle()`, фиксировавший начальную позицию окна для дефолтных `300 x 300`, после чего форма вырастала вниз до `565 x 660 * scale` без пересчёта `Location` и без зажима в `WorkingArea`.
@@ -1392,95 +1387,81 @@
       1. Удалён преждевременный `CreateHandle()` из `InitializeComponents()`, форма переведена на `StartPosition = FormStartPosition.Manual`.
       2. Добавлен `PositionFormInWorkingArea(workingArea)`: строго по центру по горизонтали и в оптическом центре по вертикали (`30%` свободной высоты сверху / `70%` снизу) с жёстким зажимом внутри `WorkingArea` экрана под курсором.
       3. В `OnLoad` выполняется финальная сверка DPI монитора показа, пересчёт `ClientSize` и точная установка позиции до отрисовки (без вмешательства в `Location` при перетаскивании в `OnDpiChanged`).
-      4. Валидация: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
 - [x] **8.122. Автоматическая установка иконки приложения (`TGramFS.icon.ico`) при создании всех типов каналов Telegram (`TelegramService.cs`)**:
     - **Задача**: Сделать так, чтобы все создаваемые приложением приватные каналы (основной канал хранилища, кастомные каналы привязанных папок и канал резервных копий БД) автоматически получали единую фирменную иконку приложения и выделялись в общей ленте чатов Telegram.
     - **Реализовано**:
       1. Добавлен ленивый потокобезопасный кэш `GetChannelIconJpegBytes()`, извлекающий слой `256x256` из встроенного ресурса `TGramFS.icon.ico` (`AppIconHelper.GetAppIconBitmap(256, 256)`) и сохраняющий его в памяти в формате `JPEG` (требование `Channels_EditPhoto` / `InputChatUploadedPhoto`, без добавления полей и изменения рисунка, т.к. прозрачные углы скруглённого квадрата отсекаются круглой маской Telegram).
       2. Добавлен безопасный метод `TrySetDefaultChannelPhotoAsync(TL.Channel)`, вызывающий `_client.UploadFileAsync(...)` и `_client.Channels_EditPhoto(...)` с учётом `EnsureFloodWaitDelayAsync()` и мягкой обработкой ошибок (`FLOOD_WAIT` / сеть не прерывают создание канала; сервисное сообщение о смене фото не удаляется).
       3. Вызов `TrySetDefaultChannelPhotoAsync` встроен во все три точки создания каналов в `TelegramService.cs`: `GetStoragePeerAsync` (основной), `CreateCustomChannelAsync` (папки) и `GetBackupStoragePeerAsync` (бэкапы БД).
-      4. Валидация: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
 - [x] **8.123. Исправление `SQLite Error 19: 'FOREIGN KEY constraint failed'` при перманентном удалении вложенных папок из корзины (`NodeRepository.cs`, `WinFspServer.cs`, `WebDavMiddleware.cs`)**:
     - **Проблема**: При очистке корзины `.Trash` одиночные файлы и пустые папки удалялись успешно, но папки с подпапками падали с `FOREIGN KEY constraint failed` в `EnqueuePermanentDeletion`, так как `OrderBy(n => n.IsDir ? 1 : 0)` после `GetSubtreeNodes` оставлял родительские папки в списке раньше вложенных подпапок при наличии `FOREIGN KEY (parent_id) REFERENCES nodes(id)`.
     - **Реализовано**:
       1. Добавлен `NodeRepository.GetPhysicalSubtreeNodesBottomUp(rootNodeId)` (сбор всех физических потомков по `parent_id` без фильтра `in_trash` в порядке: файлы -> папки от максимальной глубины к корню) и подключён в `WinFspServer.Cleanup` и `WebDavMiddleware.HandleDeleteAsync`.
       2. В `EnqueuePermanentDeletion` добавлена топологическая сортировка удаляемых ID снизу вверх (`SortNodeIdsBottomUp`), очистка `pending_caption_updates` / `pending_channel_migrations` и чанкинг по 500 ID для `IN (...)` запросов (включая `GetPartsForNodes`).
       3. В `WinFspServer.Cleanup` ветка удаления обёрнута в `try/catch/finally` с гарантированным `ctx.Dispose()`.
-      4. Валидация: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
 - [x] **8.124. Исправление цикла коллизий `FILE_CREATE`, локально-независимый `[VirtualCopy]` в той же папке и защита двухпроходных мелких файлов (`WinFspServer.cs`)**:
     - **Проблема**: При `Ctrl+C -> Ctrl+V` в той же папке диска WinFsp Проводник 18 раз циклически вызывал `Create` на существующем файле (плодя зомби-узлы в `_activeUploadNodes` и запуская 18 сканирований дескрипторов ядра ~1.5 сек), не распознавал переименованную копию (`... — копия.ext`) для `[VirtualCopy]`, а для мелких 2-проходных файлов требовалась защита от дублирующей отправки во втором проходе (`Open(FILE_OPEN_IF) -> Write -> Cleanup`).
     - **Реализовано**:
       1. В `Create` для `!isDir && createDisposition == NT_FILE_CREATE` при существовании файла возвращается `NT_STATUS_OBJECT_NAME_COLLISION` с фиксацией сигнала коллизии (поведение `isDir == true` для слияния папок не изменено); в `Close` добавлена очистка `_activeUploadNodes` при `!ctx.CleanupCalled`.
       2. Реализовано локально-независимое сопоставление переименованных виртуальных копий по сигналам коллизии/чтения (`TryMatchRenamedVirtualCandidate`, `TryMatchRenamedVirtualFromSignals`) без хардкода суффиксов языка Windows и с жёсткой изоляцией от конфликтов с физическими файлами ПК (`physicalClip.Count == 0`, `alternatePhysicalNames` в `CollectOpenFileHandles`).
       3. Внедрена защита двухпроходной записи мелких виртуальных копий (`_recentTwoPassVirtualCopies` + `IsVirtualCopyPassThrough` в `Open`/`Overwrite`/`Write`/`Cleanup`) с сохранением `[DIAG ...]` на один контрольный тест.
-      4. Валидация: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
 - [x] **8.125. Продление `[VirtualCopy Read Bypass]` на второй проход записи (`Pass 2`) и зачистка `[DIAG ...]` логов (`WinFspServer.cs`)**:
     - **Проблема**: По контрольному тесту на 9,53 МБ `.mp3` в `Cleanup` первого прохода (`written=0`) досрочно снимался `[VirtualCopy Read Bypass]`, из-за чего Проводник во втором проходе выкачивал ~8 МБ исходника из Telegram ради отбрасываемых `Write()`.
     - **Реализовано**:
       1. Внедрено явное владение `FspNodeContext.OwnsActiveVirtualCopy` и настраиваемый `ExpiresAtUtc` (`ttl`) в `ActiveVirtualCopyInfo`.
       2. В `Cleanup` первого прохода при регистрации `_recentTwoPassVirtualCopies` (`written == 0`) активная защита чтения источника переносится на `newNodeId` (TTL 20 сек), подхватывается во втором проходе `Open` (`OwnsActiveVirtualCopy = true`) и снимается сразу по завершении/закрытии `Pass 2`.
       3. Удалены временные диагностические `[DIAG ...]` логи и вспомогательные словари/методы.
-      4. Валидация: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
 - [x] **8.126. Защита старой версии `v1` при замене файла `Overwrite()` (`WinFspServer.cs`)**:
     - **Проблема**: При перезаписи существующего файла (`Overwrite()`) вызов `SetBasicInfo` обновлял в SQLite даты **старой** версии `v1` датами нового файла до её переноса в `.Trash` в `Cleanup()`, а при отмене перезаписи посередине `node.Size` оставался `0` и при `CleanupDelete` оригинал `v1` (`node.Id > 0`) мог уйти в корзину.
     - **Реализовано**:
       1. В `FspNodeContext` добавлен снимок до перезаписи (`IsOverwritePending`, `PreOverwriteSize`, `PreOverwriteUpdatedAt`, `PreOverwriteCreatedAt`, `RestorePreOverwriteState()`), заполняемый в `Overwrite()`.
       2. В `SetBasicInfo()` при `IsOverwritePending == true` обновление дат откладывается в памяти до финализации новой версии `v2` в `CreateOrUpdateFile` без изменения строки `v1` в SQLite.
       3. В `Cleanup()` (`CleanupDelete` и ветки отмены/ошибок `ForwardTask`, `PipeStream`, малых файлов) и `Close()` добавлен безопасный откат состояния `v1` без перемещения прежней версии в `.Trash`.
-      4. Валидация: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
 - [x] **8.127. Атомарность `ForwardFileAsync()` и корзинные подписи дочерних частей для файлов `> 2 ГБ` / `> 4 ГБ` (`NodeRepository.cs`, `TelegramService.cs`, `WinFspServer.cs`)**:
     - **Проблема**: При замене составного файла (`node_parts`) в `CreateOrUpdateFile()` дочерние части `v1` не получали подпись `#trash` и у мастера отсутствовал размер/номер части и `channel_id`; при `VirtualCopy` в `ForwardFileAsync()` сбой дочерней части проглатывался с возвратом битого результата, а отмена не прерывала пересылку оставшихся частей.
     - **Реализовано**:
       1. В `NodeRepository.CreateOrUpdateFile()` добавлено чтение `node_parts` уходящего в корзину `v1` и постановка в `pending_caption_updates` подписей `#trash` с `channel_id` для мастер-части (`[Часть 1 из N, total=... ГБ]`), всех дочерних частей `2..N` и превью.
       2. В `TelegramService.ForwardFileAsync()` добавлен `CancellationToken`; сбой или отмена любой части прерывает операцию, возвращает `null` и очищает уже пересланные сообщения в целевом канале через `DeleteBatchWithBisectAsync`.
       3. В `WinFspServer.cs` (`Create`, `Overwrite`, `Cleanup`) `UploadCts` привязан к `ForwardTask` для мгновенной отмены пересылки при `CleanupDelete`.
-      4. Валидация: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
 - [x] **8.128. Защита от 0-байтного 1-го прохода при перезаписи файла `Overwrite()` (`WinFspServer.cs`)**:
     - **Проблема**: В редком 2-проходном сценарии Windows Explorer (`18:36:09` в `log.MD`) Проход 1 вызывает `Overwrite(alloc=0)` и сразу закрывает хэндл с `0` байт до открытия Прохода 2 через `Open(FILE_WRITE_DATA) -> Write`. Текущий `Cleanup` отправлял `v1` в `.Trash` и создавал 0-байтную заглушку до старта закачки, а Проход 2 через `Open` не имел флага `IsOverwritePending`.
     - **Реализовано**:
       1. В `FspNodeContext` добавлен флаг `ExplicitTruncateToZero` (устанавливается в `SetFileSize` при `!setAllocationSize && newSize == 0`), чтобы не нарушать легитимное усечение/копирование реальных `0`-байтных файлов.
       2. В `WinFspServer.Cleanup` при `IsOverwritePending && finalLength == 0 && TotalBytesWritten == 0 && !ExplicitTruncateToZero` и известном непустом источнике (`KnownTargetSize > 0` или `FileInfo(OriginalSourcePath).Length > 0`) 0-байтный коммит пропускается с вызовом `RestorePreOverwriteState()`.
       3. Внедрена передача защиты в Проход 2 через `_pendingTwoPassOverwrites` (TTL `20 сек`): `Open()` с правами записи `(FILE_WRITE_DATA | FILE_APPEND_DATA)` активирует `IsOverwritePending = true`, снимает слепок `PreOverwrite*` от `v1` и переносит `OriginalSourcePath`.
-      4. Валидация: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
 - [x] **8.129. Изолированный адаптивный пейсинг отправки файлов и точное логирование `FLOOD_WAIT_<N>` (`TelegramService.cs`)**:
     - **Проблема**: При массовой пакетной загрузке мелких файлов (`Create Synchronicity`) `WTelegramClient` молча пережидал короткие `FLOOD_WAIT_3..9` (`<= 60 сек`), не сбавляя темп исходящих `SendMessageAsync` / `Messages_EditMessage`, что приводило к эскалации до `FLOOD_WAIT_211` и `FLOOD_WAIT_2916`; кроме того, при `RpcException (420)` в лог попадало обезличенное сообщение `FLOOD_WAIT_X` без точного числа секунд, а привязать пейсинг к `_globalPacingDelayMs` было нельзя, чтобы не замедлять скачивание и стриминг.
     - **Реализовано**:
       1. В `TelegramService.cs` добавлен полностью изолированный от `_globalPacingDelayMs` адаптивный пейсинг отправки (`_uploadPacingDelayMs`, старт `0 мс`, шаг `+50 мс`, потолок `2000 мс`, окно дедупликации `1500 мс`, плавный откат `-25 мс` каждые `20` чистых отправок).
       2. В `HandleWTelegramLog` добавлен перехват всех `FLOOD_WAIT_<N>` (как `<= 60 сек`, так и `> 60 сек`) строго при активном слоте загрузки (`_activeUploadPipelineCount > 0`).
       3. Внедрена пауза `EnsureUploadMessagePacingAsync` перед каждым `SendMessageAsync` (превью, медиа/документ, тома) и `Messages_EditMessage` в `UploadFileAsync` и `UploadMultiPartFileAsync`, а также логирование точных секунд `FLOOD_WAIT_{rpcEx.X}` при `RpcException (420)`.
-      4. Валидация: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
 - [x] **8.130. Переход от счётчика `20` файлов к временному анти-пила откату (`90 -> 180 -> 300 сек`) и автосбросу по простою `5 мин` (`TelegramService.cs`)**:
     - **Причина доработки**: Анализ `log.MD` показал, что при массовой заливке мелких `.htm`/`.gif` флуд прилетал каждые `~12 сек` (ровно раз в `25` файлов), а на `.jpg` — каждые `~25–30 сек`. Снижение паузы каждые `20` файлов срабатывало бы быстрее окна лимита Telegram и давало бы «пилу» на границе.
     - **Реализовано**:
       1. Замена счётчика `20` файлов на временное окно чистой отправки (`90 сек` без `FLOOD_WAIT` для снижения на `-25 мс` в `NotifyUploadMessageSucceeded`).
       2. Анти-пила защита в `RegisterUploadFloodWait`: если после снижения в пределах текущего интервала снова прилетает `FLOOD_WAIT`, интервал отката удваивается (`90 -> 180 -> 300 сек`).
       3. Автосброс в `0 мс` (`ResetUploadPacingIfIdle`) при простое `>= 5 мин` между реальными отправками файлов (`_lastUploadActivityFinishedUtc`, не считая за простой длительность загрузки самого крупного файла и игнорируя `<= 1` байта заглушки).
-      4. Валидация: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
 - [x] **8.131. Старт `Upload Pacing` со `150 мс`, жёсткий стоп отправки при `FLOOD_WAIT > 60 сек`, защита от повторной накрутки и HUD-плашка `FLOOD_WAIT` (`TelegramService.cs`, `TrayProgressOverlay.cs`, `TrayContext.cs`)**:
     - **Причина доработки**: В контрольном тесте `log.MD` (`04:44:01`) на `.gif` сразу прилетел `FLOOD_WAIT_92` без коротких предварительных флудов (`image/gif` имеет отдельный лимит Telegram; `.jpg` в те же секунды продолжали проходить). Серия отказов `Create Synchronicity` за `6.4 сек` в один и тот же тикающий таймер (`92 -> 86`) накрутила паузу `0 -> 200 мс`, а следующие `17` файлов продолжали заливать байты в MTProto впустую при отсутствии визуального предупреждения в UI.
     - **Реализовано**:
       1. В `RegisterUploadFloodWait` первый флуд сразу выставляет `_uploadPacingDelayMs = 150 мс` (вместо `50 мс`), последующие новые эпизоды добавляют `+50 мс`. Добавлен трекер активного окна `_uploadActiveFloodUntilUtc`: повторные отказы внутри одного и того же тикающего таймера больше не накручивают задержку по кругу.
       2. При `FLOOD_WAIT > 60 сек` выставляется `_uploadHardStopUntilUtc`: `UploadFileAsync` и `UploadMultiPartFileAsync` немедленно прекращают новые отправки до чтения потока и заливки байтов в MTProto до истечения таймера Telegram, а фоновая очистка незавершённых частей многотомника откладывается до окончания блокировки.
       3. В `TelegramService` добавлено событие `OnFloodWaitDetected` (срабатывает при любом `FLOOD_WAIT` и на отправке, и на скачивании), а в `TrayProgressOverlay` / `TrayContext` реализована плашка уведомления о флуде с живым обратным отсчётом (янтарная пауза `<= 60 сек` и красный стоп `> 60 сек`), показываемая принудительно даже при отключённой галочке `AutoShowOverlay` и защищённая от затирания неактивностью или запоздалыми чанками воркеров.
-      4. Валидация: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
 - [x] **8.132. Сохранение активного `FLOOD_WAIT > 10 сек` в `flood_state.json` с авто-восстановлением после перезапуска (`TelegramService.cs`, `TrayProgressOverlay.cs`, `TrayContext.cs`)**:
     - **Задача**: При длительных блокировках `FLOOD_WAIT` перезапуск приложения или ПК сбрасывал таймер в ОЗУ и скрывал от пользователя остаток времени ожидания в HUD-плашке трея.
     - **Реализовано**:
       1. В `TelegramService.cs` добавлена персистентность в портативный файл `flood_state.json` (рядом с `appsettings.json`) для любых `FLOOD_WAIT > 10 сек` (отправка и скачивание) с сохранением `FloodWaitUntilUtc` (в UTC), `InitialSeconds`, `IsUploadStopped`, `IsDownload` и `FileName`. Адаптивная пауза `_uploadPacingDelayMs` сознательно не сохраняется.
       2. В конструкторе `TelegramService` вызывается `LoadPersistedFloodState()`: если срок истёк — файл удаляется; если активен — восстанавливаются баннерное состояние, `_uploadActiveFloodUntilUtc`, жёсткая блокировка `_uploadHardStopUntilUtc` (при `IsUploadStopped`) и `_globalFloodWaitUntil` / `_nextAllowedSendUtc` (при скачивании или не-стоп флуде).
       3. В `TrayProgressOverlay.ShowFloodWait` добавлен опциональный `initialSeconds` и событие `OnFloodCountdownExpired`; в `TrayContext` сразу после подписки `OnFloodWaitDetected` выполняется проверка `TryGetActiveFloodBannerState(...)` для немедленного показа плашки при запуске и очистка `flood_state.json` по истечении таймера.
-      4. Валидация: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
 - [x] **8.133. Отправка `.gif` с MIME `application/octet-stream` для обхода жёсткого GIF-лимита Telegram (`TelegramService.cs`)**:
     - **Причина**: Повторный прогон `log.MD` (`01:16:27`–`01:23:25`) подтвердил гипотезу: `458` файлов (`.jpg` с превью, `.htm`, `.css`) прошли за `6.5` мин с одним начальным `FLOOD_WAIT_6` и снижением паузы `150 -> 50 мс`, но на **11-й** гифке (`247_1.gif`) за `94` сек прилетел жёсткий `FLOOD_WAIT_206`.
     - **Реализовано**: В `TelegramService.GetDocumentMimeType` для `.gif` установлен `application/octet-stream` вместо `image/gif` (имя файла `.gif` на диске и в `DocumentAttributeFilename` сохраняется полностью; мелкий баг `HideCheckTimer_Tick` отложен по решению пользователя).
-    - **Валидация**: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
 - [x] **8.134. Визуальное выделение привязанных к каналам папок иконкой «звёздочка» через виртуальный `desktop.ini` и поддержка `file_attributes` (`WinFspServer.cs`, `Program.cs`, `NodeRepository.cs`, `DatabaseManager.cs`, `Schema.sql`, `Node.cs`)**:
     - **Реализовано**:
       1. Добавлена полноценная поддержка хранения и отдачи атрибутов файлов и папок (`file_attributes` в `Schema.sql` / `DatabaseManager.EnsureSchemaColumns` / `NodeRepository` / `WinFspServer`), необходимая для работы нативного механизма `desktop.ini` в Проводнике Windows.
       2. Исправлена первопричина повреждения малых файлов (`<= 1 МБ`) при частичной записи без `Overwrite` (например, `WritePrivateProfileStringW` при повторном редактировании `desktop.ini`): добавлена предзагрузка текущего содержимого `EnsureSmallFileBufferLoaded`, корректный ресайз в `SetFileSize` и чтение из `SmallFileBuffer`.
       3. В `WinFspServer.cs` реализован виртуальный `desktop.ini` в памяти (`UTF-16 LE` с BOM, `IconResource=C:\Windows\System32\SHELL32.dll,43`) и автоматический флаг `FileAttributes.ReadOnly` строго для корневых привязанных папок (`TgChannelId != primaryChannelId`, без наследования на подпапки и без записи в SQLite/Telegram/`.Trash`); при этом в общем листинге каталога (`*`/`null`) виртуальный `desktop.ini` скрыт от `Ctrl+A` и копирования на диск `C:`.
       4. В `Program.cs` (`ExecuteBindChannelAsync`) добавлен вызов `SHChangeNotify` для мгновенного обновления иконки папки в Проводнике сразу после привязки к каналу.
-    - **Валидация**: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
 - [x] **8.135. Исправление удаления привязанных папок (без UAC и `Файл T:\ недоступен`) и мгновенного обновления иконки после привязки (`WinFspServer.cs`, `Program.cs`, `NodeRepository.cs`)**:
     - **Проблема**: После привязки папки к каналу иконка-звёздочка не обновлялась до перезапуска программы даже после `F5`, а при попытке удалить привязанную папку Проводник запрашивал права администратора и затем падал с `Файл T:\ недоступен`.
     - **Реализовано**:
@@ -1488,7 +1469,6 @@
       2. В `WinFspServer` добавлен метод `NotifyBoundFolderUpdated(relPath)` на базе `_host.NotifyBegin` / `_host.Notify` / `_host.NotifyEnd` (события `Added` для `desktop.ini` и `Modified` для папки), вызываемый в `ExecuteBindChannelAsync`.
       3. В `Program.cs` (`NotifyExplorerFolderIconChanged`) добавлены `SHCNE_CREATE` на `desktop.ini`, `SHCNE_UPDATEDIR` на саму папку и синхронный `SHCNF_FLUSH`, а также вызов обновления в `HandleBindChannelAsync` после успешного IPC-ответа.
       4. В `NodeRepository.SetFolderChannelId` добавлен вызов `NotifyNodeChanged()` для корректного запуска автобэкапа БД после привязки канала.
-    - **Валидация**: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
 - [x] **8.136. Устранение `ACCESS_DENIED` в `Open` виртуального `desktop.ini`, временное снятие `ReadOnly` в `SetBasicInfo` и `SHCNF_IDLIST` по `PIDL` (`WinFspServer.cs`, `Program.cs`)**:
     - **Причина доработки**: После теста решения 143 подтвердилось, что `Open` отклонял `desktop.ini` с `NT_STATUS_ACCESS_DENIED` при запросе `FILE_WRITE_DATA | FILE_APPEND_DATA` (из `MAXIMUM_ALLOWED`), `SetBasicInfo` возвращал `ReadOnly` обратно до удаления папки, `VirtualDesktopIniAttributes` содержал лишний флаг `Archive`, а `SHChangeNotify` использовал строковый `SHCNF_PATHW` вместо `PIDL`.
     - **Реализовано**:
@@ -1496,22 +1476,14 @@
       2. В `WinFspServer.SetBasicInfo` при явном снятии `ReadOnly` с привязанной папки включается 3-секундное подавление `SuppressVirtualDesktopIni`, чтобы `FillFileInfo` возвращал `Directory (0x10)` на время удаления.
       3. Атрибуты виртуального `desktop.ini` приведены к `Hidden | System` (`0x06`); в `NotifyBoundFolderUpdated` добавлен `NotifyFilter.ChangeLastWrite` и `Info`/`Warn`-логирование.
       4. В `Program.NotifyExplorerFolderIconChanged` реализована отправка `SHChangeNotify` через `ILCreateFromPathW` + `SHCNF_IDLIST | SHCNF_FLUSH` (с фоллбэком на `SHCNF_PATHW`).
-    - **Валидация**: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
-- [x] **8.137. Уникальное переименование папок в `.Trash`, удаление вложенных каналов, очередь `DeleteChannelAsync` и VFS-обновление иконки (`NodeRepository.cs`, `WinFspServer.cs`, `WebDavMiddleware.cs`, `TelegramService.cs`, `Program.cs`)**:
-    - **Проблема**: При удалении папки с именем, уже присутствующим в `.Trash`, `SoftDeleteNode` объединял их и удалял новую строку из `nodes`, теряя `tg_channel_id` (каналы оставались пустыми в Telegram); вложенные привязанные папки пропускались из-за `n.Id == node.Id`; массовое удаление каналов вызывало `FLOOD_WAIT`; иконка при `--bind-channel` обновлялась с задержкой.
-    - **Реализовано**:
-      1. В `NodeRepository.SoftDeleteNode` слияние папок в `.Trash` заменено на уникальное переименование (`Имя (2)`, `Имя (3)`) с полным сохранением `tg_channel_id` и содержимого.
-      2. В `WinFspServer.Cleanup` и `WebDavMiddleware.HandleDeleteAsync` удалён фильтр `n.Id == node.Id` (в `WinFspServer` подсчёт приведён к явному `n.TgChannelId == chId`) для удаления каналов вложенных привязанных папок.
-      3. В `TelegramService.DeleteChannelAsync` добавлена последовательная синхронизация через `_channelDeleteSemaphore` с паузой `350 мс` для защиты от `FLOOD_WAIT`.
-      4. В `Program.cs` добавлено обновление `FileAttributes.ReadOnly` через WinFsp VFS (`ApplyBoundFolderAttributesThroughVfs`), удалён дубль вызова в `HandleBindChannelAsync` и `SHCNE_UPDATEDIR` на родителя; диагностические логи виртуального `desktop.ini` / `SetBasicInfo` переведены в `Debug`.
-    - **Валидация**: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
-- [x] **8.138. Защита граничных сценариев корзины (уничтожение канала по последнему узлу, изоляция зеркал, точная миграция при восстановлении и 2-сек дебаунс очереди удаления) (`NodeRepository.cs`, `WinFspServer.cs`, `WebDavMiddleware.cs`, `TelegramService.cs`)**:
-    - **Реализовано**:
-      1. **Уничтожение канала по последнему узлу (`WinFspServer.Cleanup`, `WebDavMiddleware.HandleDeleteAsync`)**: проверка `channelsToDestroy` расширена на все узлы поддерева с кастомным `TgChannelId` (и папки, и файлы) — канал уничтожается при удалении из БД последнего узла этого канала независимо от порядка очистки папок и зеркал в `.Trash`.
-      2. **Изоляция зеркал в `.Trash` (`NodeRepository.EnsureTrashHierarchyForParent`)**: переиспользуются только незакреплённые папки-зеркала (`tg_channel_id` отсутствует или равен `Primary`), при коллизии с удалённой привязанной папкой или файлом создаётся `Имя (2)`.
-      3. **Точная миграция при восстановлении и перемещении (`WinFspServer.Rename`, `WebDavMiddleware.HandleMoveAsync`)**: для одиночных файлов используется фактический `node.TgChannelId`, а для непривязанных папок — `GetFilesForChannelMigration` (с защитой вложенных привязанных папок и группировкой по реальному каналу каждого файла).
-      4. **Скользящий 2-сек дебаунс и очистка `pending_deletions` (`TelegramService.cs`, `NodeRepository.cs`)**: добавлен скользящий дебаунс `2 сек` (макс. `10 сек`) в `ProcessDeletionQueueAsync`, пропуск каналов из `_channelsPendingDeletion` и очистка `RemovePendingDeletionsForChannel` после `DeleteChannelAsync` (пауза `350 мс` сохранена).
-    - **Валидация**: `dotnet build` (`0 Warning(s)`, `0 Error(s)`).
-
-
+- [x] **8.137. Уникальные имена папок в `.Trash`, удаление вложенных каналов, очередь `DeleteChannelAsync` и VFS-обновление иконки (`DECISIONS_LOG #145`, `NodeRepository.cs`, `WinFspServer.cs`, `WebDavMiddleware.cs`, `TelegramService.cs`, `Program.cs`)**:
+  - Отказ от слияния папок в `NodeRepository.SoftDeleteNode`: при совпадении имени в `.Trash` папка получает суффикс `Имя (2)` с сохранением `tg_channel_id`.
+  - В `WinFspServer.Cleanup` и `WebDavMiddleware.HandleDeleteAsync` снято ограничение `n.Id == node.Id` для удаления каналов вложенных папок.
+  - В `TelegramService.DeleteChannelAsync` добавлена сериализация через `_channelDeleteSemaphore` (пауза `350 мс`).
+  - В `Program.cs` добавлен `ApplyBoundFolderAttributesThroughVfs` и подчищен `NotifyExplorerFolderIconChanged`; отладочные логи `desktop.ini` / `SetBasicInfo` переведены в `Debug`.
+- [x] **8.138. Граничные сценарии корзины: снос канала по последнему узлу, изоляция зеркал, точная миграция и дебаунс удаления (`DECISIONS_LOG #146`, `NodeRepository.cs`, `WinFspServer.cs`, `WebDavMiddleware.cs`, `TelegramService.cs`)**:
+  - Проверка уничтожения канала в `WinFspServer.Cleanup` и `WebDavMiddleware.HandleDeleteAsync` расширена на все узлы поддерева (`totalNodesInDbForChannel <= nodesInSubtreeForChannel`) независимо от порядка очистки корзины.
+  - `NodeRepository.EnsureTrashHierarchyForParent` переиспользует только незакреплённые зеркала (без кастомного `tg_channel_id`).
+  - `WinFspServer.Rename` и `WebDavMiddleware.HandleMoveAsync` берут реальный `node.TgChannelId` файла и `GetFilesForChannelMigration` для папок.
+  - В `TelegramService.ProcessDeletionQueueAsync` добавлен скользящий 2-сек дебаунс и пропуск `_channelsPendingDeletion`, а в `DeleteChannelAsync` — `RemovePendingDeletionsForChannel`.
 
