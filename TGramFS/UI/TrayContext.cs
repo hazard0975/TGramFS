@@ -167,24 +167,21 @@ namespace TGramFS.UI
                 _telegramService.ClearPersistedFloodStateIfExpired();
             };
 
-            _telegramService.OnFloodWaitDetected += (waitSeconds, isUploadStopped, fileName, isDownload) =>
+            _telegramService.OnFloodWaitDetected += (waitSeconds, isUploadStopped, fileName, isDownload, floodScope) =>
             {
-                _progressOverlay.ShowFloodWait(waitSeconds, isUploadStopped, fileName, isDownload);
+                _progressOverlay.ShowFloodWait(waitSeconds, isUploadStopped, fileName, isDownload, floodScope);
             };
 
-            if (_telegramService.TryGetActiveFloodBannerState(
-                out int activeFloodRemainingSec,
-                out int activeFloodInitialSec,
-                out bool activeFloodUploadStopped,
-                out string? activeFloodFileName,
-                out bool activeFloodIsDownload))
+            foreach (var activeFlood in _telegramService.GetActiveFloodBannerStates())
             {
+                int remainingSec = Math.Max(1, activeFlood.RemainingSeconds);
                 _progressOverlay.ShowFloodWait(
-                    activeFloodRemainingSec,
-                    activeFloodUploadStopped,
-                    activeFloodFileName,
-                    activeFloodIsDownload,
-                    activeFloodInitialSec);
+                    remainingSec,
+                    activeFlood.IsUploadStopped,
+                    activeFlood.FileName,
+                    activeFlood.IsDownload,
+                    activeFlood.Scope,
+                    Math.Max(remainingSec, activeFlood.InitialSeconds));
             }
         }
 

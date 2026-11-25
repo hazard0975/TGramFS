@@ -4527,4 +4527,51 @@ _telegramService.UpdateSettings(_settings);
 1. В `TelegramService` добавлен изолированный планировщик `EnsureCaptionPacingDelayAsync` с собственным семафором `_captionPacingLock` и таймером слота `_nextCaptionAllowedSendUtc`, который не затрагивает общий `_globalPacingLock` / `_nextAllowedSendUtc` для скачивания и стриминга (`Upload_GetFile`).
 2. Задержка для фонового обновления подписей вычисляется динамически по формуле `Math.Max(350, _globalPacingDelayMs * 2)`: при стандартных `180` мс составляет `360` мс (`~2.77` req/s с запасом до порога `100` req / `30` сек), а при более низком пользовательском пейсинге скачивания гарантируется нижний порог `350` мс.
 3. `ProcessCaptionQueueAsync` переведён с `EnsurePacingDelayAsync(token)` на `EnsureCaptionPacingDelayAsync(token)`.
+4. Исправлен вывод времени в логе `TriggerGlobalFloodWait`: `_globalFloodWaitUntil.ToLocalTime():HH:mm:ss` вместо UTC.
 
+---
+
+## 150. Разделение контуров `FLOOD_WAIT`, пейсинга и HUD-индикации между очередями скачивания, подписей и фоновых операций (`TelegramService.cs`, `MtprotoDownloadWorkerPool.cs`, `TrayContext.cs`, `TrayProgressOverlay.cs`)
+
+### Контекст и симптомы:
+После массового обновления подписей (`Messages_EditMessage`) на суточных/длительных лимитах Telegram был получен `FLOOD_WAIT_1060` (`log.MD`, строка `1487`). Несмотря на то, что скачивание файлов (`Upload_GetFile`) не исчерпало квоту, диск перестал открывать любые файлы, в логе отобразилось `Пейсинг адаптирован до 200 мс`, а в HUD-оверлее зависла плашка `ПАУЗА СКАЧИВАНИЯ • FLOOD_WAIT`.
+
+### Первопричина:
+1. `UpdateMessageCaptionAsync`, `ForwardFileAsync`, `ProcessChannelMigrationsAsync`, `TrySetDefaultChannelPhotoAsync` и `MtprotoDownloadWorkerPool` вызывали общий `TriggerGlobalFloodWait`, который блокировал единый `_globalFloodWaitUntil` (останавливая `EnsureFloodWaitDelayAsync` во всех методах чтения/скачивания/отправки), сдвигал общий слот скачивания `_nextAllowedSendUtc`, увеличивал `_globalPacingDelayMs` (`AdaptPacingDelay(20)`) и сохранял `isDownload: true` в `flood_state.json`.
+2. `HandleWTelegramLog` проверял только `_activeUploadPipelineCount > 0`, а все прочие `FLOOD_WAIT` (включая `Messages_EditMessage` и фоновые операции) помечал как `isDownload: true`, а при `LoadPersistedFloodState` любая не-upload пауза снова блокировала `_globalFloodWaitUntil` и `_nextAllowedSendUtc`.
+3. `DeleteBatchWithBisectAsync` использовал общий `EnsurePacingDelayAsync` (сдвигая слоты скачивания) и не перехватывал `RpcException 420` (запуская бисекцию вместо паузы).
+
+### Принятое решение:
+1. Введён `FloodWaitScope` (`General`, `Download`, `Upload`, `Caption`, `Background`) и раздельные таймеры ожидания: `_sessionFloodWaitUntilUtc`, `_downloadFloodWaitUntilUtc`, `_captionFloodWaitUntilUtc`, `_backgroundFloodWaitUntilUtc` (в дополнение к существующим `_uploadActiveFloodUntilUtc` / `_uploadHardStopUntilUtc`).
+2. Выделены отдельные методы ожидания и триггеры:
+   - `EnsureDownloadFloodWaitDelayAsync` / `TriggerDownloadFloodWait` (используются только в `DownloadSingleDocumentSliceAsync`, `GetDocumentFromMessageAsync`, `MtprotoDownloadWorkerPool`; только здесь выполняется `AdaptPacingDelay(20)` и сдвигается `_nextAllowedSendUtc`).
+   - `EnsureCaptionFloodWaitDelayAsync` / `TriggerCaptionFloodWait` (используются только в `ProcessCaptionQueueAsync` / `UpdateMessageCaptionAsync`).
+   - `EnsureBackgroundFloodWaitDelayAsync` / `EnsureBackgroundPacingDelayAsync` / `TriggerBackgroundFloodWait` (используются в `ProcessDeletionQueueAsync`, `DeleteFilesFromTelegramAsync`, `DeleteBatchWithBisectAsync`, `ProcessChannelMigrationsAsync`, `ForwardFileAsync`, `CreateCustomChannelAsync`, `EditChannelTitleAsync`, `DeleteChannelAsync`, `TrySetDefaultChannelPhotoAsync`).
+   - `EnsureFloodWaitDelayAsync` / `TriggerSessionFloodWait` / `GetRemainingFloodWaitSeconds` оставлены для сессии, авторизации, реконнекта и общих вызовов.
+3. Добавлены счётчики активных RPC (`BeginDownloadRpc`/`EndDownloadRpc`, `BeginCaptionRpc`/`EndCaptionRpc`, `BeginBackgroundRpc`/`EndBackgroundRpc`) для точной атрибуции коротких `FLOOD_WAIT <= 60` сек в `HandleWTelegramLog` (при длительных `> 60` сек приоритет отдан точному `catch (420)` в вызывающем методе).
+4. В `DeleteBatchWithBisectAsync` добавлен перехват `RpcException 420` с вызовом `TriggerBackgroundFloodWait` и пробросом в `ProcessDeletionQueueAsync`, чтобы пачка сообщений не дробилась бисекцией и не терялась при `FLOOD_WAIT`.
+5. В `PersistedFloodState` (`flood_state.json`), `TrayContext` и `TrayProgressOverlay` добавлена поддержка `FloodWaitScope` (с обратной совместимостью для старых файлов), приоритетом баннеров (`Upload HardStop` > `Download`/`Upload` > `General` > `Background` > `Caption`) и корректными заголовками (`ПАУЗА ПОДПИСЕЙ • FLOOD_WAIT`, `ПАУЗА ФОНОВЫХ ОПЕРАЦИЙ • FLOOD_WAIT`), которые не перекрывают активный прогресс-бар скачивания или загрузки.
+
+
+
+
+---
+
+## 151. Вынос пост-загрузочных подписей `ID:` в параллельную очередь `pending_caption_updates`, мультислотовый `flood_state.json` и 5-секундная ротация плашек `FLOOD_WAIT` (`TelegramService.cs`, `WinFspServer.cs`, `WebDavMiddleware.cs`, `TrayContext.cs`, `TrayProgressOverlay.cs`)
+
+### Контекст и симптомы:
+1. В `UploadFileAsync` и `UploadMultiPartFileAsync` сразу после `SendMessageAsync` выполнялся встроенный вызов `Messages_EditMessage` для дописывания строки `ID: <message_id>` в подпись сообщения. Если в этот момент аккаунт находился под лимитом `Messages_EditMessage`, срабатывал `catch (RpcException 420)` с вызовом `RegisterUploadFloodWait`, что при длительном `FLOOD_WAIT` выставляло красный `Upload HardStop` и блокировало отправку новых файлов (`SendMessageAsync`), хотя их квоты разделены.
+2. В `TelegramService` и `TrayProgressOverlay` хранился только один активный баннер и одна запись в `flood_state.json`. При наложении двух независимых флудов (например, длительный `Caption` и короткий `Download`/`Upload`) более приоритетный или короткий флуд перезаписывал файл `flood_state.json` и после истечения удалял его целиком, теряя таймер второго контура и не показывая оба активных ограничения пользователю.
+3. При параллельной работе загрузки (`_activeUploadPipelineCount > 0` во время потоковой передачи байтов) и `ProcessCaptionQueueAsync` короткий авто-сон `<= 60` сек в `HandleWTelegramLog` мог атрибутироваться на `Upload` вместо `Caption`.
+
+### Принятое решение:
+1. **Отвязанная параллельная финализация подписей (`PendingCaptionUpdate`)**:
+   - Из `UploadFileAsync` и `UploadMultiPartFileAsync` удалены встроенные блоки `Messages_EditMessage`. Вместо этого в `FileUploadResult` добавлено свойство `PendingCaptions` (для одиночных файлов, превью-режима и всех частей многотомных файлов).
+   - В `TelegramService` добавлены сигнал `_captionSignal` (`TriggerCaptionQueueProcessing`) и метод `EnqueuePendingCaptions(int nodeId, FileUploadResult? uploadResult)`.
+   - Во всех точках создания узла после загрузки (`WinFspServer.Cleanup` для потоковых и малых файлов, а также `WebDavMiddleware.HandlePutAsync`) сразу после получения реального `node_id` из `_repository.CreateOrUpdateFile` вызывается `EnqueuePendingCaptions(newNodeId, uploadResult)`. Воркер `ProcessCaptionQueueAsync` исполняет эти обновления параллельно на своём изолированном контуре (`>= 350` мс и `_captionFloodWaitUntilUtc`).
+2. **Точная атрибуция параллельных RPC в `HandleWTelegramLog`**:
+   - Введён узкий счётчик `_activeUploadMessageRpcCount` (`BeginUploadMessageRpc` / `EndUploadMessageRpc`) строго вокруг вызовов `SendMessageAsync` при загрузке файлов. Короткие `FLOOD_WAIT <= 60` сек от `ProcessCaptionQueueAsync` во время заливки байтов файла теперь точно уходят в контур `Caption`.
+3. **Мультислотовый `flood_state.json` и 5-секундная ротация HUD**:
+   - В `TelegramService` единичные поля баннера заменены словарём `_activeFloodBanners` (ключ `FloodWaitScope`), а `PersistedFloodStateFile` сохраняет список `Entries` (с полной обратной совместимостью при чтении старого однослотового `flood_state.json`). В `ClearPersistedFloodStateIfExpired()` удаляются только истёкшие контуры, а файл удаляется с диска только при обнулении всех активных записей.
+   - `TrayContext` при старте восстанавливает все активные записи через `GetActiveFloodBannerStates()`.
+   - `TrayProgressOverlay` хранит словарь `ActiveFloodSlot` по `FloodWaitScope`, при `2+` активных флудах переключается между ними каждые `5` секунд с индикатором `(1/N)` в заголовке, мгновенно ставит в фокус новый флуд более высокого приоритета и сохраняет фоновые паузы (`Caption`/`Background`) на время показа активного прогресса скачивания/загрузки.

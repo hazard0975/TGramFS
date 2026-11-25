@@ -281,7 +281,7 @@ namespace TGramFS.Services
 
         private async Task PaceRequestAsync(int workerId, CancellationToken cancellationToken)
         {
-            await TelegramService.EnsureFloodWaitDelayAsync(cancellationToken);
+            await TelegramService.EnsureDownloadFloodWaitDelayAsync(cancellationToken);
             await TelegramService.EnsurePacingDelayAsync(cancellationToken);
         }
 
@@ -421,7 +421,16 @@ namespace TGramFS.Services
                     AppLogger.Info("MtprotoWorkerPool", $"[Воркер #{workerId}] Запрос чанка #{displayChunkIdx}/{totalFileChunks}{fileTag} (смещение {reqOffset:N0} б, размер {alignedLimit:N0} б){requestTag}...");
                     var sw = Stopwatch.StartNew();
 
-                    var fileBase = await activeClient.Upload_GetFile(location, reqOffset, alignedLimit, precise: true);
+                    TelegramService.BeginDownloadRpc();
+                    Upload_FileBase fileBase;
+                    try
+                    {
+                        fileBase = await activeClient.Upload_GetFile(location, reqOffset, alignedLimit, precise: true);
+                    }
+                    finally
+                    {
+                        TelegramService.EndDownloadRpc();
+                    }
                     sw.Stop();
                     TelegramService.NotifyRequestCompleted();
 
@@ -492,8 +501,8 @@ namespace TGramFS.Services
                 catch (RpcException rpcEx) when (rpcEx.Code == 420) // FLOOD_WAIT_X
                 {
                     int waitSec = rpcEx.X > 0 ? rpcEx.X : 3;
-                    TelegramService.TriggerGlobalFloodWait(waitSec);
-                    AppLogger.Warn("MtprotoWorkerPool", $"[Воркер #{workerId}] FLOOD_WAIT {waitSec} сек! Сквозная пауза. Все воркеры приостановлены.");
+                    TelegramService.TriggerDownloadFloodWait(waitSec, request.FileName);
+                    AppLogger.Warn("MtprotoWorkerPool", $"[Воркер #{workerId}] FLOOD_WAIT {waitSec} сек! Пауза воркеров скачивания.");
                     await Task.Delay(waitSec * 1000, token);
                 }
                 catch (OperationCanceledException)
@@ -616,7 +625,16 @@ namespace TGramFS.Services
                                 AppLogger.Info("MtprotoWorkerPool", $"[Воркер #{workerId}] [Диск] Запрос чанка #{chunkIdx} ({reqLimit / 1024} КБ)...");
                                 var sw = Stopwatch.StartNew();
 
-                                var fileBase = await workerClient.Upload_GetFile(location, chunkOffset, reqLimit, precise: true);
+                                TelegramService.BeginDownloadRpc();
+                                Upload_FileBase fileBase;
+                                try
+                                {
+                                    fileBase = await workerClient.Upload_GetFile(location, chunkOffset, reqLimit, precise: true);
+                                }
+                                finally
+                                {
+                                    TelegramService.EndDownloadRpc();
+                                }
                                 sw.Stop();
                                 TelegramService.NotifyRequestCompleted();
 
@@ -631,8 +649,8 @@ namespace TGramFS.Services
                             catch (RpcException rpcEx) when (rpcEx.Code == 420)
                             {
                                 int waitSec = rpcEx.X > 0 ? rpcEx.X : 3;
-                                TelegramService.TriggerGlobalFloodWait(waitSec);
-                                AppLogger.Warn("MtprotoWorkerPool", $"[Воркер #{workerId}] FLOOD_WAIT {waitSec} сек! Сквозная пауза. Все воркеры приостановлены.");
+                                TelegramService.TriggerDownloadFloodWait(waitSec);
+                                AppLogger.Warn("MtprotoWorkerPool", $"[Воркер #{workerId}] FLOOD_WAIT {waitSec} сек! Пауза воркеров скачивания.");
                                 await Task.Delay(waitSec * 1000, cancellationToken);
                                 chunkQueue.Enqueue(chunkOffset);
                             }

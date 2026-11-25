@@ -2460,7 +2460,11 @@ namespace TGramFS.Services
                                     fileAttributes: node.FileAttributes
                                 );
 
-                                if (newNodeId > 0) node.Id = newNodeId;
+                                if (newNodeId > 0)
+                                {
+                                    node.Id = newNodeId;
+                                    _telegramService.EnqueuePendingCaptions(newNodeId, uploadResult);
+                                }
                                 ctx.IsOverwritePending = false;
                                 _activeUploadNodes.TryRemove(cleanFilePath, out _);
 
@@ -2632,7 +2636,11 @@ namespace TGramFS.Services
                                         fileAttributes: node.FileAttributes
                                     );
 
-                                    if (newNodeId > 0) node.Id = newNodeId;
+                                    if (newNodeId > 0)
+                                    {
+                                        node.Id = newNodeId;
+                                        _telegramService.EnqueuePendingCaptions(newNodeId, uploadResult);
+                                    }
                                     ctx.IsOverwritePending = false;
                                     _activeUploadNodes.TryRemove(cleanFilePath, out _);
 

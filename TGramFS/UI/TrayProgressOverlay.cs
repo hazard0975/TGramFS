@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
@@ -136,6 +138,22 @@ namespace TGramFS.UI
         public bool AutoShowOverlay { get; set; } = true;
         public event Action? OnFloodCountdownExpired;
 
+        private sealed class ActiveFloodSlot
+        {
+            public FloodWaitScope Scope { get; set; }
+            public bool IsUploadStopped { get; set; }
+            public bool IsDownload { get; set; }
+            public DateTime WaitUntilUtc { get; set; }
+            public DateTime ShownAtUtc { get; set; }
+            public int InitialSeconds { get; set; }
+            public string FileName { get; set; } = string.Empty;
+        }
+
+        private const double FloodRotationIntervalSeconds = 5.0;
+        private readonly Dictionary<FloodWaitScope, ActiveFloodSlot> _activeFloods = new();
+        private FloodWaitScope? _displayedFloodScope = null;
+        private DateTime _lastFloodRotationUtc = DateTime.MinValue;
+
         private TransferDirection _direction = TransferDirection.Upload;
         private string _currentFileName = string.Empty;
         private long _currentBytes = 0;
@@ -145,14 +163,7 @@ namespace TGramFS.UI
         private bool _isFinalizing = false;
         private bool _isCompleted = false;
         private bool _isMetadata = false;
-        private bool _isFloodWait = false;
-        private bool _isFloodUploadStopped = false;
-        private bool _isFloodDownload = false;
         private bool _isFloodRecovered = false;
-        private DateTime _floodWaitUntilUtc = DateTime.MinValue;
-        private DateTime _floodShownAtUtc = DateTime.MinValue;
-        private int _floodInitialSeconds = 0;
-        private string _floodFileName = string.Empty;
         private DateTime _lastSpeedCalcTime = DateTime.UtcNow;
         private long _lastSpeedBytes = 0;
         private double _bytesPerSecond = 0;
@@ -213,15 +224,30 @@ namespace TGramFS.UI
             {
                 AppLogger.Info("TrayProgressOverlay", $"_completionTimer Tick! _isTransferring={_isTransferring}, _isCompleted={_isCompleted}, Visible={Visible}");
                 _completionTimer.Stop();
-                if (!_isTransferring && !_isFloodWait)
+                if (PruneExpiredFloodSlots(DateTime.UtcNow, out _, out _))
                 {
-                    _updateTimer.Stop();
-                    _hideCheckTimer.Stop();
+                    OnFloodCountdownExpired?.Invoke();
+                }
+
+                if (!_isTransferring)
+                {
                     _isCompleted = false;
                     _isFinalizing = false;
                     _isMetadata = false;
                     _isFloodRecovered = false;
                     _currentFileName = string.Empty;
+
+                    if (_activeFloods.Count > 0)
+                    {
+                        EnsureDisplayedFloodScope(DateTime.UtcNow);
+                        _floodCountdownTimer?.Start();
+                        Invalidate();
+                        Update();
+                        return;
+                    }
+
+                    _updateTimer.Stop();
+                    _hideCheckTimer.Stop();
                     Hide();
                     AppLogger.Info("TrayProgressOverlay", "Оверлей успешно скрыт по завершению таймаута.");
                 }
@@ -279,54 +305,205 @@ namespace TGramFS.UI
             }
         }
 
-        public void ShowFloodWait(int waitSeconds, bool isUploadStopped, string? fileName, bool isDownload, int? initialSeconds = null)
+        private static int GetFloodPriority(FloodWaitScope scope, bool isUploadStopped)
+        {
+            if (isUploadStopped) return 4;
+            return scope switch
+            {
+                FloodWaitScope.Download => 3,
+                FloodWaitScope.Upload => 3,
+                FloodWaitScope.General => 2,
+                FloodWaitScope.Background => 1,
+                FloodWaitScope.Caption => 0,
+                _ => 1
+            };
+        }
+
+        private bool PruneExpiredFloodSlots(DateTime nowUtc, out FloodWaitScope lastFinishedScope, out bool lastFinishedWasStopped)
+        {
+            lastFinishedScope = FloodWaitScope.General;
+            lastFinishedWasStopped = false;
+            if (_activeFloods.Count == 0) return false;
+
+            var expired = _activeFloods.Values
+                .Where(s => s.WaitUntilUtc <= nowUtc)
+                .OrderByDescending(s => GetFloodPriority(s.Scope, s.IsUploadStopped))
+                .ToList();
+
+            if (expired.Count == 0) return false;
+
+            lastFinishedScope = expired[0].Scope;
+            lastFinishedWasStopped = expired[0].IsUploadStopped;
+            foreach (var item in expired)
+            {
+                _activeFloods.Remove(item.Scope);
+                if (_displayedFloodScope == item.Scope)
+                {
+                    _displayedFloodScope = null;
+                }
+            }
+            return true;
+        }
+
+        private List<ActiveFloodSlot> GetOrderedActiveFloods()
+        {
+            return _activeFloods.Values
+                .Where(s => s.WaitUntilUtc > DateTime.UtcNow)
+                .OrderByDescending(s => GetFloodPriority(s.Scope, s.IsUploadStopped))
+                .ThenByDescending(s => s.WaitUntilUtc)
+                .ThenBy(s => (int)s.Scope)
+                .ToList();
+        }
+
+        private void EnsureDisplayedFloodScope(DateTime nowUtc)
+        {
+            var ordered = GetOrderedActiveFloods();
+            if (ordered.Count == 0)
+            {
+                _displayedFloodScope = null;
+                return;
+            }
+
+            if (_displayedFloodScope == null || !ordered.Any(s => s.Scope == _displayedFloodScope.Value))
+            {
+                _displayedFloodScope = ordered[0].Scope;
+                _lastFloodRotationUtc = nowUtc;
+            }
+        }
+
+        private ActiveFloodSlot? GetCurrentDisplayedFloodSlot(out int index, out int totalCount)
+        {
+            var ordered = GetOrderedActiveFloods();
+            totalCount = ordered.Count;
+            if (totalCount == 0)
+            {
+                index = 0;
+                _displayedFloodScope = null;
+                return null;
+            }
+
+            if (_displayedFloodScope.HasValue)
+            {
+                int foundIdx = ordered.FindIndex(s => s.Scope == _displayedFloodScope.Value);
+                if (foundIdx >= 0)
+                {
+                    index = foundIdx;
+                    return ordered[foundIdx];
+                }
+            }
+
+            _displayedFloodScope = ordered[0].Scope;
+            index = 0;
+            return ordered[0];
+        }
+
+        private bool HasActiveUploadHardStop(DateTime nowUtc)
+        {
+            return _activeFloods.Values.Any(s => s.IsUploadStopped && s.WaitUntilUtc > nowUtc);
+        }
+
+        public void ShowFloodWait(int waitSeconds, bool isUploadStopped, string? fileName, bool isDownload, FloodWaitScope floodScope = FloodWaitScope.General, int? initialSeconds = null)
         {
             if (_syncContext != null && SynchronizationContext.Current != _syncContext)
             {
-                _syncContext.Post(_ => ShowFloodWait(waitSeconds, isUploadStopped, fileName, isDownload, initialSeconds), null);
+                _syncContext.Post(_ => ShowFloodWait(waitSeconds, isUploadStopped, fileName, isDownload, floodScope, initialSeconds), null);
                 return;
             }
 
             if (waitSeconds <= 0) return;
 
             var now = DateTime.UtcNow;
-            var candidateUntil = now.AddSeconds(waitSeconds);
-            if (!_isFloodWait || candidateUntil > _floodWaitUntilUtc.AddSeconds(1))
+            if (PruneExpiredFloodSlots(now, out _, out _))
             {
-                _floodWaitUntilUtc = candidateUntil;
-                _floodInitialSeconds = Math.Max(waitSeconds, initialSeconds ?? waitSeconds);
-            }
-            else if (initialSeconds.HasValue && initialSeconds.Value > _floodInitialSeconds)
-            {
-                _floodInitialSeconds = initialSeconds.Value;
+                OnFloodCountdownExpired?.Invoke();
             }
 
-            _isFloodWait = true;
-            _isFloodUploadStopped = _isFloodUploadStopped || isUploadStopped;
-            _isFloodDownload = isDownload && !_isFloodUploadStopped;
+            bool isNonBlockingBackgroundScope = !isUploadStopped && (floodScope == FloodWaitScope.Caption || floodScope == FloodWaitScope.Background);
+            bool effectiveDownload = (floodScope == FloodWaitScope.Download || isDownload) && !isUploadStopped && !isNonBlockingBackgroundScope;
+            var candidateUntil = now.AddSeconds(waitSeconds);
+
+            int currentDisplayedPriority = -1;
+            if (_displayedFloodScope.HasValue && _activeFloods.TryGetValue(_displayedFloodScope.Value, out var displayedSlot) && displayedSlot.WaitUntilUtc > now)
+            {
+                currentDisplayedPriority = GetFloodPriority(displayedSlot.Scope, displayedSlot.IsUploadStopped);
+            }
+
+            int incomingPriority = GetFloodPriority(floodScope, isUploadStopped);
+            bool isNewScope = !_activeFloods.TryGetValue(floodScope, out var existingSlot) || existingSlot.WaitUntilUtc <= now;
+
+            if (isNewScope || existingSlot == null)
+            {
+                existingSlot = new ActiveFloodSlot
+                {
+                    Scope = floodScope,
+                    IsUploadStopped = isUploadStopped,
+                    IsDownload = effectiveDownload,
+                    WaitUntilUtc = candidateUntil,
+                    ShownAtUtc = now,
+                    InitialSeconds = Math.Max(waitSeconds, initialSeconds ?? waitSeconds),
+                    FileName = !string.IsNullOrWhiteSpace(fileName)
+                        ? fileName
+                        : (isNonBlockingBackgroundScope ? string.Empty : _currentFileName)
+                };
+                _activeFloods[floodScope] = existingSlot;
+            }
+            else
+            {
+                bool upgradedToStop = isUploadStopped && !existingSlot.IsUploadStopped;
+                if (upgradedToStop || candidateUntil > existingSlot.WaitUntilUtc.AddSeconds(1))
+                {
+                    if (candidateUntil > existingSlot.WaitUntilUtc)
+                    {
+                        existingSlot.WaitUntilUtc = candidateUntil;
+                    }
+                    existingSlot.InitialSeconds = Math.Max(existingSlot.InitialSeconds, Math.Max(waitSeconds, initialSeconds ?? waitSeconds));
+                }
+                else if (initialSeconds.HasValue && initialSeconds.Value > existingSlot.InitialSeconds)
+                {
+                    existingSlot.InitialSeconds = initialSeconds.Value;
+                }
+
+                existingSlot.IsUploadStopped = existingSlot.IsUploadStopped || isUploadStopped;
+                existingSlot.IsDownload = effectiveDownload && !existingSlot.IsUploadStopped;
+                existingSlot.ShownAtUtc = now;
+                if (!string.IsNullOrWhiteSpace(fileName))
+                {
+                    existingSlot.FileName = fileName;
+                }
+            }
+
+            if (_displayedFloodScope == null || incomingPriority > currentDisplayedPriority || (isNewScope && incomingPriority == currentDisplayedPriority))
+            {
+                _displayedFloodScope = floodScope;
+                _lastFloodRotationUtc = now;
+            }
+
+            _floodCountdownTimer.Start();
+
+            // Не перебиваем активный прогресс-бар скачивания/отправки плашкой фоновых очередей (сама запись при этом сохраняется в _activeFloods)
+            if (isNonBlockingBackgroundScope && _isTransferring && !_isCompleted && (now - _lastProgressUpdateTime).TotalSeconds < 2.5)
+            {
+                return;
+            }
+
             _isFloodRecovered = false;
             _isCompleted = false;
-            _floodShownAtUtc = now;
             _lastProgressUpdateTime = now;
-            if (_isFloodUploadStopped)
+            if (isUploadStopped || HasActiveUploadHardStop(now))
             {
                 _isTransferring = false;
                 _isFinalizing = false;
                 _isMetadata = false;
                 _bytesPerSecond = 0;
             }
-
-            if (!string.IsNullOrWhiteSpace(fileName))
+            else if (!isNonBlockingBackgroundScope)
             {
-                _floodFileName = fileName;
-            }
-            else if (string.IsNullOrWhiteSpace(_floodFileName) && !string.IsNullOrWhiteSpace(_currentFileName))
-            {
-                _floodFileName = _currentFileName;
+                _isTransferring = false;
+                _isFinalizing = false;
+                _isMetadata = false;
             }
 
             _completionTimer.Stop();
-            _floodCountdownTimer.Start();
 
             // Плашка о FLOOD_WAIT показывается принудительно даже при отключенной галочке AutoShowOverlay
             if (!TryShowOverlay())
@@ -343,45 +520,65 @@ namespace TGramFS.UI
 
         private void FloodCountdownTimer_Tick(object? sender, EventArgs e)
         {
-            if (!_isFloodWait)
+            if (_activeFloods.Count == 0)
             {
                 _floodCountdownTimer.Stop();
                 return;
             }
 
-            var remainingSec = (_floodWaitUntilUtc - DateTime.UtcNow).TotalSeconds;
-            if (remainingSec <= 0)
+            var now = DateTime.UtcNow;
+            bool anyExpired = PruneExpiredFloodSlots(now, out FloodWaitScope finishedScope, out bool wasStopped);
+            if (anyExpired)
             {
-                bool wasStopped = _isFloodUploadStopped;
-                _isFloodWait = false;
-                _isFloodUploadStopped = false;
-                _isFloodDownload = false;
-                _floodWaitUntilUtc = DateTime.MinValue;
-                _floodFileName = string.Empty;
-                _floodCountdownTimer.Stop();
                 OnFloodCountdownExpired?.Invoke();
 
-                if (!_isTransferring)
+                if (_activeFloods.Count == 0)
                 {
-                    _isFloodRecovered = true;
-                    _isCompleted = true;
-                    _isMetadata = false;
-                    _isFinalizing = false;
-                    _currentFileName = wasStopped ? "Отправка снова доступна ✔" : "Пауза FLOOD_WAIT завершена ✔";
-                    Invalidate();
-                    Update();
-                    _completionTimer.Stop();
-                    _completionTimer.Start();
+                    _floodCountdownTimer.Stop();
+                    if (!_isTransferring)
+                    {
+                        _isFloodRecovered = true;
+                        _isCompleted = true;
+                        _isMetadata = false;
+                        _isFinalizing = false;
+                        _currentFileName = wasStopped
+                            ? "Отправка снова доступна ✔"
+                            : finishedScope switch
+                            {
+                                FloodWaitScope.Caption => "Обновление подписей возобновлено ✔",
+                                FloodWaitScope.Background => "Фоновые операции возобновлены ✔",
+                                FloodWaitScope.Download => "Скачивание снова доступно ✔",
+                                _ => "Пауза FLOOD_WAIT завершена ✔"
+                            };
+                        Invalidate();
+                        Update();
+                        _completionTimer.Stop();
+                        _completionTimer.Start();
+                    }
+                    else
+                    {
+                        Invalidate();
+                        Update();
+                    }
+                    return;
                 }
-                else
-                {
-                    Invalidate();
-                    Update();
-                }
-                return;
+
+                // Остались другие активные флуды — сразу переключаемся на следующий без скрытия плашки
+                EnsureDisplayedFloodScope(now);
             }
 
-            if (!Visible && !IsFullScreenAppRunning())
+            var ordered = GetOrderedActiveFloods();
+            if (ordered.Count > 1 && (now - _lastFloodRotationUtc).TotalSeconds >= FloodRotationIntervalSeconds)
+            {
+                int currentIdx = _displayedFloodScope.HasValue
+                    ? ordered.FindIndex(s => s.Scope == _displayedFloodScope.Value)
+                    : -1;
+                int nextIdx = (currentIdx + 1) % ordered.Count;
+                _displayedFloodScope = ordered[nextIdx].Scope;
+                _lastFloodRotationUtc = now;
+            }
+
+            if (!_isTransferring && !_isCompleted && !Visible && !IsFullScreenAppRunning())
             {
                 TryShowOverlay();
             }
@@ -408,24 +605,51 @@ namespace TGramFS.UI
                 _isCompleted = false;
             }
 
-            if (_isFloodWait)
+            var now = DateTime.UtcNow;
+            if (PruneExpiredFloodSlots(now, out _, out _))
             {
-                var now = DateTime.UtcNow;
-                bool hardStopActive = _isFloodUploadStopped && now < _floodWaitUntilUtc;
-                bool waitExpired = now >= _floodWaitUntilUtc;
-                bool settledDownloadResume = direction == TransferDirection.Download &&
-                                             !hardStopActive &&
-                                             (waitExpired || (now - _floodShownAtUtc).TotalSeconds >= 1.5);
-                bool validUploadResume = direction == TransferDirection.Upload && !hardStopActive;
+                OnFloodCountdownExpired?.Invoke();
+            }
 
-                if (waitExpired || validUploadResume || settledDownloadResume)
+            if (_activeFloods.Count > 0)
+            {
+                bool hardStopActive = HasActiveUploadHardStop(now);
+                if (hardStopActive)
                 {
-                    _isFloodWait = false;
-                    _isFloodUploadStopped = false;
-                    _isFloodDownload = false;
-                    _floodFileName = string.Empty;
-                    _floodCountdownTimer.Stop();
+                    _currentBytes = Math.Max(_currentBytes, current);
+                    _totalBytes = total;
+                    return;
+                }
 
+                if (direction == TransferDirection.Download &&
+                    _activeFloods.TryGetValue(FloodWaitScope.Download, out var dlSlot))
+                {
+                    if ((now - dlSlot.ShownAtUtc).TotalSeconds < 1.5)
+                    {
+                        _currentBytes = Math.Max(_currentBytes, current);
+                        _totalBytes = total;
+                        return;
+                    }
+                    _activeFloods.Remove(FloodWaitScope.Download);
+                    if (_displayedFloodScope == FloodWaitScope.Download) _displayedFloodScope = null;
+                }
+
+                if (direction == TransferDirection.Upload &&
+                    _activeFloods.TryGetValue(FloodWaitScope.Upload, out var ulSlot) &&
+                    !ulSlot.IsUploadStopped)
+                {
+                    _activeFloods.Remove(FloodWaitScope.Upload);
+                    if (_displayedFloodScope == FloodWaitScope.Upload) _displayedFloodScope = null;
+                }
+
+                if (_activeFloods.Remove(FloodWaitScope.General) && _displayedFloodScope == FloodWaitScope.General)
+                {
+                    _displayedFloodScope = null;
+                }
+
+                if (_activeFloods.Count == 0)
+                {
+                    _floodCountdownTimer.Stop();
                     if (!AutoShowOverlay && Visible && !_isFloodRecovered)
                     {
                         _isTransferring = false;
@@ -435,13 +659,6 @@ namespace TGramFS.UI
                         Hide();
                         return;
                     }
-                }
-                else
-                {
-                    // Пока активен жёсткий стоп или только что получен FLOOD_WAIT на параллельном воркере — не затираем плашку флуда
-                    _currentBytes = Math.Max(_currentBytes, current);
-                    _totalBytes = total;
-                    return;
                 }
             }
             _isFloodRecovered = false;
@@ -505,8 +722,8 @@ namespace TGramFS.UI
             else
             {
                 _isFinalizing = false;
-                var now = DateTime.UtcNow;
-                var elapsed = (now - _lastSpeedCalcTime).TotalSeconds;
+                var speedNow = DateTime.UtcNow;
+                var elapsed = (speedNow - _lastSpeedCalcTime).TotalSeconds;
                 if (elapsed >= 0.5)
                 {
                     long bytesDiff = current - _lastSpeedBytes;
@@ -516,7 +733,7 @@ namespace TGramFS.UI
                         _bytesPerSecond = _bytesPerSecond == 0 ? instantSpeed : (_bytesPerSecond * 0.7 + instantSpeed * 0.3);
                     }
                     _lastSpeedBytes = current;
-                    _lastSpeedCalcTime = now;
+                    _lastSpeedCalcTime = speedNow;
                 }
             }
 
@@ -622,17 +839,39 @@ namespace TGramFS.UI
                 return;
             }
 
-            if (_isFloodWait)
+            var now = DateTime.UtcNow;
+            if (PruneExpiredFloodSlots(now, out _, out _))
             {
-                if (_isFloodUploadStopped && DateTime.UtcNow < _floodWaitUntilUtc && direction == TransferDirection.Download)
+                OnFloodCountdownExpired?.Invoke();
+            }
+
+            if (_activeFloods.Count > 0)
+            {
+                if (HasActiveUploadHardStop(now) && direction == TransferDirection.Download)
                 {
                     return;
                 }
-                _isFloodWait = false;
-                _isFloodUploadStopped = false;
-                _isFloodDownload = false;
-                _floodFileName = string.Empty;
-                _floodCountdownTimer.Stop();
+
+                if (direction == TransferDirection.Download)
+                {
+                    _activeFloods.Remove(FloodWaitScope.Download);
+                    if (_displayedFloodScope == FloodWaitScope.Download) _displayedFloodScope = null;
+                }
+                else if (_activeFloods.TryGetValue(FloodWaitScope.Upload, out var ulSlot) && !ulSlot.IsUploadStopped)
+                {
+                    _activeFloods.Remove(FloodWaitScope.Upload);
+                    if (_displayedFloodScope == FloodWaitScope.Upload) _displayedFloodScope = null;
+                }
+
+                if (_activeFloods.Remove(FloodWaitScope.General) && _displayedFloodScope == FloodWaitScope.General)
+                {
+                    _displayedFloodScope = null;
+                }
+
+                if (_activeFloods.Count == 0)
+                {
+                    _floodCountdownTimer.Stop();
+                }
             }
             _isFloodRecovered = false;
 
@@ -677,7 +916,13 @@ namespace TGramFS.UI
                 return;
             }
 
-            if (_isFloodWait && _isFloodUploadStopped && DateTime.UtcNow < _floodWaitUntilUtc)
+            var now = DateTime.UtcNow;
+            if (PruneExpiredFloodSlots(now, out _, out _))
+            {
+                OnFloodCountdownExpired?.Invoke();
+            }
+
+            if (HasActiveUploadHardStop(now))
             {
                 // При жёсткой остановке из-за FLOOD_WAIT > 60 не скрываем информационную плашку при откатах отменённых узлов
                 _isTransferring = false;
@@ -698,6 +943,15 @@ namespace TGramFS.UI
             _bytesPerSecond = 0;
 
             _completionTimer.Stop();
+            if (_activeFloods.Count > 0)
+            {
+                EnsureDisplayedFloodScope(now);
+                _floodCountdownTimer.Start();
+                Invalidate();
+                Update();
+                return;
+            }
+
             _updateTimer.Stop();
             _hideCheckTimer.Stop();
 
@@ -781,7 +1035,7 @@ namespace TGramFS.UI
                 return;
             }
 
-            if (_isFloodWait && DateTime.UtcNow < _floodWaitUntilUtc)
+            if (_activeFloods.Count > 0 && !_isTransferring && !_isCompleted && !_isFloodRecovered)
             {
                 return;
             }
@@ -796,6 +1050,22 @@ namespace TGramFS.UI
                     AppLogger.Info("TrayProgressOverlay", $"Таймаут неактивности передачи ({secondsSinceProgress:F1} сек). Скрытие оверлея.");
                     _isTransferring = false;
                     _isFinalizing = false;
+
+                    var now = DateTime.UtcNow;
+                    if (PruneExpiredFloodSlots(now, out _, out _))
+                    {
+                        OnFloodCountdownExpired?.Invoke();
+                    }
+
+                    if (_activeFloods.Count > 0)
+                    {
+                        EnsureDisplayedFloodScope(now);
+                        _floodCountdownTimer.Start();
+                        Invalidate();
+                        Update();
+                        return;
+                    }
+
                     _updateTimer.Stop();
                     _hideCheckTimer.Stop();
                     Hide();
@@ -816,13 +1086,20 @@ namespace TGramFS.UI
             float padX = ScalePxF(BasePaddingX, dpiScale);
             float availableWidth = Math.Max(10f, Width - padX * 2f);
 
+            int floodSlotIndex = 0;
+            int floodTotalCount = 0;
+            var activeFloodSlot = (!_isTransferring && !_isCompleted && !_isFloodRecovered)
+                ? GetCurrentDisplayedFloodSlot(out floodSlotIndex, out floodTotalCount)
+                : null;
+            bool isFloodBannerVisible = activeFloodSlot != null;
+
             // 1. Скругленный контур и фон
             int cornerRadius = ScalePx(BaseCornerRadius, dpiScale);
             float borderWidth = Math.Max(1f, dpiScale);
             Color borderColor = Color.FromArgb(71, 85, 105); // Slate 600
-            if (_isFloodWait)
+            if (isFloodBannerVisible && activeFloodSlot != null)
             {
-                borderColor = _isFloodUploadStopped
+                borderColor = activeFloodSlot.IsUploadStopped
                     ? Color.FromArgb(239, 68, 68)  // Red 500
                     : Color.FromArgb(245, 158, 11); // Amber 500
             }
@@ -851,9 +1128,9 @@ namespace TGramFS.UI
 
             // 2. Заголовок
             Color headerColor = Color.FromArgb(148, 163, 184); // Slate 400
-            if (_isFloodWait)
+            if (isFloodBannerVisible && activeFloodSlot != null)
             {
-                headerColor = _isFloodUploadStopped
+                headerColor = activeFloodSlot.IsUploadStopped
                     ? Color.FromArgb(252, 165, 165) // Red 300
                     : Color.FromArgb(252, 211, 77); // Amber 300
             }
@@ -866,17 +1143,26 @@ namespace TGramFS.UI
             using (var titleBrush = new SolidBrush(headerColor))
             {
                 string header;
-                if (_isFloodWait)
+                if (isFloodBannerVisible && activeFloodSlot != null)
                 {
-                    if (_isFloodUploadStopped)
+                    if (activeFloodSlot.IsUploadStopped)
                     {
                         header = "ОТПРАВКА ОСТАНОВЛЕНА • FLOOD_WAIT";
                     }
                     else
                     {
-                        header = _isFloodDownload
-                            ? "ПАУЗА СКАЧИВАНИЯ • FLOOD_WAIT"
-                            : "ПАУЗА ПЕРЕДАЧИ • FLOOD_WAIT";
+                        header = activeFloodSlot.Scope switch
+                        {
+                            FloodWaitScope.Caption => "ПАУЗА ПОДПИСЕЙ • FLOOD_WAIT",
+                            FloodWaitScope.Background => "ПАУЗА ФОНОВЫХ ОПЕРАЦИЙ • FLOOD_WAIT",
+                            FloodWaitScope.Download => "ПАУЗА СКАЧИВАНИЯ • FLOOD_WAIT",
+                            _ => activeFloodSlot.IsDownload ? "ПАУЗА СКАЧИВАНИЯ • FLOOD_WAIT" : "ПАУЗА ПЕРЕДАЧИ • FLOOD_WAIT"
+                        };
+                    }
+
+                    if (floodTotalCount > 1)
+                    {
+                        header = $"{header} ({floodSlotIndex + 1}/{floodTotalCount})";
                     }
                 }
                 else if (_isFloodRecovered)
@@ -926,8 +1212,8 @@ namespace TGramFS.UI
             using (var nameFont = new Font("Segoe UI", 9.5f, FontStyle.Bold))
             using (var nameBrush = new SolidBrush(Color.White))
             {
-                string displayName = _isFloodWait
-                    ? (!string.IsNullOrEmpty(_floodFileName) ? _floodFileName : "Ограничение частоты запросов Telegram")
+                string displayName = isFloodBannerVisible && activeFloodSlot != null
+                    ? (!string.IsNullOrEmpty(activeFloodSlot.FileName) ? activeFloodSlot.FileName : "Ограничение частоты запросов Telegram")
                     : (string.IsNullOrEmpty(_currentFileName) ? "Готов к передаче" : _currentFileName);
                 float textX = padX;
                 float textY = ScalePxF(BaseNameY, dpiScale);
@@ -1002,13 +1288,13 @@ namespace TGramFS.UI
             int minFillWidth = Math.Max(ScalePx(BaseMinFillWidth, dpiScale), barRadius * 2);
             int percent = 0;
 
-            double floodRemainingSec = _isFloodWait
-                ? Math.Max(0, (_floodWaitUntilUtc - DateTime.UtcNow).TotalSeconds)
+            double floodRemainingSec = isFloodBannerVisible && activeFloodSlot != null
+                ? Math.Max(0, (activeFloodSlot.WaitUntilUtc - DateTime.UtcNow).TotalSeconds)
                 : 0;
 
-            if (_isFloodWait)
+            if (isFloodBannerVisible && activeFloodSlot != null)
             {
-                int initialSec = Math.Max(1, _floodInitialSeconds);
+                int initialSec = Math.Max(1, activeFloodSlot.InitialSeconds);
                 percent = (int)Math.Clamp(Math.Ceiling((floodRemainingSec / initialSec) * 100.0), 1, 100);
             }
             else if (_isCompleted)
@@ -1040,9 +1326,9 @@ namespace TGramFS.UI
                     Color startColor;
                     Color endColor;
 
-                    if (_isFloodWait)
+                    if (isFloodBannerVisible && activeFloodSlot != null)
                     {
-                        if (_isFloodUploadStopped)
+                        if (activeFloodSlot.IsUploadStopped)
                         {
                             startColor = Color.FromArgb(239, 68, 68);  // Red 500
                             endColor = Color.FromArgb(249, 115, 22);   // Orange 500
@@ -1085,16 +1371,21 @@ namespace TGramFS.UI
             using (var statsBrush = new SolidBrush(Color.FromArgb(203, 213, 225))) // Slate 300
             {
                 string stats;
-                if (_isFloodWait)
+                if (isFloodBannerVisible && activeFloodSlot != null)
                 {
                     int secLeft = Math.Max(1, (int)Math.Ceiling(floodRemainingSec));
                     string timerText = secLeft >= 60
                         ? $"{secLeft / 60:D2}:{secLeft % 60:D2} ({secLeft} сек)"
                         : $"{secLeft} сек";
-                    DateTime untilLocal = _floodWaitUntilUtc.ToLocalTime();
-                    stats = _isFloodUploadStopped
+                    DateTime untilLocal = activeFloodSlot.WaitUntilUtc.ToLocalTime();
+                    stats = activeFloodSlot.IsUploadStopped
                         ? $"Лимит Telegram: {timerText} • Стоп до {untilLocal:HH:mm:ss}"
-                        : $"Ожидание Telegram: {timerText} • Продолжится само";
+                        : activeFloodSlot.Scope switch
+                        {
+                            FloodWaitScope.Caption => $"Пауза: {timerText} • До {untilLocal:HH:mm:ss} • Диск активен",
+                            FloodWaitScope.Background => $"Пауза: {timerText} • До {untilLocal:HH:mm:ss} • Диск активен",
+                            _ => $"Ожидание Telegram: {timerText} • Продолжится само"
+                        };
                 }
                 else if (_isFloodRecovered)
                 {

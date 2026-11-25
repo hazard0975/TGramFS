@@ -31,6 +31,15 @@ namespace TGramFS.Services
         Authorized
     }
 
+    public enum FloodWaitScope
+    {
+        General = 0,
+        Download = 1,
+        Upload = 2,
+        Caption = 3,
+        Background = 4
+    }
+
     public class TelegramUserInfo
     {
         public long Id { get; set; }
@@ -87,17 +96,48 @@ namespace TGramFS.Services
         }
     }
 
+    public sealed class PendingCaptionUpdate
+    {
+        public int MessageId { get; }
+        public string Caption { get; }
+        public long? ChannelId { get; }
+
+        public PendingCaptionUpdate(int messageId, string caption, long? channelId = null)
+        {
+            MessageId = messageId;
+            Caption = caption;
+            ChannelId = channelId;
+        }
+    }
+
+    public sealed class ActiveFloodBannerState
+    {
+        public FloodWaitScope Scope { get; set; }
+        public DateTime FloodWaitUntilUtc { get; set; }
+        public int InitialSeconds { get; set; }
+        public bool IsUploadStopped { get; set; }
+        public bool IsDownload { get; set; }
+        public string? FileName { get; set; }
+        public int RemainingSeconds => Math.Max(0, (int)Math.Ceiling((FloodWaitUntilUtc - DateTime.UtcNow).TotalSeconds));
+    }
+
     public class FileUploadResult
     {
         public int MessageId { get; set; }
         public int? PreviewMessageId { get; set; }
         public List<Models.NodePart>? Parts { get; set; }
+        public List<PendingCaptionUpdate>? PendingCaptions { get; set; }
 
-        public FileUploadResult(int messageId, int? previewMessageId = null, List<Models.NodePart>? parts = null)
+        public FileUploadResult(
+            int messageId,
+            int? previewMessageId = null,
+            List<Models.NodePart>? parts = null,
+            List<PendingCaptionUpdate>? pendingCaptions = null)
         {
             MessageId = messageId;
             PreviewMessageId = previewMessageId;
             Parts = parts;
+            PendingCaptions = pendingCaptions;
         }
 
         public static implicit operator int?(FileUploadResult? res) => res?.MessageId;
@@ -113,7 +153,10 @@ namespace TGramFS.Services
         private NodeRepository? _repository;
         private AppSettings _currentSettings;
         private readonly SemaphoreSlim _floodLock = new SemaphoreSlim(1, 1);
-        private static DateTime _globalFloodWaitUntil = DateTime.MinValue;
+        private static DateTime _sessionFloodWaitUntilUtc = DateTime.MinValue;
+        private static DateTime _downloadFloodWaitUntilUtc = DateTime.MinValue;
+        private static DateTime _captionFloodWaitUntilUtc = DateTime.MinValue;
+        private static DateTime _backgroundFloodWaitUntilUtc = DateTime.MinValue;
         private WTelegram.Client? _client;
         private System.Threading.CancellationTokenSource? _queueCts;
 
@@ -129,6 +172,10 @@ namespace TGramFS.Services
         private readonly SemaphoreSlim _channelDeleteSemaphore = new SemaphoreSlim(1, 1);
         private int _pendingUploadsCount = 0;
         private int _activeUploadPipelineCount = 0;
+        private static int _activeUploadMessageRpcCount = 0;
+        private static int _activeDownloadRequestCount = 0;
+        private static int _activeCaptionRequestCount = 0;
+        private static int _activeBackgroundRequestCount = 0;
 
         /// <summary>
         /// Количество файлов в очереди на отправку в Telegram (включая текущий передаваемый).
@@ -551,9 +598,9 @@ namespace TGramFS.Services
         public event Action<string>? OnDownloadCompleted;
 
         /// <summary>
-        /// Событие фиксации FLOOD_WAIT (осталось секунд, остановлена ли отправка, имя файла, операция скачивания).
+        /// Событие фиксации FLOOD_WAIT (осталось секунд, остановлена ли отправка, имя файла/операции, операция скачивания, контур очереди).
         /// </summary>
-        public event Action<int, bool, string?, bool>? OnFloodWaitDetected;
+        public event Action<int, bool, string?, bool, FloodWaitScope>? OnFloodWaitDetected;
 
         private CancellationTokenSource? _reconnectWaitCts;
         private readonly object _reconnectWaitLock = new();
@@ -636,14 +683,71 @@ namespace TGramFS.Services
                 var match = FloodWaitLogRegex.Match(str);
                 if (match.Success && int.TryParse(match.Groups[1].Value, out int waitSeconds) && waitSeconds > 0)
                 {
-                    if (Volatile.Read(ref _activeUploadPipelineCount) > 0)
+                    int activeUploads = Volatile.Read(ref _activeUploadPipelineCount);
+                    int activeUploadMsgs = Volatile.Read(ref _activeUploadMessageRpcCount);
+                    int activeDownloads = Volatile.Read(ref _activeDownloadRequestCount);
+                    int activeCaptions = Volatile.Read(ref _activeCaptionRequestCount);
+                    int activeBackground = Volatile.Read(ref _activeBackgroundRequestCount);
+
+                    // Для длительных FLOOD_WAIT (> 60 сек) WTelegramClient сам выбрасывает RpcException в вызывающий метод,
+                    // где точный catch (420) выставит правильный контур очереди без риска ложной атрибуции.
+                    if (waitSeconds > UploadHardStopThresholdSeconds)
                     {
-                        RegisterUploadFloodWait(waitSeconds, "WTelegram", _activeUploadFileName);
+                        if ((activeUploadMsgs > 0 || activeUploads > 0) && activeDownloads == 0 && activeCaptions == 0 && activeBackground == 0)
+                        {
+                            RegisterUploadFloodWait(waitSeconds, "WTelegram", _activeUploadFileName);
+                        }
+                        else if (activeUploads == 0 && activeUploadMsgs == 0 && activeDownloads == 0 && activeCaptions == 0 && activeBackground == 0 && IsAuthorized)
+                        {
+                            RecordFloodStateAndPersist(waitSeconds, isUploadStopped: false, fileName: null, isDownload: false, scope: FloodWaitScope.General);
+                            NotifyFloodWaitBanner(waitSeconds, isUploadStopped: false, fileName: null, isDownload: false, scope: FloodWaitScope.General);
+                        }
                     }
-                    else if (IsAuthorized)
+                    else
                     {
-                        RecordFloodStateAndPersist(waitSeconds, isUploadStopped: false, fileName: null, isDownload: true);
-                        NotifyFloodWaitBanner(waitSeconds, isUploadStopped: false, fileName: null, isDownload: true);
+                        if (activeUploadMsgs > 0 && activeDownloads == 0 && activeCaptions == 0 && activeBackground == 0)
+                        {
+                            RegisterUploadFloodWait(waitSeconds, "WTelegram", _activeUploadFileName);
+                        }
+                        else if (activeDownloads > 0 && activeUploadMsgs == 0 && activeCaptions == 0 && activeBackground == 0)
+                        {
+                            RecordFloodStateAndPersist(waitSeconds, isUploadStopped: false, fileName: null, isDownload: true, scope: FloodWaitScope.Download);
+                            NotifyFloodWaitBanner(waitSeconds, isUploadStopped: false, fileName: null, isDownload: true, scope: FloodWaitScope.Download);
+                        }
+                        else if (activeCaptions > 0 && activeUploadMsgs == 0 && activeDownloads == 0 && activeBackground == 0)
+                        {
+                            TriggerCaptionFloodWait(waitSeconds, "WTelegram (автоожидание)");
+                        }
+                        else if (activeBackground > 0 && activeUploadMsgs == 0 && activeDownloads == 0 && activeCaptions == 0)
+                        {
+                            TriggerBackgroundFloodWait(waitSeconds, "WTelegram (фоновая операция)");
+                        }
+                        else if (activeUploadMsgs > 0)
+                        {
+                            RegisterUploadFloodWait(waitSeconds, "WTelegram", _activeUploadFileName);
+                        }
+                        else if (activeDownloads > 0)
+                        {
+                            RecordFloodStateAndPersist(waitSeconds, isUploadStopped: false, fileName: null, isDownload: true, scope: FloodWaitScope.Download);
+                            NotifyFloodWaitBanner(waitSeconds, isUploadStopped: false, fileName: null, isDownload: true, scope: FloodWaitScope.Download);
+                        }
+                        else if (activeCaptions > 0)
+                        {
+                            TriggerCaptionFloodWait(waitSeconds, "WTelegram (автоожидание)");
+                        }
+                        else if (activeBackground > 0)
+                        {
+                            TriggerBackgroundFloodWait(waitSeconds, "WTelegram (фоновая операция)");
+                        }
+                        else if (activeUploads > 0)
+                        {
+                            RegisterUploadFloodWait(waitSeconds, "WTelegram", _activeUploadFileName);
+                        }
+                        else if (IsAuthorized)
+                        {
+                            RecordFloodStateAndPersist(waitSeconds, isUploadStopped: false, fileName: null, isDownload: false, scope: FloodWaitScope.General);
+                            NotifyFloodWaitBanner(waitSeconds, isUploadStopped: false, fileName: null, isDownload: false, scope: FloodWaitScope.General);
+                        }
                     }
                 }
             }
@@ -706,6 +810,7 @@ namespace TGramFS.Services
 
         private System.Threading.CancellationTokenSource? _migrationQueueCts;
         private readonly SemaphoreSlim _migrationSignal = new SemaphoreSlim(0, int.MaxValue);
+        private readonly SemaphoreSlim _captionSignal = new SemaphoreSlim(0, int.MaxValue);
 
         /// <summary>
         /// Помечает канал как ожидающий полного уничтожения, чтобы воркер очереди удаления не удалял его сообщения поштучно.
@@ -760,6 +865,47 @@ namespace TGramFS.Services
                 }
             }
             catch { }
+        }
+
+        /// <summary>
+        /// Сигнализирует воркеру подписей о новых элементах в очереди pending_caption_updates.
+        /// </summary>
+        public void TriggerCaptionQueueProcessing()
+        {
+            try
+            {
+                if (_captionSignal.CurrentCount == 0)
+                {
+                    _captionSignal.Release();
+                }
+            }
+            catch { }
+        }
+
+        /// <summary>
+        /// Помещает отложенные обновления подписей (добавление ID сообщения после загрузки) в персистентную очередь SQLite.
+        /// </summary>
+        public void EnqueuePendingCaptions(int nodeId, FileUploadResult? uploadResult)
+        {
+            if (_repository == null || nodeId <= 0 || uploadResult?.PendingCaptions == null || uploadResult.PendingCaptions.Count == 0)
+            {
+                return;
+            }
+
+            bool enqueued = false;
+            foreach (var item in uploadResult.PendingCaptions)
+            {
+                if (item.MessageId > 1 && !string.IsNullOrEmpty(item.Caption))
+                {
+                    _repository.EnqueueCaptionUpdate(nodeId, item.MessageId, item.Caption, item.ChannelId);
+                    enqueued = true;
+                }
+            }
+
+            if (enqueued)
+            {
+                TriggerCaptionQueueProcessing();
+            }
         }
 
         private void StartDeletionQueueWorker()
@@ -851,6 +997,7 @@ namespace TGramFS.Services
                     bool hasRetryableFailure = false;
                     bool hasPendingChannelSkip = false;
 
+                    bool hitFloodWait = false;
                     foreach (var kvp in channelGroups)
                     {
                         if (kvp.Key != 0L && IsChannelPendingDeletion(kvp.Key))
@@ -862,6 +1009,7 @@ namespace TGramFS.Services
 
                         try
                         {
+                            await EnsureBackgroundFloodWaitDelayAsync(token);
                             var peer = await GetStoragePeerAsync(kvp.Key != 0L ? kvp.Key : (long?)null);
                             bool isChannel = peer is TL.InputPeerChannel;
                             const int batchSize = 100;
@@ -874,6 +1022,17 @@ namespace TGramFS.Services
                             }
 
                             completedMsgIds.AddRange(kvp.Value);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            throw;
+                        }
+                        catch (TL.RpcException rpcEx) when (rpcEx.Code == 420)
+                        {
+                            AppLogger.Warn("TelegramService", $"[DeletionQueue] FloodWait при удалении из канала ID {kvp.Key}: пауза {rpcEx.X} сек...");
+                            hitFloodWait = true;
+                            hasRetryableFailure = true;
+                            break;
                         }
                         catch (Exception ex) when (kvp.Key != 0L && (ex.Message.Contains("не найден") || ex.Message.Contains("CHANNEL_INVALID") || ex.Message.Contains("CHANNEL_PRIVATE")))
                         {
@@ -900,7 +1059,12 @@ namespace TGramFS.Services
                         }
                     }
 
-                    if (hasRetryableFailure)
+                    if (hitFloodWait)
+                    {
+                        await EnsureBackgroundFloodWaitDelayAsync(token);
+                        await Task.Delay(1000, token);
+                    }
+                    else if (hasRetryableFailure)
                     {
                         // При неудаче в сети/биссекции повторяем попытку через 5 секунд только пока в очереди есть записи
                         AppLogger.Warn("TelegramService", $"[DeletionQueue] Не удалось завершить пакетное удаление сообщений из Telegram. Повтор через 5 секунд...");
@@ -958,8 +1122,8 @@ namespace TGramFS.Services
                     {
                         if (token.IsCancellationRequested) break;
 
-                        await EnsureFloodWaitDelayAsync();
-                        await EnsurePacingDelayAsync(token);
+                        await EnsureBackgroundFloodWaitDelayAsync(token);
+                        await EnsureBackgroundPacingDelayAsync(token);
 
                         var file = _repository.GetNodeById(item.NodeId);
                         if (file == null || file.InTrash || !file.TgMessageId.HasValue || file.TgMessageId.Value <= 0)
@@ -1010,10 +1174,19 @@ namespace TGramFS.Services
                                     flags = TL.Methods.Messages_ForwardMessages.Flags.drop_author
                                 };
 
-                                var previewUpdates = await _client.Invoke(fwdPreviewReq);
+                                BeginBackgroundRpc();
+                                TL.UpdatesBase previewUpdates;
+                                try
+                                {
+                                    previewUpdates = await _client.Invoke(fwdPreviewReq);
+                                }
+                                finally
+                                {
+                                    EndBackgroundRpc();
+                                }
                                 newPreviewId = ExtractMessageIdFromUpdates(previewUpdates);
                                 if (newPreviewId <= 0) newPreviewId = null;
-                                await EnsurePacingDelayAsync(token);
+                                await EnsureBackgroundPacingDelayAsync(token);
                             }
 
                             // 2. Затем пересылаем основной документ (файл) в целевой канал (drop_author = true)
@@ -1026,7 +1199,16 @@ namespace TGramFS.Services
                                 flags = TL.Methods.Messages_ForwardMessages.Flags.drop_author
                             };
 
-                            var fwdUpdates = await _client.Invoke(fwdReq);
+                            BeginBackgroundRpc();
+                            TL.UpdatesBase fwdUpdates;
+                            try
+                            {
+                                fwdUpdates = await _client.Invoke(fwdReq);
+                            }
+                            finally
+                            {
+                                EndBackgroundRpc();
+                            }
                             newMsgId = ExtractMessageIdFromUpdates(fwdUpdates);
 
                             if (newMsgId > 0)
@@ -1070,7 +1252,7 @@ namespace TGramFS.Services
                         catch (TL.RpcException rpcEx) when (rpcEx.Code == 420) // FLOOD_WAIT_X
                         {
                             AppLogger.Warn("TelegramService", $"[MigrationQueue] FloodWait при пересылке файла '{file.Name}': пауза {rpcEx.X} сек...");
-                            TriggerGlobalFloodWait(rpcEx.X);
+                            TriggerBackgroundFloodWait(rpcEx.X, $"миграция '{file.Name}'");
                             await Task.Delay(Math.Max(5000, rpcEx.X * 1000), token);
                             break;
                         }
@@ -1105,7 +1287,7 @@ namespace TGramFS.Services
                         currentItem = _repository.GetNextPendingCaptionUpdate();
                         if (currentItem != null)
                         {
-                            await EnsureFloodWaitDelayAsync();
+                            await EnsureCaptionFloodWaitDelayAsync(token);
                             await EnsureCaptionPacingDelayAsync(token);
                             long? targetChannelId = currentItem.ChannelId ?? _repository.GetChannelIdByTgMessageId(currentItem.TgMessageId);
                             await UpdateMessageCaptionAsync(currentItem.TgMessageId, currentItem.NewCaption, targetChannelId);
@@ -1139,7 +1321,14 @@ namespace TGramFS.Services
                     await Task.Delay(2000, token);
                 }
 
-                await Task.Delay(1000, token);
+                try
+                {
+                    await _captionSignal.WaitAsync(1000, token);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
             }
         }
 
@@ -1384,7 +1573,7 @@ namespace TGramFS.Services
         /// </summary>
         public async Task<TelegramChannel?> CreateCustomChannelAsync(string title)
         {
-            await EnsureFloodWaitDelayAsync();
+            await EnsureBackgroundFloodWaitDelayAsync();
             if (_client == null || !IsAuthorized)
                 throw new InvalidOperationException("Клиент Telegram не подключен или не авторизован.");
 
@@ -1402,7 +1591,22 @@ namespace TGramFS.Services
                 about = "Приватный канал хранилища папки " + cleanTitle
             };
 
-            var createdUpdates = await _client.Invoke(createReq);
+            BeginBackgroundRpc();
+            TL.UpdatesBase createdUpdates;
+            try
+            {
+                createdUpdates = await _client.Invoke(createReq);
+            }
+            catch (TL.RpcException rpcEx) when (rpcEx.Code == 420)
+            {
+                TriggerBackgroundFloodWait(rpcEx.X, $"создание канала '{cleanTitle}'");
+                throw;
+            }
+            finally
+            {
+                EndBackgroundRpc();
+            }
+
             if (createdUpdates is TL.Updates updates)
             {
                 foreach (var chat in updates.chats.Values)
@@ -1424,7 +1628,7 @@ namespace TGramFS.Services
         /// </summary>
         public async Task EditChannelTitleAsync(long channelId, string newTitle)
         {
-            await EnsureFloodWaitDelayAsync();
+            await EnsureBackgroundFloodWaitDelayAsync();
             if (_client == null || !IsAuthorized || channelId == 0) return;
 
             string cleanTitle = newTitle.Trim();
@@ -1438,10 +1642,23 @@ namespace TGramFS.Services
                         channel = new TL.InputChannel(pc.channel_id, pc.access_hash),
                         title = cleanTitle
                     };
-                    await _client.Invoke(req);
+                    BeginBackgroundRpc();
+                    try
+                    {
+                        await _client.Invoke(req);
+                    }
+                    finally
+                    {
+                        EndBackgroundRpc();
+                    }
                     _repository?.UpdateChannelTitle(channelId, cleanTitle);
                     AppLogger.Info("TelegramService", $"Название канала Telegram (ID: {channelId}) сменено на '{cleanTitle}'.");
                 }
+            }
+            catch (TL.RpcException rpcEx) when (rpcEx.Code == 420)
+            {
+                TriggerBackgroundFloodWait(rpcEx.X, $"переименование канала '{cleanTitle}'");
+                AppLogger.Warn("TelegramService", $"Не удалось изменить название канала ID {channelId} из-за FLOOD_WAIT ({rpcEx.X} сек).");
             }
             catch (Exception ex)
             {
@@ -1524,7 +1741,7 @@ namespace TGramFS.Services
             await _channelDeleteSemaphore.WaitAsync();
             try
             {
-                await EnsureFloodWaitDelayAsync();
+                await EnsureBackgroundFloodWaitDelayAsync();
                 if (_client == null || !IsAuthorized) return;
 
                 var peer = await GetStoragePeerAsync(channelId);
@@ -1534,7 +1751,15 @@ namespace TGramFS.Services
                     {
                         channel = new TL.InputChannel(pc.channel_id, pc.access_hash)
                     };
-                    await _client.Invoke(req);
+                    BeginBackgroundRpc();
+                    try
+                    {
+                        await _client.Invoke(req);
+                    }
+                    finally
+                    {
+                        EndBackgroundRpc();
+                    }
                     _repository?.DeleteTelegramChannel(channelId);
                     int purged = _repository?.RemovePendingDeletionsForChannel(channelId) ?? 0;
                     EvictChannelCaches(channelId);
@@ -1543,6 +1768,11 @@ namespace TGramFS.Services
                         : $"Канал Telegram ID {channelId} полностью удален.");
                     await Task.Delay(350);
                 }
+            }
+            catch (TL.RpcException rpcEx) when (rpcEx.Code == 420)
+            {
+                TriggerBackgroundFloodWait(rpcEx.X, $"удаление канала ID {channelId}");
+                AppLogger.Warn("TelegramService", $"Не удалось удалить канал ID {channelId} из-за FLOOD_WAIT ({rpcEx.X} сек).");
             }
             catch (Exception ex) when (ex.Message.Contains("CHANNEL_INVALID") || ex.Message.Contains("CHANNEL_PRIVATE") || ex.Message.Contains("не найден"))
             {
@@ -1652,7 +1882,7 @@ namespace TGramFS.Services
             }
             catch (TL.RpcException rpcEx) when (rpcEx.Code == 420) // FLOOD_WAIT_X
             {
-                TriggerGlobalFloodWait(rpcEx.X);
+                TriggerSessionFloodWait(rpcEx.X);
                 LastError = FormatFloodWaitMessage(rpcEx.X);
                 AppLogger.Warn("TelegramService", $"Ошибка подключения существующей сессии: {LastError}");
                 try { _client?.Dispose(); } catch { }
@@ -1885,7 +2115,7 @@ namespace TGramFS.Services
                         }
                         catch (TL.RpcException rpcEx) when (rpcEx.Code == 420) // FLOOD_WAIT_X
                         {
-                            TriggerGlobalFloodWait(rpcEx.X);
+                            TriggerSessionFloodWait(rpcEx.X);
                             AppLogger.Warn("TelegramService", $"[Reactor] Получен FLOOD_WAIT на {rpcEx.X} сек от серверов Telegram. Приостановка реактора на {rpcEx.X} секунд...");
                             int waitMs = Math.Max(5000, rpcEx.X * 1000);
                             await Task.Delay(waitMs);
@@ -2196,7 +2426,7 @@ namespace TGramFS.Services
                 AppLogger.Error("TelegramService", $"RPC Ошибка: {rpcEx.Message} (Код: {rpcEx.Code})", rpcEx);
                 if (rpcEx.Code == 420) // FLOOD_WAIT_X
                 {
-                    TriggerFloodWait(rpcEx.X);
+                    TriggerSessionFloodWait(rpcEx.X);
                     LastError = FormatFloodWaitMessage(rpcEx.X);
                     throw new InvalidOperationException(LastError, rpcEx);
                 }
@@ -2299,14 +2529,50 @@ namespace TGramFS.Services
             AppLogger.Info("TelegramService", "Процесс авторизации сброшен к шагу ввода номера телефона.");
         }
 
+        public static void BeginDownloadRpc() => Interlocked.Increment(ref _activeDownloadRequestCount);
+        public static void EndDownloadRpc()
+        {
+            if (Interlocked.Decrement(ref _activeDownloadRequestCount) < 0)
+            {
+                Interlocked.Exchange(ref _activeDownloadRequestCount, 0);
+            }
+        }
+
+        private static void BeginCaptionRpc() => Interlocked.Increment(ref _activeCaptionRequestCount);
+        private static void EndCaptionRpc()
+        {
+            if (Interlocked.Decrement(ref _activeCaptionRequestCount) < 0)
+            {
+                Interlocked.Exchange(ref _activeCaptionRequestCount, 0);
+            }
+        }
+
+        private static void BeginBackgroundRpc() => Interlocked.Increment(ref _activeBackgroundRequestCount);
+        private static void EndBackgroundRpc()
+        {
+            if (Interlocked.Decrement(ref _activeBackgroundRequestCount) < 0)
+            {
+                Interlocked.Exchange(ref _activeBackgroundRequestCount, 0);
+            }
+        }
+
+        private static void BeginUploadMessageRpc() => Interlocked.Increment(ref _activeUploadMessageRpcCount);
+        private static void EndUploadMessageRpc()
+        {
+            if (Interlocked.Decrement(ref _activeUploadMessageRpcCount) < 0)
+            {
+                Interlocked.Exchange(ref _activeUploadMessageRpcCount, 0);
+            }
+        }
+
         /// <summary>
-        /// Возвращает оставшееся время ожидания в секундах при активном FLOOD_WAIT.
+        /// Возвращает оставшееся время ожидания в секундах при активном FLOOD_WAIT сессии/авторизации.
         /// </summary>
         public static int GetRemainingFloodWaitSeconds()
         {
-            if (_globalFloodWaitUntil > DateTime.UtcNow)
+            if (_sessionFloodWaitUntilUtc > DateTime.UtcNow)
             {
-                return (int)Math.Ceiling((_globalFloodWaitUntil - DateTime.UtcNow).TotalSeconds);
+                return (int)Math.Ceiling((_sessionFloodWaitUntilUtc - DateTime.UtcNow).TotalSeconds);
             }
             return 0;
         }
@@ -2326,23 +2592,81 @@ namespace TGramFS.Services
         }
 
         /// <summary>
-        /// Механизм перехвата FLOOD_WAIT и плавного ожидания без разрыва соединения с Проводником Windows.
-        /// Сквозной для всех воркеров, файлов и пулов приложения.
+        /// Ожидание сессионного FLOOD_WAIT (авторизация, восстановление подключения, общие вызовы).
+        /// Изолирован от очередей скачивания, обновления подписей и фонового удаления/миграции.
         /// </summary>
         public static async Task EnsureFloodWaitDelayAsync(CancellationToken cancellationToken = default)
         {
-            if (_globalFloodWaitUntil > DateTime.UtcNow)
+            var until = _sessionFloodWaitUntilUtc;
+            if (until > DateTime.UtcNow)
             {
-                var delay = _globalFloodWaitUntil - DateTime.UtcNow;
+                var delay = until - DateTime.UtcNow;
                 if (delay.TotalMilliseconds > 0)
                 {
-                    AppLogger.Warn("TelegramService", $"FLOOD_WAIT активен: задержка потока на {delay.TotalSeconds:F1} сек...");
+                    AppLogger.Warn("TelegramService", $"[Session FLOOD_WAIT] Задержка потока до {until.ToLocalTime():HH:mm:ss} ({delay.TotalSeconds:F1} сек)...");
                     await Task.Delay(delay, cancellationToken);
                 }
             }
         }
 
-        // Глобальный сквозной семафор и планировщик слотов времени отправки (Token-Bucket Pacing)
+        /// <summary>
+        /// Ожидание FLOOD_WAIT для контура скачивания и стриминга (учитывает только паузу скачивания и общую паузу сессии).
+        /// </summary>
+        public static async Task EnsureDownloadFloodWaitDelayAsync(CancellationToken cancellationToken = default)
+        {
+            var until = _downloadFloodWaitUntilUtc > _sessionFloodWaitUntilUtc
+                ? _downloadFloodWaitUntilUtc
+                : _sessionFloodWaitUntilUtc;
+            if (until > DateTime.UtcNow)
+            {
+                var delay = until - DateTime.UtcNow;
+                if (delay.TotalMilliseconds > 0)
+                {
+                    AppLogger.Warn("TelegramService", $"[Download FLOOD_WAIT] Пауза скачивания до {until.ToLocalTime():HH:mm:ss} ({delay.TotalSeconds:F1} сек)...");
+                    await Task.Delay(delay, cancellationToken);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Ожидание FLOOD_WAIT для изолированной фоновой очереди обновления подписей.
+        /// </summary>
+        public static async Task EnsureCaptionFloodWaitDelayAsync(CancellationToken cancellationToken = default)
+        {
+            var until = _captionFloodWaitUntilUtc > _sessionFloodWaitUntilUtc
+                ? _captionFloodWaitUntilUtc
+                : _sessionFloodWaitUntilUtc;
+            if (until > DateTime.UtcNow)
+            {
+                var delay = until - DateTime.UtcNow;
+                if (delay.TotalMilliseconds > 0)
+                {
+                    AppLogger.Warn("TelegramService", $"[Caption FLOOD_WAIT] Пауза очереди подписей до {until.ToLocalTime():HH:mm:ss} ({delay.TotalSeconds:F1} сек)...");
+                    await Task.Delay(delay, cancellationToken);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Ожидание FLOOD_WAIT для фоновых сервисных очередей (удаление, миграция каналов, копирование-форвард, аватарки).
+        /// </summary>
+        public static async Task EnsureBackgroundFloodWaitDelayAsync(CancellationToken cancellationToken = default)
+        {
+            var until = _backgroundFloodWaitUntilUtc > _sessionFloodWaitUntilUtc
+                ? _backgroundFloodWaitUntilUtc
+                : _sessionFloodWaitUntilUtc;
+            if (until > DateTime.UtcNow)
+            {
+                var delay = until - DateTime.UtcNow;
+                if (delay.TotalMilliseconds > 0)
+                {
+                    AppLogger.Warn("TelegramService", $"[Background FLOOD_WAIT] Пауза фоновых операций до {until.ToLocalTime():HH:mm:ss} ({delay.TotalSeconds:F1} сек)...");
+                    await Task.Delay(delay, cancellationToken);
+                }
+            }
+        }
+
+        // Выделенный планировщик слотов времени отправки для скачивания и стриминга (Token-Bucket Pacing)
         // Гарантирует строгое квантование интервалов запуска исходящих MTProto-пакетов Upload_GetFile
         private static readonly SemaphoreSlim _globalPacingLock = new SemaphoreSlim(1, 1);
         private static DateTime _nextAllowedSendUtc = DateTime.MinValue;
@@ -2350,7 +2674,7 @@ namespace TGramFS.Services
 
         /// <summary>
         /// Резервирует уникальный временной слот для отправки исходящего пакета Upload_GetFile.
-        /// Исключает одновременную отправку пакетов разными воркерами в одну миллисекунду.
+        /// Исключает одновременную отправку пакетов разными воркерами скачивания в одну миллисекунду.
         /// </summary>
         public static async Task EnsurePacingDelayAsync(CancellationToken cancellationToken = default)
         {
@@ -2414,6 +2738,39 @@ namespace TGramFS.Services
             }
         }
 
+        // Изолированный планировщик для фоновых операций (удаление, миграция каналов, форвард),
+        // чтобы они не сдвигали временные слоты скачивания/стриминга (_nextAllowedSendUtc).
+        private static readonly SemaphoreSlim _backgroundPacingLock = new SemaphoreSlim(1, 1);
+        private static DateTime _nextBackgroundAllowedSendUtc = DateTime.MinValue;
+
+        public static async Task EnsureBackgroundPacingDelayAsync(CancellationToken cancellationToken = default)
+        {
+            int effectiveDelayMs = Math.Max(ServerSettings.DefaultPacingDelayMs, Volatile.Read(ref _globalPacingDelayMs));
+
+            DateTime scheduledTime;
+            await _backgroundPacingLock.WaitAsync(cancellationToken);
+            try
+            {
+                var now = DateTime.UtcNow;
+                if (_nextBackgroundAllowedSendUtc < now)
+                {
+                    _nextBackgroundAllowedSendUtc = now;
+                }
+                scheduledTime = _nextBackgroundAllowedSendUtc;
+                _nextBackgroundAllowedSendUtc = _nextBackgroundAllowedSendUtc.AddMilliseconds(effectiveDelayMs);
+            }
+            finally
+            {
+                _backgroundPacingLock.Release();
+            }
+
+            var waitMs = (scheduledTime - DateTime.UtcNow).TotalMilliseconds;
+            if (waitMs > 0)
+            {
+                await Task.Delay((int)waitMs, cancellationToken);
+            }
+        }
+
         /// <summary>
         /// Фиксирует завершение сетевого вызова к серверам Telegram.
         /// </summary>
@@ -2436,15 +2793,32 @@ namespace TGramFS.Services
 
         public void TriggerFloodWait(int seconds)
         {
-            TriggerGlobalFloodWait(seconds);
+            TriggerSessionFloodWait(seconds);
         }
 
-        public static void TriggerGlobalFloodWait(int seconds)
+        public static void TriggerSessionFloodWait(int seconds)
         {
+            if (seconds <= 0) return;
             var targetTime = DateTime.UtcNow.AddSeconds(seconds);
-            if (targetTime > _globalFloodWaitUntil)
+            if (targetTime > _sessionFloodWaitUntilUtc)
             {
-                _globalFloodWaitUntil = targetTime;
+                _sessionFloodWaitUntilUtc = targetTime;
+            }
+            AppLogger.Warn("TelegramService", $"[Session Flood] Получен FLOOD_WAIT на {seconds} сек. Пауза сессии до {_sessionFloodWaitUntilUtc.ToLocalTime():HH:mm:ss}.");
+            if (_activeInstance?.IsAuthorized == true)
+            {
+                RecordFloodStateAndPersist(seconds, isUploadStopped: false, fileName: null, isDownload: false, scope: FloodWaitScope.General);
+                NotifyFloodWaitBanner(seconds, isUploadStopped: false, fileName: null, isDownload: false, scope: FloodWaitScope.General);
+            }
+        }
+
+        public static void TriggerDownloadFloodWait(int seconds, string? fileName = null)
+        {
+            if (seconds <= 0) seconds = 3;
+            var targetTime = DateTime.UtcNow.AddSeconds(seconds);
+            if (targetTime > _downloadFloodWaitUntilUtc)
+            {
+                _downloadFloodWaitUntilUtc = targetTime;
             }
             _globalPacingLock.Wait();
             try
@@ -2459,11 +2833,72 @@ namespace TGramFS.Services
                 _globalPacingLock.Release();
             }
             AdaptPacingDelay(20);
-            AppLogger.Warn("TelegramService", $"Получен FLOOD_WAIT на {seconds} сек от серверов Telegram. Сквозная пауза до {_globalFloodWaitUntil:HH:mm:ss}. Пейсинг адаптирован до {_globalPacingDelayMs} мс.");
-            if (_activeInstance?.IsAuthorized == true && seconds > 0)
+            AppLogger.Warn("TelegramService", $"[Download Flood] Получен FLOOD_WAIT на {seconds} сек при скачивании. Пауза скачивания до {_downloadFloodWaitUntilUtc.ToLocalTime():HH:mm:ss}. Пейсинг скачивания адаптирован до {_globalPacingDelayMs} мс.");
+            if (_activeInstance?.IsAuthorized == true)
             {
-                RecordFloodStateAndPersist(seconds, isUploadStopped: false, fileName: null, isDownload: true);
-                NotifyFloodWaitBanner(seconds, isUploadStopped: false, fileName: null, isDownload: true);
+                RecordFloodStateAndPersist(seconds, isUploadStopped: false, fileName: fileName, isDownload: true, scope: FloodWaitScope.Download);
+                NotifyFloodWaitBanner(seconds, isUploadStopped: false, fileName: fileName, isDownload: true, scope: FloodWaitScope.Download);
+            }
+        }
+
+        public static void TriggerCaptionFloodWait(int seconds, string? source = null)
+        {
+            if (seconds <= 0) return;
+            var targetTime = DateTime.UtcNow.AddSeconds(seconds);
+            if (targetTime > _captionFloodWaitUntilUtc)
+            {
+                _captionFloodWaitUntilUtc = targetTime;
+            }
+            _captionPacingLock.Wait();
+            try
+            {
+                if (targetTime > _nextCaptionAllowedSendUtc)
+                {
+                    _nextCaptionAllowedSendUtc = targetTime;
+                }
+            }
+            finally
+            {
+                _captionPacingLock.Release();
+            }
+
+            string srcTag = string.IsNullOrWhiteSpace(source) ? string.Empty : $" ({source})";
+            AppLogger.Warn("TelegramService", $"[Caption Flood] Получен FLOOD_WAIT на {seconds} сек{srcTag}. Очередь обновления подписей приостановлена до {_captionFloodWaitUntilUtc.ToLocalTime():HH:mm:ss} (скачивание и загрузка не затронуты).");
+            if (_activeInstance?.IsAuthorized == true)
+            {
+                const string captionBannerTitle = "Фоновое обновление подписей";
+                RecordFloodStateAndPersist(seconds, isUploadStopped: false, fileName: captionBannerTitle, isDownload: false, scope: FloodWaitScope.Caption);
+                NotifyFloodWaitBanner(seconds, isUploadStopped: false, fileName: captionBannerTitle, isDownload: false, scope: FloodWaitScope.Caption);
+            }
+        }
+
+        public static void TriggerBackgroundFloodWait(int seconds, string? source = null)
+        {
+            if (seconds <= 0) return;
+            var targetTime = DateTime.UtcNow.AddSeconds(seconds);
+            if (targetTime > _backgroundFloodWaitUntilUtc)
+            {
+                _backgroundFloodWaitUntilUtc = targetTime;
+            }
+            _backgroundPacingLock.Wait();
+            try
+            {
+                if (targetTime > _nextBackgroundAllowedSendUtc)
+                {
+                    _nextBackgroundAllowedSendUtc = targetTime;
+                }
+            }
+            finally
+            {
+                _backgroundPacingLock.Release();
+            }
+
+            string bannerName = string.IsNullOrWhiteSpace(source) ? "Фоновые операции Telegram" : source;
+            AppLogger.Warn("TelegramService", $"[Background Flood] Получен FLOOD_WAIT на {seconds} сек ({bannerName}). Фоновая очередь приостановлена до {_backgroundFloodWaitUntilUtc.ToLocalTime():HH:mm:ss} (скачивание не затронуто).");
+            if (_activeInstance?.IsAuthorized == true)
+            {
+                RecordFloodStateAndPersist(seconds, isUploadStopped: false, fileName: bannerName, isDownload: false, scope: FloodWaitScope.Background);
+                NotifyFloodWaitBanner(seconds, isUploadStopped: false, fileName: bannerName, isDownload: false, scope: FloodWaitScope.Background);
             }
         }
 
@@ -2483,7 +2918,7 @@ namespace TGramFS.Services
         private static DateTime _uploadLastPacingChangeUtc = DateTime.MinValue;
         private static DateTime _uploadLastDecayAttemptUtc = DateTime.MinValue;
         private static DateTime _lastUploadActivityFinishedUtc = DateTime.MinValue;
-        private static DateTime _lastFloodBannerNotifyUtc = DateTime.MinValue;
+        private static readonly Dictionary<FloodWaitScope, DateTime> _lastFloodBannerNotifyByScopeUtc = new();
         private const int UploadPacingInitialFloodDelayMs = 150;
         private const int UploadPacingStepMs = 50;
         private const int UploadPacingMaxDelayMs = 2000;
@@ -2497,11 +2932,7 @@ namespace TGramFS.Services
         private const string FloodStateFileName = "flood_state.json";
         private static string FloodStateFilePath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, FloodStateFileName);
         private static readonly object _floodStateFileLock = new();
-        private static DateTime _floodBannerUntilUtc = DateTime.MinValue;
-        private static int _floodBannerInitialSeconds = 0;
-        private static bool _floodBannerIsUploadStopped = false;
-        private static bool _floodBannerIsDownload = false;
-        private static string? _floodBannerFileName = null;
+        private static readonly Dictionary<FloodWaitScope, ActiveFloodBannerState> _activeFloodBanners = new();
 
         private sealed class PersistedFloodState
         {
@@ -2510,24 +2941,74 @@ namespace TGramFS.Services
             public bool IsUploadStopped { get; set; }
             public bool IsDownload { get; set; }
             public string? FileName { get; set; }
+            public FloodWaitScope? Scope { get; set; }
         }
 
-        private static void SavePersistedFloodState(PersistedFloodState state)
+        private sealed class PersistedFloodStateFile
+        {
+            public List<PersistedFloodState>? Entries { get; set; }
+            // Поля для обратной совместимости со старым однослотовым форматом flood_state.json
+            public DateTime FloodWaitUntilUtc { get; set; }
+            public int InitialSeconds { get; set; }
+            public bool IsUploadStopped { get; set; }
+            public bool IsDownload { get; set; }
+            public string? FileName { get; set; }
+            public FloodWaitScope? Scope { get; set; }
+        }
+
+        private static int GetBannerPriority(FloodWaitScope scope, bool isUploadStopped)
+        {
+            if (isUploadStopped) return 4;
+            return scope switch
+            {
+                FloodWaitScope.Download => 3,
+                FloodWaitScope.Upload => 3,
+                FloodWaitScope.General => 2,
+                FloodWaitScope.Background => 1,
+                FloodWaitScope.Caption => 0,
+                _ => 1
+            };
+        }
+
+        private static List<PersistedFloodState> CollectPersistableEntriesLocked(DateTime nowUtc)
+        {
+            return _activeFloodBanners.Values
+                .Where(b => b.FloodWaitUntilUtc > nowUtc && b.InitialSeconds > FloodPersistThresholdSeconds)
+                .OrderByDescending(b => GetBannerPriority(b.Scope, b.IsUploadStopped))
+                .ThenByDescending(b => b.FloodWaitUntilUtc)
+                .Select(b => new PersistedFloodState
+                {
+                    FloodWaitUntilUtc = b.FloodWaitUntilUtc,
+                    InitialSeconds = Math.Max(1, b.InitialSeconds),
+                    IsUploadStopped = b.IsUploadStopped,
+                    IsDownload = b.IsDownload,
+                    FileName = b.FileName,
+                    Scope = b.Scope
+                })
+                .ToList();
+        }
+
+        private static void WriteOrDeletePersistedFloodState()
         {
             lock (_floodStateFileLock)
             {
+                List<PersistedFloodState> entries;
                 lock (_uploadPacingLock)
                 {
-                    if (DateTime.UtcNow >= _floodBannerUntilUtc || state.FloodWaitUntilUtc < _floodBannerUntilUtc)
-                    {
-                        return;
-                    }
+                    entries = CollectPersistableEntriesLocked(DateTime.UtcNow);
+                }
+
+                if (entries.Count == 0)
+                {
+                    DeletePersistedFloodStateNoLock();
+                    return;
                 }
 
                 try
                 {
+                    var fileModel = new PersistedFloodStateFile { Entries = entries };
                     var options = new JsonSerializerOptions { WriteIndented = true };
-                    string json = JsonSerializer.Serialize(state, options);
+                    string json = JsonSerializer.Serialize(fileModel, options);
                     File.WriteAllText(FloodStateFilePath, json);
                 }
                 catch (Exception ex)
@@ -2563,71 +3044,191 @@ namespace TGramFS.Services
                 try
                 {
                     string json = File.ReadAllText(path);
-                    var state = JsonSerializer.Deserialize<PersistedFloodState>(json);
-                    if (state == null || state.InitialSeconds <= 0 || state.FloodWaitUntilUtc == DateTime.MinValue)
+                    var fileModel = JsonSerializer.Deserialize<PersistedFloodStateFile>(json);
+                    if (fileModel == null)
                     {
                         DeletePersistedFloodStateNoLock();
                         return;
                     }
 
-                    DateTime untilUtc = state.FloodWaitUntilUtc.Kind == DateTimeKind.Unspecified
-                        ? DateTime.SpecifyKind(state.FloodWaitUntilUtc, DateTimeKind.Utc)
-                        : state.FloodWaitUntilUtc.ToUniversalTime();
+                    List<PersistedFloodState> rawEntries;
+                    if (fileModel.Entries != null && fileModel.Entries.Count > 0)
+                    {
+                        rawEntries = fileModel.Entries;
+                    }
+                    else if (fileModel.InitialSeconds > 0 && fileModel.FloodWaitUntilUtc != DateTime.MinValue)
+                    {
+                        rawEntries = new List<PersistedFloodState>
+                        {
+                            new PersistedFloodState
+                            {
+                                FloodWaitUntilUtc = fileModel.FloodWaitUntilUtc,
+                                InitialSeconds = fileModel.InitialSeconds,
+                                IsUploadStopped = fileModel.IsUploadStopped,
+                                IsDownload = fileModel.IsDownload,
+                                FileName = fileModel.FileName,
+                                Scope = fileModel.Scope
+                            }
+                        };
+                    }
+                    else
+                    {
+                        DeletePersistedFloodStateNoLock();
+                        return;
+                    }
 
                     var now = DateTime.UtcNow;
-                    if (untilUtc <= now)
+                    int restoredCount = 0;
+                    bool hadExpiredEntries = false;
+
+                    foreach (var state in rawEntries)
                     {
-                        DeletePersistedFloodStateNoLock();
-                        AppLogger.Info("TelegramService", "[Flood Persist] Таймер сохранённого FLOOD_WAIT уже истёк — файл flood_state.json очищен.");
-                        return;
-                    }
-
-                    int remainingSec = Math.Max(1, (int)Math.Ceiling((untilUtc - now).TotalSeconds));
-                    int initialSec = Math.Max(remainingSec, state.InitialSeconds);
-
-                    lock (_uploadPacingLock)
-                    {
-                        if (untilUtc > _floodBannerUntilUtc)
+                        if (state == null || state.InitialSeconds <= 0 || state.FloodWaitUntilUtc == DateTime.MinValue)
                         {
-                            _floodBannerUntilUtc = untilUtc;
-                            _floodBannerInitialSeconds = initialSec;
-                            _floodBannerIsUploadStopped = state.IsUploadStopped;
-                            _floodBannerIsDownload = state.IsDownload && !state.IsUploadStopped;
-                            _floodBannerFileName = state.FileName;
+                            hadExpiredEntries = true;
+                            continue;
                         }
 
-                        if (!state.IsDownload && untilUtc > _uploadActiveFloodUntilUtc)
+                        DateTime untilUtc = state.FloodWaitUntilUtc.Kind == DateTimeKind.Unspecified
+                            ? DateTime.SpecifyKind(state.FloodWaitUntilUtc, DateTimeKind.Utc)
+                            : state.FloodWaitUntilUtc.ToUniversalTime();
+
+                        if (untilUtc <= now)
                         {
-                            _uploadActiveFloodUntilUtc = untilUtc;
+                            hadExpiredEntries = true;
+                            continue;
                         }
 
-                        if (state.IsUploadStopped && untilUtc > _uploadHardStopUntilUtc)
-                        {
-                            _uploadHardStopUntilUtc = untilUtc;
-                        }
-                    }
+                        FloodWaitScope resolvedScope = state.Scope ?? (state.IsUploadStopped
+                            ? FloodWaitScope.Upload
+                            : (state.IsDownload ? FloodWaitScope.Download : FloodWaitScope.General));
 
-                    if (state.IsDownload || !state.IsUploadStopped)
-                    {
-                        if (untilUtc > _globalFloodWaitUntil)
+                        int remainingSec = Math.Max(1, (int)Math.Ceiling((untilUtc - now).TotalSeconds));
+                        int initialSec = Math.Max(remainingSec, state.InitialSeconds);
+                        bool effectiveDownload = resolvedScope == FloodWaitScope.Download && !state.IsUploadStopped;
+
+                        lock (_uploadPacingLock)
                         {
-                            _globalFloodWaitUntil = untilUtc;
-                        }
-                        _globalPacingLock.Wait();
-                        try
-                        {
-                            if (untilUtc > _nextAllowedSendUtc)
+                            if (!_activeFloodBanners.TryGetValue(resolvedScope, out var existing) || untilUtc > existing.FloodWaitUntilUtc)
                             {
-                                _nextAllowedSendUtc = untilUtc;
+                                _activeFloodBanners[resolvedScope] = new ActiveFloodBannerState
+                                {
+                                    Scope = resolvedScope,
+                                    FloodWaitUntilUtc = untilUtc,
+                                    InitialSeconds = existing != null ? Math.Max(existing.InitialSeconds, initialSec) : initialSec,
+                                    IsUploadStopped = (existing?.IsUploadStopped == true) || state.IsUploadStopped,
+                                    IsDownload = effectiveDownload,
+                                    FileName = !string.IsNullOrWhiteSpace(state.FileName) ? state.FileName : existing?.FileName
+                                };
+                            }
+
+                            if (resolvedScope == FloodWaitScope.Upload)
+                            {
+                                if (untilUtc > _uploadActiveFloodUntilUtc)
+                                {
+                                    _uploadActiveFloodUntilUtc = untilUtc;
+                                }
+                                if (state.IsUploadStopped && untilUtc > _uploadHardStopUntilUtc)
+                                {
+                                    _uploadHardStopUntilUtc = untilUtc;
+                                }
                             }
                         }
-                        finally
+
+                        switch (resolvedScope)
                         {
-                            _globalPacingLock.Release();
+                            case FloodWaitScope.Download:
+                                if (untilUtc > _downloadFloodWaitUntilUtc)
+                                {
+                                    _downloadFloodWaitUntilUtc = untilUtc;
+                                }
+                                _globalPacingLock.Wait();
+                                try
+                                {
+                                    if (untilUtc > _nextAllowedSendUtc)
+                                    {
+                                        _nextAllowedSendUtc = untilUtc;
+                                    }
+                                }
+                                finally
+                                {
+                                    _globalPacingLock.Release();
+                                }
+                                break;
+
+                            case FloodWaitScope.Caption:
+                                if (untilUtc > _captionFloodWaitUntilUtc)
+                                {
+                                    _captionFloodWaitUntilUtc = untilUtc;
+                                }
+                                _captionPacingLock.Wait();
+                                try
+                                {
+                                    if (untilUtc > _nextCaptionAllowedSendUtc)
+                                    {
+                                        _nextCaptionAllowedSendUtc = untilUtc;
+                                    }
+                                }
+                                finally
+                                {
+                                    _captionPacingLock.Release();
+                                }
+                                break;
+
+                            case FloodWaitScope.Background:
+                                if (untilUtc > _backgroundFloodWaitUntilUtc)
+                                {
+                                    _backgroundFloodWaitUntilUtc = untilUtc;
+                                }
+                                _backgroundPacingLock.Wait();
+                                try
+                                {
+                                    if (untilUtc > _nextBackgroundAllowedSendUtc)
+                                    {
+                                        _nextBackgroundAllowedSendUtc = untilUtc;
+                                    }
+                                }
+                                finally
+                                {
+                                    _backgroundPacingLock.Release();
+                                }
+                                break;
+
+                            case FloodWaitScope.General:
+                                if (untilUtc > _sessionFloodWaitUntilUtc)
+                                {
+                                    _sessionFloodWaitUntilUtc = untilUtc;
+                                }
+                                break;
                         }
+
+                        restoredCount++;
+                        AppLogger.Warn("TelegramService", $"[Flood Persist] Восстановлен активный FLOOD_WAIT ({resolvedScope}) из {FloodStateFileName}: осталось {remainingSec} из {initialSec} сек (до {untilUtc.ToLocalTime():HH:mm:ss}, stop={state.IsUploadStopped}, download={effectiveDownload}).");
                     }
 
-                    AppLogger.Warn("TelegramService", $"[Flood Persist] Восстановлен активный FLOOD_WAIT из {FloodStateFileName}: осталось {remainingSec} из {initialSec} сек (до {untilUtc.ToLocalTime():HH:mm:ss}, stop={state.IsUploadStopped}, download={state.IsDownload}).");
+                    if (restoredCount == 0)
+                    {
+                        DeletePersistedFloodStateNoLock();
+                        AppLogger.Info("TelegramService", "[Flood Persist] Таймеры сохранённых FLOOD_WAIT уже истекли — файл flood_state.json очищен.");
+                    }
+                    else if (hadExpiredEntries)
+                    {
+                        List<PersistedFloodState> cleaned;
+                        lock (_uploadPacingLock)
+                        {
+                            cleaned = CollectPersistableEntriesLocked(now);
+                        }
+                        if (cleaned.Count == 0)
+                        {
+                            DeletePersistedFloodStateNoLock();
+                        }
+                        else
+                        {
+                            var updatedModel = new PersistedFloodStateFile { Entries = cleaned };
+                            var options = new JsonSerializerOptions { WriteIndented = true };
+                            File.WriteAllText(FloodStateFilePath, JsonSerializer.Serialize(updatedModel, options));
+                        }
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -2637,148 +3238,155 @@ namespace TGramFS.Services
             }
         }
 
-        private static void RecordFloodStateAndPersist(int waitSeconds, bool isUploadStopped, string? fileName, bool isDownload)
+        private static void RecordFloodStateAndPersist(int waitSeconds, bool isUploadStopped, string? fileName, bool isDownload, FloodWaitScope scope = FloodWaitScope.General)
         {
             if (waitSeconds <= 0) return;
 
-            PersistedFloodState? toPersist = null;
+            bool shouldWriteFile = false;
             lock (_uploadPacingLock)
             {
                 var now = DateTime.UtcNow;
                 var candidateUntil = now.AddSeconds(waitSeconds);
-                bool activeBanner = now < _floodBannerUntilUtc;
-                bool upgradedToStop = isUploadStopped && !_floodBannerIsUploadStopped;
-                bool extendsSignificantly = !activeBanner || candidateUntil > _floodBannerUntilUtc.AddSeconds(2) || upgradedToStop;
+                bool hasExisting = _activeFloodBanners.TryGetValue(scope, out var existing) && now < existing.FloodWaitUntilUtc;
 
-                if (extendsSignificantly)
+                bool effectiveIsDownload = (scope == FloodWaitScope.Download || isDownload) &&
+                                           !isUploadStopped &&
+                                           scope != FloodWaitScope.Caption &&
+                                           scope != FloodWaitScope.Background;
+
+                if (!hasExisting || existing == null)
                 {
-                    if (candidateUntil > _floodBannerUntilUtc)
+                    var created = new ActiveFloodBannerState
                     {
-                        _floodBannerUntilUtc = candidateUntil;
-                    }
-
-                    if (!activeBanner)
+                        Scope = scope,
+                        FloodWaitUntilUtc = candidateUntil,
+                        InitialSeconds = waitSeconds,
+                        IsUploadStopped = isUploadStopped,
+                        IsDownload = effectiveIsDownload,
+                        FileName = !string.IsNullOrWhiteSpace(fileName) ? fileName : null
+                    };
+                    _activeFloodBanners[scope] = created;
+                    if (created.InitialSeconds > FloodPersistThresholdSeconds)
                     {
-                        _floodBannerInitialSeconds = waitSeconds;
-                    }
-                    else if (waitSeconds > _floodBannerInitialSeconds)
-                    {
-                        _floodBannerInitialSeconds = waitSeconds;
-                    }
-
-                    _floodBannerIsUploadStopped = activeBanner ? (_floodBannerIsUploadStopped || isUploadStopped) : isUploadStopped;
-                    _floodBannerIsDownload = isDownload && !_floodBannerIsUploadStopped;
-
-                    if (!string.IsNullOrWhiteSpace(fileName))
-                    {
-                        _floodBannerFileName = fileName;
-                    }
-                    else if (!activeBanner)
-                    {
-                        _floodBannerFileName = null;
-                    }
-
-                    if (waitSeconds > FloodPersistThresholdSeconds || (activeBanner && _floodBannerInitialSeconds > FloodPersistThresholdSeconds))
-                    {
-                        toPersist = new PersistedFloodState
-                        {
-                            FloodWaitUntilUtc = _floodBannerUntilUtc,
-                            InitialSeconds = Math.Max(1, _floodBannerInitialSeconds),
-                            IsUploadStopped = _floodBannerIsUploadStopped,
-                            IsDownload = _floodBannerIsDownload,
-                            FileName = _floodBannerFileName
-                        };
+                        shouldWriteFile = true;
                     }
                 }
-                else if (string.IsNullOrWhiteSpace(_floodBannerFileName) && !string.IsNullOrWhiteSpace(fileName))
+                else
                 {
-                    _floodBannerFileName = fileName;
-                    if (_floodBannerInitialSeconds > FloodPersistThresholdSeconds)
+                    bool upgradedToStop = isUploadStopped && !existing.IsUploadStopped;
+                    bool extendsSignificantly = upgradedToStop || candidateUntil > existing.FloodWaitUntilUtc.AddSeconds(2);
+                    if (extendsSignificantly)
                     {
-                        toPersist = new PersistedFloodState
+                        if (candidateUntil > existing.FloodWaitUntilUtc)
                         {
-                            FloodWaitUntilUtc = _floodBannerUntilUtc,
-                            InitialSeconds = Math.Max(1, _floodBannerInitialSeconds),
-                            IsUploadStopped = _floodBannerIsUploadStopped,
-                            IsDownload = _floodBannerIsDownload,
-                            FileName = _floodBannerFileName
-                        };
+                            existing.FloodWaitUntilUtc = candidateUntil;
+                        }
+                        if (waitSeconds > existing.InitialSeconds)
+                        {
+                            existing.InitialSeconds = waitSeconds;
+                        }
+                        existing.IsUploadStopped = existing.IsUploadStopped || isUploadStopped;
+                        existing.IsDownload = effectiveIsDownload && !existing.IsUploadStopped;
+                        if (!string.IsNullOrWhiteSpace(fileName))
+                        {
+                            existing.FileName = fileName;
+                        }
+                        if (existing.InitialSeconds > FloodPersistThresholdSeconds)
+                        {
+                            shouldWriteFile = true;
+                        }
+                    }
+                    else if (string.IsNullOrWhiteSpace(existing.FileName) && !string.IsNullOrWhiteSpace(fileName))
+                    {
+                        existing.FileName = fileName;
+                        if (existing.InitialSeconds > FloodPersistThresholdSeconds)
+                        {
+                            shouldWriteFile = true;
+                        }
                     }
                 }
             }
 
-            if (toPersist != null)
+            if (shouldWriteFile)
             {
-                SavePersistedFloodState(toPersist);
+                WriteOrDeletePersistedFloodState();
             }
         }
 
         public void ClearPersistedFloodStateIfExpired()
         {
-            bool shouldDeleteFile = false;
+            bool changed = false;
+            var now = DateTime.UtcNow;
+
+            if (_sessionFloodWaitUntilUtc != DateTime.MinValue && now >= _sessionFloodWaitUntilUtc)
+                _sessionFloodWaitUntilUtc = DateTime.MinValue;
+            if (_downloadFloodWaitUntilUtc != DateTime.MinValue && now >= _downloadFloodWaitUntilUtc)
+                _downloadFloodWaitUntilUtc = DateTime.MinValue;
+            if (_captionFloodWaitUntilUtc != DateTime.MinValue && now >= _captionFloodWaitUntilUtc)
+                _captionFloodWaitUntilUtc = DateTime.MinValue;
+            if (_backgroundFloodWaitUntilUtc != DateTime.MinValue && now >= _backgroundFloodWaitUntilUtc)
+                _backgroundFloodWaitUntilUtc = DateTime.MinValue;
+
             lock (_uploadPacingLock)
             {
-                var now = DateTime.UtcNow;
                 if (_uploadHardStopUntilUtc != DateTime.MinValue && now >= _uploadHardStopUntilUtc)
                 {
                     _uploadHardStopUntilUtc = DateTime.MinValue;
                 }
 
-                if (_floodBannerUntilUtc == DateTime.MinValue)
+                if (_activeFloodBanners.Count > 0)
                 {
-                    shouldDeleteFile = true;
+                    var expiredScopes = _activeFloodBanners
+                        .Where(kv => now >= kv.Value.FloodWaitUntilUtc)
+                        .Select(kv => kv.Key)
+                        .ToList();
+
+                    if (expiredScopes.Count > 0)
+                    {
+                        foreach (var expiredScope in expiredScopes)
+                        {
+                            _activeFloodBanners.Remove(expiredScope);
+                        }
+                        changed = true;
+                    }
                 }
-                else if (now >= _floodBannerUntilUtc)
+                else
                 {
-                    _floodBannerUntilUtc = DateTime.MinValue;
-                    _floodBannerInitialSeconds = 0;
-                    _floodBannerIsUploadStopped = false;
-                    _floodBannerIsDownload = false;
-                    _floodBannerFileName = null;
-                    shouldDeleteFile = true;
+                    changed = File.Exists(FloodStateFilePath);
                 }
             }
 
-            if (shouldDeleteFile)
+            if (changed)
             {
-                lock (_floodStateFileLock)
-                {
-                    lock (_uploadPacingLock)
-                    {
-                        if (_floodBannerUntilUtc > DateTime.UtcNow)
-                        {
-                            return;
-                        }
-                    }
-                    DeletePersistedFloodStateNoLock();
-                }
+                WriteOrDeletePersistedFloodState();
             }
         }
 
-        public bool TryGetActiveFloodBannerState(
-            out int remainingSeconds,
-            out int initialSeconds,
-            out bool isUploadStopped,
-            out string? fileName,
-            out bool isDownload)
+        public List<ActiveFloodBannerState> GetActiveFloodBannerStates()
         {
             bool needCleanup = false;
+            var result = new List<ActiveFloodBannerState>();
             lock (_uploadPacingLock)
             {
                 var now = DateTime.UtcNow;
-                if (_floodBannerUntilUtc > now)
+                foreach (var entry in _activeFloodBanners.Values)
                 {
-                    remainingSeconds = Math.Max(1, (int)Math.Ceiling((_floodBannerUntilUtc - now).TotalSeconds));
-                    initialSeconds = Math.Max(remainingSeconds, _floodBannerInitialSeconds);
-                    isUploadStopped = _floodBannerIsUploadStopped;
-                    fileName = _floodBannerFileName;
-                    isDownload = _floodBannerIsDownload;
-                    return true;
-                }
-
-                if (_floodBannerUntilUtc != DateTime.MinValue)
-                {
-                    needCleanup = true;
+                    if (entry.FloodWaitUntilUtc > now)
+                    {
+                        result.Add(new ActiveFloodBannerState
+                        {
+                            Scope = entry.Scope,
+                            FloodWaitUntilUtc = entry.FloodWaitUntilUtc,
+                            InitialSeconds = Math.Max(1, entry.InitialSeconds),
+                            IsUploadStopped = entry.IsUploadStopped,
+                            IsDownload = entry.IsDownload,
+                            FileName = entry.FileName
+                        });
+                    }
+                    else
+                    {
+                        needCleanup = true;
+                    }
                 }
             }
 
@@ -2787,15 +3395,43 @@ namespace TGramFS.Services
                 ClearPersistedFloodStateIfExpired();
             }
 
+            return result
+                .OrderByDescending(b => GetBannerPriority(b.Scope, b.IsUploadStopped))
+                .ThenByDescending(b => b.FloodWaitUntilUtc)
+                .ToList();
+        }
+
+        public bool TryGetActiveFloodBannerState(
+            out int remainingSeconds,
+            out int initialSeconds,
+            out bool isUploadStopped,
+            out string? fileName,
+            out bool isDownload,
+            out FloodWaitScope scope)
+        {
+            var active = GetActiveFloodBannerStates();
+            if (active.Count > 0)
+            {
+                var top = active[0];
+                remainingSeconds = Math.Max(1, top.RemainingSeconds);
+                initialSeconds = Math.Max(remainingSeconds, top.InitialSeconds);
+                isUploadStopped = top.IsUploadStopped;
+                fileName = top.FileName;
+                isDownload = top.IsDownload;
+                scope = top.Scope;
+                return true;
+            }
+
             remainingSeconds = 0;
             initialSeconds = 0;
             isUploadStopped = false;
             fileName = null;
             isDownload = false;
+            scope = FloodWaitScope.General;
             return false;
         }
 
-        private static void NotifyFloodWaitBanner(int waitSeconds, bool isUploadStopped, string? fileName, bool isDownload)
+        private static void NotifyFloodWaitBanner(int waitSeconds, bool isUploadStopped, string? fileName, bool isDownload, FloodWaitScope scope = FloodWaitScope.General)
         {
             var instance = _activeInstance;
             if (instance == null || waitSeconds <= 0) return;
@@ -2803,14 +3439,16 @@ namespace TGramFS.Services
             var now = DateTime.UtcNow;
             lock (_uploadPacingLock)
             {
-                if (!isUploadStopped && (now - _lastFloodBannerNotifyUtc).TotalMilliseconds < 800)
+                if (!isUploadStopped &&
+                    _lastFloodBannerNotifyByScopeUtc.TryGetValue(scope, out var lastScopeNotifyUtc) &&
+                    (now - lastScopeNotifyUtc).TotalMilliseconds < 800)
                 {
                     return;
                 }
-                _lastFloodBannerNotifyUtc = now;
+                _lastFloodBannerNotifyByScopeUtc[scope] = now;
             }
 
-            instance.OnFloodWaitDetected?.Invoke(waitSeconds, isUploadStopped, fileName, isDownload);
+            instance.OnFloodWaitDetected?.Invoke(waitSeconds, isUploadStopped, fileName, isDownload, scope);
         }
 
         private static bool TryGetRemainingUploadHardStopSeconds(out int remainingSeconds, out DateTime hardStopUntilUtc)
@@ -2849,7 +3487,7 @@ namespace TGramFS.Services
             {
                 if (notifyBanner)
                 {
-                    NotifyFloodWaitBanner(remainingSeconds, isUploadStopped: true, fileName, isDownload: false);
+                    NotifyFloodWaitBanner(remainingSeconds, isUploadStopped: true, fileName, isDownload: false, scope: FloodWaitScope.Upload);
                 }
                 return true;
             }
@@ -2861,7 +3499,7 @@ namespace TGramFS.Services
             if (TryGetRemainingUploadHardStopSeconds(out int remainingSec, out DateTime hardStopUntilUtc))
             {
                 AppLogger.Warn("TelegramService", $"[Upload HardStop] Отправка '{fileName}' прекращена без обращения к Telegram: активен FLOOD_WAIT (осталось {remainingSec} сек, до {hardStopUntilUtc.ToLocalTime():HH:mm:ss}).");
-                NotifyFloodWaitBanner(remainingSec, isUploadStopped: true, fileName, isDownload: false);
+                NotifyFloodWaitBanner(remainingSec, isUploadStopped: true, fileName, isDownload: false, scope: FloodWaitScope.Upload);
                 throw new InvalidOperationException($"Отправка остановлена из-за FLOOD_WAIT Telegram (осталось {remainingSec} сек, до {hardStopUntilUtc.ToLocalTime():HH:mm:ss}).");
             }
         }
@@ -2997,8 +3635,8 @@ namespace TGramFS.Services
 
             bool effectiveUploadStopped = waitSeconds > UploadHardStopThresholdSeconds || TryGetRemainingUploadHardStopSeconds(out _, out _);
             string? effectiveBannerFile = fileName ?? _activeUploadFileName;
-            RecordFloodStateAndPersist(waitSeconds, effectiveUploadStopped, effectiveBannerFile, isDownload: false);
-            NotifyFloodWaitBanner(waitSeconds, isUploadStopped: effectiveUploadStopped, effectiveBannerFile, isDownload: false);
+            RecordFloodStateAndPersist(waitSeconds, effectiveUploadStopped, effectiveBannerFile, isDownload: false, scope: FloodWaitScope.Upload);
+            NotifyFloodWaitBanner(waitSeconds, isUploadStopped: effectiveUploadStopped, effectiveBannerFile, isDownload: false, scope: FloodWaitScope.Upload);
         }
 
         private static void NotifyUploadMessageSucceeded()
@@ -3081,7 +3719,6 @@ namespace TGramFS.Services
             Interlocked.Increment(ref _pendingUploadsCount);
             bool uploadSlotAcquired = false;
             bool didAttemptNetworkUpload = false;
-            bool uploadHitFlood = false;
             string effectiveFileName = !string.IsNullOrEmpty(displayFileName) ? displayFileName : fileName;
             string rawCaptionPath = !string.IsNullOrEmpty(caption) ? caption : effectiveFileName;
             string effectiveCaption = rawCaptionPath.StartsWith("🟢") || rawCaptionPath.StartsWith("🗑️")
@@ -3286,7 +3923,15 @@ namespace TGramFS.Services
                     try
                     {
                         await EnsureUploadMessagePacingAsync(cancellationToken);
-                        message = await _client.SendMessageAsync(peer, effectiveCaption, mediaDoc);
+                        BeginUploadMessageRpc();
+                        try
+                        {
+                            message = await _client.SendMessageAsync(peer, effectiveCaption, mediaDoc);
+                        }
+                        finally
+                        {
+                            EndUploadMessageRpc();
+                        }
                     }
                     catch (TL.RpcException rpcEx) when (rpcEx.Code == 400 && (rpcEx.Message.Contains("CHANNEL_INVALID") || rpcEx.Message.Contains("CHANNEL_PRIVATE")))
                     {
@@ -3294,7 +3939,15 @@ namespace TGramFS.Services
                         InvalidateStoragePeer();
                         peer = await GetStoragePeerAsync(targetChannelId);
                         await EnsureUploadMessagePacingAsync(cancellationToken);
-                        message = await _client.SendMessageAsync(peer, effectiveCaption, mediaDoc);
+                        BeginUploadMessageRpc();
+                        try
+                        {
+                            message = await _client.SendMessageAsync(peer, effectiveCaption, mediaDoc);
+                        }
+                        finally
+                        {
+                            EndUploadMessageRpc();
+                        }
                     }
                 }
                 else if (isVideo)
@@ -3344,7 +3997,15 @@ namespace TGramFS.Services
                     try
                     {
                         await EnsureUploadMessagePacingAsync(cancellationToken);
-                        message = await _client.SendMessageAsync(peer, effectiveCaption, mediaDoc);
+                        BeginUploadMessageRpc();
+                        try
+                        {
+                            message = await _client.SendMessageAsync(peer, effectiveCaption, mediaDoc);
+                        }
+                        finally
+                        {
+                            EndUploadMessageRpc();
+                        }
                     }
                     catch (TL.RpcException rpcEx) when (rpcEx.Code == 400 && (rpcEx.Message.Contains("CHANNEL_INVALID") || rpcEx.Message.Contains("CHANNEL_PRIVATE")))
                     {
@@ -3352,7 +4013,15 @@ namespace TGramFS.Services
                         InvalidateStoragePeer();
                         peer = await GetStoragePeerAsync(targetChannelId);
                         await EnsureUploadMessagePacingAsync(cancellationToken);
-                        message = await _client.SendMessageAsync(peer, effectiveCaption, mediaDoc);
+                        BeginUploadMessageRpc();
+                        try
+                        {
+                            message = await _client.SendMessageAsync(peer, effectiveCaption, mediaDoc);
+                        }
+                        finally
+                        {
+                            EndUploadMessageRpc();
+                        }
                     }
                 }
                 else
@@ -3367,7 +4036,15 @@ namespace TGramFS.Services
                             var photoInput = await _client.UploadFileAsync(photoMs, previewFileName);
                             var photoMedia = new TL.InputMediaUploadedPhoto { file = photoInput };
                             await EnsureUploadMessagePacingAsync(cancellationToken);
-                            photoMessage = await _client.SendMessageAsync(peer, effectiveCaption, photoMedia);
+                            BeginUploadMessageRpc();
+                            try
+                            {
+                                photoMessage = await _client.SendMessageAsync(peer, effectiveCaption, photoMedia);
+                            }
+                            finally
+                            {
+                                EndUploadMessageRpc();
+                            }
                             AppLogger.Info("TelegramService", $"Фото-превью для галереи успешно опубликовано в Telegram (Message ID: {photoMessage.ID}, имя: '{previewFileName}').");
                         }
                         catch (TL.RpcException rpcEx) when (rpcEx.Code == 400 && (rpcEx.Message.Contains("CHANNEL_INVALID") || rpcEx.Message.Contains("CHANNEL_PRIVATE")))
@@ -3378,7 +4055,15 @@ namespace TGramFS.Services
                             var photoInput = await _client.UploadFileAsync(photoMs, previewFileName);
                             var photoMedia = new TL.InputMediaUploadedPhoto { file = photoInput };
                             await EnsureUploadMessagePacingAsync(cancellationToken);
-                            photoMessage = await _client.SendMessageAsync(peer, effectiveCaption, photoMedia);
+                            BeginUploadMessageRpc();
+                            try
+                            {
+                                photoMessage = await _client.SendMessageAsync(peer, effectiveCaption, photoMedia);
+                            }
+                            finally
+                            {
+                                EndUploadMessageRpc();
+                            }
                         }
                         catch (TL.RpcException rpcEx) when (rpcEx.Code == 420)
                         {
@@ -3424,7 +4109,15 @@ namespace TGramFS.Services
                     try
                     {
                         await EnsureUploadMessagePacingAsync(cancellationToken);
-                        message = await _client.SendMessageAsync(peer, docCaption, mediaDoc, reply_to_msg_id: replyToId);
+                        BeginUploadMessageRpc();
+                        try
+                        {
+                            message = await _client.SendMessageAsync(peer, docCaption, mediaDoc, reply_to_msg_id: replyToId);
+                        }
+                        finally
+                        {
+                            EndUploadMessageRpc();
+                        }
                     }
                     catch (TL.RpcException rpcEx) when (rpcEx.Code == 400 && (rpcEx.Message.Contains("CHANNEL_INVALID") || rpcEx.Message.Contains("CHANNEL_PRIVATE")))
                     {
@@ -3432,82 +4125,61 @@ namespace TGramFS.Services
                         InvalidateStoragePeer();
                         peer = await GetStoragePeerAsync(targetChannelId);
                         await EnsureUploadMessagePacingAsync(cancellationToken);
-                        message = await _client.SendMessageAsync(peer, docCaption, mediaDoc, reply_to_msg_id: replyToId);
+                        BeginUploadMessageRpc();
+                        try
+                        {
+                            message = await _client.SendMessageAsync(peer, docCaption, mediaDoc, reply_to_msg_id: replyToId);
+                        }
+                        finally
+                        {
+                            EndUploadMessageRpc();
+                        }
                     }
 
                     if (message != null)
                     {
-                        // Обновляем подпись в Telegram, добавляя точный ID сообщения
+                        long? resolvedChannelId = targetChannelId ?? (peer is TL.InputPeerChannel ipc ? ipc.channel_id : (long?)null);
+                        if (resolvedChannelId <= 0) resolvedChannelId = null;
+
+                        List<PendingCaptionUpdate>? pendingCaptions = null;
                         if (message.ID > 0)
                         {
-                            try
+                            string finalizedCaption = NodeRepository.FormatTelegramCaption(rawCaptionPath, message.ID, isLatest: true);
+                            pendingCaptions = new List<PendingCaptionUpdate>
                             {
-                                string finalizedCaption = NodeRepository.FormatTelegramCaption(rawCaptionPath, message.ID, isLatest: true);
-                                var editReq = new TL.Methods.Messages_EditMessage
-                                {
-                                    flags = TL.Methods.Messages_EditMessage.Flags.has_message,
-                                    peer = peer,
-                                    id = message.ID,
-                                    message = finalizedCaption
-                                };
-                                await EnsureUploadMessagePacingAsync(cancellationToken);
-                                await _client.Invoke(editReq);
-                            }
-                            catch (TL.RpcException rpcEx) when (rpcEx.Code == 420)
-                            {
-                                uploadHitFlood = true;
-                                RegisterUploadFloodWait(rpcEx.X, $"обновление подписи #{message.ID}");
-                                AppLogger.Warn("TelegramService", $"Получен FLOOD_WAIT_{rpcEx.X} ({rpcEx.X} сек) при обновлении финальной подписи с ID для #{message.ID}.");
-                            }
-                            catch (Exception ex)
-                            {
-                                AppLogger.Debug("TelegramService", $"Не удалось обновить финальную подпись с ID для #{message.ID}: {ex.Message}");
-                            }
+                                new PendingCaptionUpdate(message.ID, finalizedCaption, resolvedChannelId)
+                            };
                         }
 
-                        if (!uploadHitFlood) NotifyUploadMessageSucceeded();
+                        NotifyUploadMessageSucceeded();
                         AppLogger.Info("TelegramService", $"Файл '{effectiveFileName}' успешно сохранен в Telegram. Message ID: {message.ID}" + (photoMessage != null ? $", Preview ID: {photoMessage.ID}" : ""));
                         OnUploadCompleted?.Invoke(effectiveFileName);
-                        return new FileUploadResult(message.ID, photoMessage?.ID);
+                        return new FileUploadResult(message.ID, photoMessage?.ID, pendingCaptions: pendingCaptions);
                     }
                 }
 
                 if (message != null)
                 {
+                    long? resolvedChannelId = targetChannelId ?? (peer is TL.InputPeerChannel ipc ? ipc.channel_id : (long?)null);
+                    if (resolvedChannelId <= 0) resolvedChannelId = null;
+
+                    List<PendingCaptionUpdate>? pendingCaptions = null;
                     if (message.ID > 0)
                     {
-                        try
+                        string finalizedCaption = NodeRepository.FormatTelegramCaption(rawCaptionPath, message.ID, isLatest: true);
+                        pendingCaptions = new List<PendingCaptionUpdate>
                         {
-                            string finalizedCaption = NodeRepository.FormatTelegramCaption(rawCaptionPath, message.ID, isLatest: true);
-                            var editReq = new TL.Methods.Messages_EditMessage
-                            {
-                                flags = TL.Methods.Messages_EditMessage.Flags.has_message,
-                                peer = peer,
-                                id = message.ID,
-                                message = finalizedCaption
-                            };
-                            await EnsureUploadMessagePacingAsync(cancellationToken);
-                            await _client.Invoke(editReq);
-                        }
-                        catch (TL.RpcException rpcEx) when (rpcEx.Code == 420)
-                        {
-                            uploadHitFlood = true;
-                            RegisterUploadFloodWait(rpcEx.X, $"обновление подписи #{message.ID}");
-                            AppLogger.Warn("TelegramService", $"Получен FLOOD_WAIT_{rpcEx.X} ({rpcEx.X} сек) при обновлении финальной подписи с ID для #{message.ID}.");
-                        }
-                        catch (Exception ex)
-                        {
-                            AppLogger.Debug("TelegramService", $"Не удалось обновить финальную подпись с ID для #{message.ID}: {ex.Message}");
-                        }
+                            new PendingCaptionUpdate(message.ID, finalizedCaption, resolvedChannelId)
+                        };
                     }
 
-                    if (!uploadHitFlood) NotifyUploadMessageSucceeded();
+                    NotifyUploadMessageSucceeded();
                     AppLogger.Info("TelegramService", $"Файл '{effectiveFileName}' успешно сохранен в Telegram. Message ID: {message.ID}");
                     OnUploadCompleted?.Invoke(effectiveFileName);
-                    return new FileUploadResult(message.ID);
+                    return new FileUploadResult(message.ID, pendingCaptions: pendingCaptions);
                 }
 
-                if (!uploadHitFlood) NotifyUploadMessageSucceeded();
+                NotifyUploadMessageSucceeded();
                 AppLogger.Warn("TelegramService", "Сообщение отправлено, но ID не определен, возвращаем 1.");
                 OnUploadCompleted?.Invoke(effectiveFileName);
                 return new FileUploadResult(1);
@@ -3591,9 +4263,9 @@ namespace TGramFS.Services
             AppLogger.Info("TelegramService", $"[BigFile Chunking] Запуск нарезки и загрузки крупного файла '{effectiveFileName}' ({fileLength:N0} байт / {fileLength / (1024.0 * 1024.0 * 1024.0):F2} ГБ). Всего частей: {partCount}, лимит части: {maxPartSize / (1024.0 * 1024.0):F0} МБ.");
 
             var parts = new List<Models.NodePart>();
+            var pendingCaptions = new List<PendingCaptionUpdate>();
             int masterMessageId = 0;
             long channelId = targetChannelId ?? (peer is TL.InputPeerChannel ipc ? ipc.channel_id : 0);
-            bool uploadHitFlood = false;
 
             try
             {
@@ -3676,14 +4348,30 @@ namespace TGramFS.Services
                         try
                         {
                             await EnsureUploadMessagePacingAsync(cancellationToken);
-                            message = await _client.SendMessageAsync(peer, partCaption, mediaDoc);
+                            BeginUploadMessageRpc();
+                            try
+                            {
+                                message = await _client.SendMessageAsync(peer, partCaption, mediaDoc);
+                            }
+                            finally
+                            {
+                                EndUploadMessageRpc();
+                            }
                         }
                         catch (TL.RpcException rpcEx) when (rpcEx.Code == 400 && (rpcEx.Message.Contains("CHANNEL_INVALID") || rpcEx.Message.Contains("CHANNEL_PRIVATE")))
                         {
                             InvalidateStoragePeer();
                             peer = await GetStoragePeerAsync(targetChannelId);
                             await EnsureUploadMessagePacingAsync(cancellationToken);
-                            message = await _client.SendMessageAsync(peer, partCaption, mediaDoc);
+                            BeginUploadMessageRpc();
+                            try
+                            {
+                                message = await _client.SendMessageAsync(peer, partCaption, mediaDoc);
+                            }
+                            finally
+                            {
+                                EndUploadMessageRpc();
+                            }
                         }
 
                         masterMessageId = message.ID;
@@ -3691,29 +4379,8 @@ namespace TGramFS.Services
 
                         if (masterMessageId > 0)
                         {
-                            try
-                            {
-                                string finalizedCaption = NodeRepository.FormatTelegramCaption(masterCaptionPath, masterMessageId, isLatest: true);
-                                var editReq = new TL.Methods.Messages_EditMessage
-                                {
-                                    flags = TL.Methods.Messages_EditMessage.Flags.has_message,
-                                    peer = peer,
-                                    id = masterMessageId,
-                                    message = finalizedCaption
-                                };
-                                await EnsureUploadMessagePacingAsync(cancellationToken);
-                                await _client.Invoke(editReq);
-                            }
-                            catch (TL.RpcException rpcEx) when (rpcEx.Code == 420)
-                            {
-                                uploadHitFlood = true;
-                                RegisterUploadFloodWait(rpcEx.X, $"обновление подписи #{masterMessageId}");
-                                AppLogger.Warn("TelegramService", $"[BigFile Chunking] Получен FLOOD_WAIT_{rpcEx.X} ({rpcEx.X} сек) при обновлении подписи для #{masterMessageId}.");
-                            }
-                            catch (Exception ex)
-                            {
-                                AppLogger.Debug("TelegramService", $"[BigFile Chunking] Не удалось обновить финальную подпись для #{masterMessageId}: {ex.Message}");
-                            }
+                            string finalizedCaption = NodeRepository.FormatTelegramCaption(masterCaptionPath, masterMessageId, isLatest: true);
+                            pendingCaptions.Add(new PendingCaptionUpdate(masterMessageId, finalizedCaption, channelId > 0 ? channelId : null));
                         }
                     }
                     else
@@ -3723,53 +4390,48 @@ namespace TGramFS.Services
                         try
                         {
                             await EnsureUploadMessagePacingAsync(cancellationToken);
-                            message = await _client.SendMessageAsync(peer, partCaption, mediaDoc, reply_to_msg_id: masterMessageId);
+                            BeginUploadMessageRpc();
+                            try
+                            {
+                                message = await _client.SendMessageAsync(peer, partCaption, mediaDoc, reply_to_msg_id: masterMessageId);
+                            }
+                            finally
+                            {
+                                EndUploadMessageRpc();
+                            }
                         }
                         catch (TL.RpcException rpcEx) when (rpcEx.Code == 400 && (rpcEx.Message.Contains("CHANNEL_INVALID") || rpcEx.Message.Contains("CHANNEL_PRIVATE")))
                         {
                             InvalidateStoragePeer();
                             peer = await GetStoragePeerAsync(targetChannelId);
                             await EnsureUploadMessagePacingAsync(cancellationToken);
-                            message = await _client.SendMessageAsync(peer, partCaption, mediaDoc, reply_to_msg_id: masterMessageId);
+                            BeginUploadMessageRpc();
+                            try
+                            {
+                                message = await _client.SendMessageAsync(peer, partCaption, mediaDoc, reply_to_msg_id: masterMessageId);
+                            }
+                            finally
+                            {
+                                EndUploadMessageRpc();
+                            }
                         }
 
                         AppLogger.Info("TelegramService", $"[BigFile Chunking] Дочерняя Часть {partDisplayNum}/{partCount} успешно отправлена в канал (Message ID: {message.ID}, ReplyTo: {masterMessageId}).");
 
                         if (message.ID > 0)
                         {
-                            try
-                            {
-                                string finalizedChildCaption = $"↳ {childCaptionPath}\nID: {message.ID}";
-                                var editReq = new TL.Methods.Messages_EditMessage
-                                {
-                                    flags = TL.Methods.Messages_EditMessage.Flags.has_message,
-                                    peer = peer,
-                                    id = message.ID,
-                                    message = finalizedChildCaption
-                                };
-                                await EnsureUploadMessagePacingAsync(cancellationToken);
-                                await _client.Invoke(editReq);
-                            }
-                            catch (TL.RpcException rpcEx) when (rpcEx.Code == 420)
-                            {
-                                uploadHitFlood = true;
-                                RegisterUploadFloodWait(rpcEx.X, $"обновление подписи #{message.ID}");
-                                AppLogger.Warn("TelegramService", $"[BigFile Chunking] Получен FLOOD_WAIT_{rpcEx.X} ({rpcEx.X} сек) при обновлении подписи дочерней части #{message.ID}.");
-                            }
-                            catch (Exception ex)
-                            {
-                                AppLogger.Debug("TelegramService", $"[BigFile Chunking] Не удалось обновить финальную подпись дочерней части #{message.ID}: {ex.Message}");
-                            }
+                            string finalizedChildCaption = $"↳ {childCaptionPath}\nID: {message.ID}";
+                            pendingCaptions.Add(new PendingCaptionUpdate(message.ID, finalizedChildCaption, channelId > 0 ? channelId : null));
                         }
                     }
 
                     parts.Add(new Models.NodePart(0, i, currentPartLength, message.ID, channelId));
                 }
 
-                if (!uploadHitFlood) NotifyUploadMessageSucceeded();
+                NotifyUploadMessageSucceeded();
                 AppLogger.Info("TelegramService", $"[BigFile Chunking] Все {parts.Count} частей для '{effectiveFileName}' успешно загружены в Telegram!");
                 OnUploadCompleted?.Invoke(effectiveFileName);
-                return new FileUploadResult(masterMessageId, null, parts);
+                return new FileUploadResult(masterMessageId, null, parts, pendingCaptions);
             }
             catch (Exception ex)
             {
@@ -4025,7 +4687,15 @@ namespace TGramFS.Services
                     message = newCaption
                 };
 
-                await _client.Invoke(editReq);
+                BeginCaptionRpc();
+                try
+                {
+                    await _client.Invoke(editReq);
+                }
+                finally
+                {
+                    EndCaptionRpc();
+                }
                 AppLogger.Info("TelegramService", $"Подпись сообщения #{messageId} в Telegram успешно обновлена на: '{newCaption}'.");
             }
             catch (TL.RpcException rpcEx) when (rpcEx.Code == 400 && rpcEx.Message.Contains("MESSAGE_NOT_MODIFIED"))
@@ -4034,7 +4704,7 @@ namespace TGramFS.Services
             }
             catch (TL.RpcException rpcEx) when (rpcEx.Code == 420) // FLOOD_WAIT_X
             {
-                TriggerGlobalFloodWait(rpcEx.X);
+                TriggerCaptionFloodWait(rpcEx.X, $"сообщение #{messageId}");
                 throw;
             }
             catch (TL.RpcException rpcEx) when (rpcEx.Code == 400 && (rpcEx.Message.Contains("MESSAGE_ID_INVALID") || rpcEx.Message.Contains("CHAT_ADMIN_REQUIRED")))
@@ -4095,7 +4765,7 @@ namespace TGramFS.Services
             try
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                await EnsureFloodWaitDelayAsync(cancellationToken);
+                await EnsureBackgroundFloodWaitDelayAsync(cancellationToken);
 
                 var sourcePeer = await GetStoragePeerAsync(sourceChannelId);
                 targetPeer = await GetStoragePeerAsync(targetChannelId);
@@ -4119,13 +4789,22 @@ namespace TGramFS.Services
                             flags = TL.Methods.Messages_ForwardMessages.Flags.drop_author
                         };
 
-                        var previewUpdates = await _client.Invoke(fwdPreviewReq);
+                        BeginBackgroundRpc();
+                        TL.UpdatesBase previewUpdates;
+                        try
+                        {
+                            previewUpdates = await _client.Invoke(fwdPreviewReq);
+                        }
+                        finally
+                        {
+                            EndBackgroundRpc();
+                        }
                         newPreviewId = ExtractMessageIdFromUpdates(previewUpdates);
                         if (newPreviewId.HasValue && newPreviewId.Value > 0)
                         {
                             forwardedMsgIds.Add(newPreviewId.Value);
                         }
-                        await EnsurePacingDelayAsync(cancellationToken);
+                        await EnsureBackgroundPacingDelayAsync(cancellationToken);
                     }
                     catch (OperationCanceledException)
                     {
@@ -4149,7 +4828,16 @@ namespace TGramFS.Services
                     flags = TL.Methods.Messages_ForwardMessages.Flags.drop_author
                 };
 
-                var fwdUpdates = await _client.Invoke(fwdReq);
+                BeginBackgroundRpc();
+                TL.UpdatesBase fwdUpdates;
+                try
+                {
+                    fwdUpdates = await _client.Invoke(fwdReq);
+                }
+                finally
+                {
+                    EndBackgroundRpc();
+                }
                 newMsgId = ExtractMessageIdFromUpdates(fwdUpdates);
 
                 if (newMsgId <= 0)
@@ -4189,8 +4877,8 @@ namespace TGramFS.Services
                     foreach (var childPart in partsToForward.Where(p => p.PartIndex > 0).OrderBy(p => p.PartIndex))
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        await EnsureFloodWaitDelayAsync(cancellationToken);
-                        await EnsurePacingDelayAsync(cancellationToken);
+                        await EnsureBackgroundFloodWaitDelayAsync(cancellationToken);
+                        await EnsureBackgroundPacingDelayAsync(cancellationToken);
                         cancellationToken.ThrowIfCancellationRequested();
 
                         var fwdChildReq = new TL.Methods.Messages_ForwardMessages
@@ -4202,7 +4890,16 @@ namespace TGramFS.Services
                             flags = TL.Methods.Messages_ForwardMessages.Flags.drop_author
                         };
 
-                        var childUpdates = await _client.Invoke(fwdChildReq);
+                        BeginBackgroundRpc();
+                        TL.UpdatesBase childUpdates;
+                        try
+                        {
+                            childUpdates = await _client.Invoke(fwdChildReq);
+                        }
+                        finally
+                        {
+                            EndBackgroundRpc();
+                        }
                         int childNewMsgId = ExtractMessageIdFromUpdates(childUpdates);
 
                         if (childNewMsgId <= 0)
@@ -4272,7 +4969,7 @@ namespace TGramFS.Services
             }
             catch (TL.RpcException rpcEx) when (rpcEx.Code == 420) // FLOOD_WAIT_X
             {
-                TriggerGlobalFloodWait(rpcEx.X);
+                TriggerBackgroundFloodWait(rpcEx.X, $"копирование сообщения #{sourceMessageId}");
                 AppLogger.Warn("TelegramService", $"[ForwardFileAsync] FloodWait: пауза {rpcEx.X} секунд.");
                 ScheduleForwardedCleanup();
                 return null;
@@ -4472,9 +5169,15 @@ namespace TGramFS.Services
             long? peerChannelId = effectiveChannelId != 0 ? effectiveChannelId : (long?)null;
             var peer = await GetStoragePeerAsync(peerChannelId);
             TL.Messages_MessagesBase messagesBase;
+            BeginDownloadRpc();
             try
             {
                 messagesBase = await _client.GetMessages(peer, new TL.InputMessage[] { new TL.InputMessageID { id = messageId } });
+            }
+            catch (TL.RpcException rpcEx) when (rpcEx.Code == 420)
+            {
+                TriggerDownloadFloodWait(rpcEx.X);
+                throw;
             }
             catch (TL.RpcException rpcEx) when (rpcEx.Code == 400 && (rpcEx.Message.Contains("CHANNEL_INVALID") || rpcEx.Message.Contains("CHANNEL_PRIVATE")))
             {
@@ -4487,6 +5190,10 @@ namespace TGramFS.Services
             {
                 TriggerReactorReconnect("сбой сети при запросе дескриптора сообщения");
                 throw new TelegramNetworkException($"Сбой сети при запросе документа ID {messageId}: {ex.Message}", ex);
+            }
+            finally
+            {
+                EndDownloadRpc();
             }
             
             TL.Document? document = null;
@@ -4636,7 +5343,7 @@ namespace TGramFS.Services
 
         private async Task DownloadSingleDocumentSliceAsync(int messageId, Stream destination, long offset, long length, string fileName = "файл", long totalFileSize = -1, long? channelId = null, int? nodeId = null, string? fullVirtualPath = null)
         {
-            await EnsureFloodWaitDelayAsync();
+            await EnsureDownloadFloodWaitDelayAsync();
 
             if (_client == null || !IsAuthorized)
             {
@@ -4841,7 +5548,7 @@ namespace TGramFS.Services
 
             while (remainingBytes > 0)
             {
-                await EnsureFloodWaitDelayAsync();
+                await EnsureDownloadFloodWaitDelayAsync();
 
                 // 1. Проверяем, есть ли уже нужные байты в быстром кэше оперативной памяти
                 if (TryGetFromMemoryCache(effectiveChannelId, messageId, currentPos, out var cachedRaw, out var cachedOffset) && cachedRaw != null)
@@ -5166,7 +5873,7 @@ namespace TGramFS.Services
             var validIds = messageIds.Where(id => id > 0).Distinct().ToList();
             if (validIds.Count == 0) return true;
 
-            await EnsureFloodWaitDelayAsync();
+            await EnsureBackgroundFloodWaitDelayAsync();
 
             if (_client == null || !IsAuthorized)
                 throw new InvalidOperationException("Клиент Telegram не подключен или не авторизован.");
@@ -5226,6 +5933,11 @@ namespace TGramFS.Services
                 }
                 return true;
             }
+            catch (TL.RpcException rpcEx) when (rpcEx.Code == 420)
+            {
+                AppLogger.Warn("TelegramService", $"Удаление сообщений приостановлено из-за FLOOD_WAIT ({rpcEx.X} сек).");
+                return false;
+            }
             catch (Exception ex)
             {
                 AppLogger.Error("TelegramService", $"Критическая ошибка при удалении сообщений из Telegram: {ex.Message}", ex);
@@ -5241,33 +5953,47 @@ namespace TGramFS.Services
         private async Task DeleteBatchWithBisectAsync(TL.InputPeer peer, bool isChannel, int[] ids)
         {
             if (ids == null || ids.Length == 0 || _client == null) return;
-            await EnsurePacingDelayAsync();
+            await EnsureBackgroundFloodWaitDelayAsync();
+            await EnsureBackgroundPacingDelayAsync();
 
             AppLogger.Debug("TelegramService", $"[DeleteBatchWithBisectAsync] Отправка запроса на удаление {ids.Length} сообщений: [{string.Join(", ", ids)}]");
 
             try
             {
-                if (isChannel && peer is TL.InputPeerChannel pc)
+                BeginBackgroundRpc();
+                try
                 {
-                    var channel = new TL.InputChannel(pc.channel_id, pc.access_hash);
-                    var deleteReq = new TL.Methods.Channels_DeleteMessages
+                    if (isChannel && peer is TL.InputPeerChannel pc)
                     {
-                        channel = channel,
-                        id = ids
-                    };
-                    await _client.Invoke(deleteReq);
+                        var channel = new TL.InputChannel(pc.channel_id, pc.access_hash);
+                        var deleteReq = new TL.Methods.Channels_DeleteMessages
+                        {
+                            channel = channel,
+                            id = ids
+                        };
+                        await _client.Invoke(deleteReq);
+                    }
+                    else
+                    {
+                        var deleteReq = new TL.Methods.Messages_DeleteMessages
+                        {
+                            id = ids
+                        };
+                        await _client.Invoke(deleteReq);
+                    }
                 }
-                else
+                finally
                 {
-                    var deleteReq = new TL.Methods.Messages_DeleteMessages
-                    {
-                        id = ids
-                    };
-                    await _client.Invoke(deleteReq);
+                    EndBackgroundRpc();
                 }
 
                 AppLogger.Info("TelegramService", $"Пакет из {ids.Length} сообщений успешно удален из Telegram.");
                 AppLogger.Debug("TelegramService", $"Удалены Telegram ID: [{string.Join(", ", ids)}]");
+            }
+            catch (TL.RpcException rpcEx) when (rpcEx.Code == 420) // FLOOD_WAIT_X — не бисектируем и не теряем сообщения!
+            {
+                TriggerBackgroundFloodWait(rpcEx.X, $"удаление {ids.Length} сообщений");
+                throw;
             }
             catch (Exception ex)
             {
@@ -5361,22 +6087,30 @@ namespace TGramFS.Services
                     return;
                 }
 
-                await EnsureFloodWaitDelayAsync();
+                await EnsureBackgroundFloodWaitDelayAsync();
 
-                using var ms = new MemoryStream(jpegBytes, writable: false);
-                var inputFile = await _client.UploadFileAsync(ms, "tgramfs_channel_icon.jpg");
-                var photo = new TL.InputChatUploadedPhoto
+                BeginBackgroundRpc();
+                try
                 {
-                    flags = TL.InputChatUploadedPhoto.Flags.has_file,
-                    file = inputFile
-                };
+                    using var ms = new MemoryStream(jpegBytes, writable: false);
+                    var inputFile = await _client.UploadFileAsync(ms, "tgramfs_channel_icon.jpg");
+                    var photo = new TL.InputChatUploadedPhoto
+                    {
+                        flags = TL.InputChatUploadedPhoto.Flags.has_file,
+                        file = inputFile
+                    };
 
-                await _client.Channels_EditPhoto(new TL.InputChannel(channel.ID, channel.access_hash), photo);
+                    await _client.Channels_EditPhoto(new TL.InputChannel(channel.ID, channel.access_hash), photo);
+                }
+                finally
+                {
+                    EndBackgroundRpc();
+                }
                 AppLogger.Info("TelegramService", $"Установлена стандартная иконка для канала '{channel.Title}' (ID: {channel.ID}).");
             }
             catch (TL.RpcException rpcEx) when (rpcEx.Code == 420)
             {
-                TriggerGlobalFloodWait(rpcEx.X);
+                TriggerBackgroundFloodWait(rpcEx.X, $"иконка канала '{channel.Title}'");
                 AppLogger.Warn("TelegramService", $"Не удалось установить иконку для канала '{channel.Title}' (ID: {channel.ID}) из-за FLOOD_WAIT ({rpcEx.X} сек).");
             }
             catch (Exception ex)

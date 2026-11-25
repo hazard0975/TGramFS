@@ -442,7 +442,11 @@ namespace TGramFS.Server
                         }
 
                         // Записываем инфу в базу с встроенными байтами при необходимости (без аудио-тегов в БД)
-                        repository.CreateOrUpdateFile(parentNode.Id, name, totalSize, tgMessageId, tgPreviewMessageId, inlineBytes, headerLastModified, parts: uploadResult?.Parts);
+                        int newNodeId = repository.CreateOrUpdateFile(parentNode.Id, name, totalSize, tgMessageId, tgPreviewMessageId, inlineBytes, headerLastModified, parts: uploadResult?.Parts);
+                        if (newNodeId > 0 && uploadResult != null)
+                        {
+                            telegramService.EnqueuePendingCaptions(newNodeId, uploadResult);
+                        }
 
                         context.Response.StatusCode = (int)HttpStatusCode.Created;
                     }
