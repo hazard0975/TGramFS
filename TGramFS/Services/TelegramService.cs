@@ -1106,7 +1106,7 @@ namespace TGramFS.Services
                         if (currentItem != null)
                         {
                             await EnsureFloodWaitDelayAsync();
-                            await EnsurePacingDelayAsync(token);
+                            await EnsureCaptionPacingDelayAsync(token);
                             long? targetChannelId = currentItem.ChannelId ?? _repository.GetChannelIdByTgMessageId(currentItem.TgMessageId);
                             await UpdateMessageCaptionAsync(currentItem.TgMessageId, currentItem.NewCaption, targetChannelId);
                             _repository.RemovePendingCaptionUpdate(currentItem.Id);
@@ -2369,6 +2369,42 @@ namespace TGramFS.Services
             finally
             {
                 _globalPacingLock.Release();
+            }
+
+            var waitMs = (scheduledTime - DateTime.UtcNow).TotalMilliseconds;
+            if (waitMs > 0)
+            {
+                await Task.Delay((int)waitMs, cancellationToken);
+            }
+        }
+
+        // Изолированный планировщик для фоновой очереди обновления подписей (ProcessCaptionQueueAsync).
+        // Использует удвоенный интервал глобального пейсинга с нижним порогом 350 мс (Math.Max(350, _globalPacingDelayMs * 2)),
+        // чтобы не упираться в лимит Telegram на Messages_EditMessage (~100 запросов / 30 сек) и не сдвигать слоты скачивания/стриминга.
+        private const int MinCaptionPacingDelayMs = 350;
+        private static readonly SemaphoreSlim _captionPacingLock = new SemaphoreSlim(1, 1);
+        private static DateTime _nextCaptionAllowedSendUtc = DateTime.MinValue;
+
+        public static async Task EnsureCaptionPacingDelayAsync(CancellationToken cancellationToken = default)
+        {
+            int globalDelayMs = Volatile.Read(ref _globalPacingDelayMs);
+            int effectiveDelayMs = Math.Max(MinCaptionPacingDelayMs, globalDelayMs * 2);
+
+            DateTime scheduledTime;
+            await _captionPacingLock.WaitAsync(cancellationToken);
+            try
+            {
+                var now = DateTime.UtcNow;
+                if (_nextCaptionAllowedSendUtc < now)
+                {
+                    _nextCaptionAllowedSendUtc = now;
+                }
+                scheduledTime = _nextCaptionAllowedSendUtc;
+                _nextCaptionAllowedSendUtc = _nextCaptionAllowedSendUtc.AddMilliseconds(effectiveDelayMs);
+            }
+            finally
+            {
+                _captionPacingLock.Release();
             }
 
             var waitMs = (scheduledTime - DateTime.UtcNow).TotalMilliseconds;

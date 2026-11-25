@@ -1493,4 +1493,8 @@
 - [x] **8.140. Возврат `NT_STATUS_DEVICE_NOT_READY` в `WinFspServer` при активном `Upload HardStop` для паузы и продолжения копирования в Проводнике Windows (`DECISIONS_LOG #148`, `WinFspServer.cs`, `TelegramService.cs`)**:
   - В `TelegramService` добавлен публичный `TryGetUploadHardStop(...)`.
   - В `WinFspServer` операции записи файлов (`Create`, `Overwrite`, `Write`, `SetFileSize`, `Flush`) при активном `HardStop` отклоняются кодом `NT_STATUS_DEVICE_NOT_READY` (`0xC00000A3`) с троттлингом лога и безопасным сбросом контекста записи (`AbortWriteContextOnHardStop`), чтобы Проводник показывал диалог «Повторить / Пропустить / Отмена» и позволял продолжить копирование после окончания `FLOOD_WAIT`.
+- [x] **8.141. Изолированный щадящий пейсинг фоновой очереди обновления подписей `ProcessCaptionQueueAsync` (`DECISIONS_LOG #149`, `TelegramService.cs`)**:
+  - В `TelegramService` добавлен отдельный планировщик `EnsureCaptionPacingDelayAsync` (`_captionPacingLock` / `_nextCaptionAllowedSendUtc`) с интервалом `Math.Max(350, _globalPacingDelayMs * 2)` (`360` мс при базовых `180` мс, нижний порог `350` мс).
+  - `ProcessCaptionQueueAsync` переведён на `EnsureCaptionPacingDelayAsync`, что убирает `FLOOD_WAIT` на массовом редактировании подписей (`Messages_EditMessage`) при сохранении `180` мс скорости скачивания и стриминга.
+
 

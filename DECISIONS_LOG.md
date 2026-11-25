@@ -4515,3 +4515,16 @@ _telegramService.UpdateSettings(_settings);
 1. В `TelegramService` добавлен публичный метод `TryGetUploadHardStop(out int remainingSeconds, out DateTime hardStopUntilUtc, string? fileName = null, bool notifyBanner = false)`.
 2. В `WinFspServer` добавлена константа `NT_STATUS_DEVICE_NOT_READY` (`0xC00000A3`, отображается в Win32 как `ERROR_NOT_READY` — «Устройство не готово», что заставляет Проводник Windows показать диалог **«Повторить / Пропустить / Отмена»** и удерживать очередь копирования до окончания флуда) и хелперы `TryRejectUploadOnHardStop` (с троттлингом лога и баннера раз в `2` сек) и `AbortWriteContextOnHardStop`.
 3. Проверка добавлена в `Create` (для файлов `!isDir`), `Overwrite` (до обнуления размера и контекста), `Write` (и при отказе запущенного `UploadTask`, и до старта новой буферизации/стриминга), `SetFileSize` (`newSize > 1`) и `Flush` (`ctx.IsModified`). При отказе в `Write`/`SetFileSize`/`Flush` контекст сбрасывается (`IsModified = false`, `RestorePreOverwriteState`, удаление из `_activeUploadNodes`), чтобы `Cleanup` не загрузил недописанный буфер.
+
+---
+
+## 149. Изолированный пейсинг для очереди обновления подписей `ProcessCaptionQueueAsync` (`TelegramService.cs`)
+
+### Контекст и симптомы:
+При массовом переносе в корзину или переименовании папок с большим числом мелких файлов (`1477+` сообщений в `log.MD`) фоновый воркер `ProcessCaptionQueueAsync` использовал общий `EnsurePacingDelayAsync` (`_globalPacingDelayMs`, по умолчанию `180` мс). С учётом сетевого RTT и локальных операций SQLite фактический интервал между запросами составлял `~231` мс (`~4.3` req/s), из-за чего каждые `21–24` секунды проходило `100` вызовов `Messages_EditMessage` и срабатывал лимит Telegram (`100` запросов за `30` сек) с `FLOOD_WAIT_5..9` + повторным `FLOOD_WAIT_3`. При тестовом повышении общего пейсинга до `300` мс (`~306` мс по факту) на `1487` обновлений сработал только один пограничный `FLOOD_WAIT_3`, но завышение общей настройки `PacingDelayMs` замедляет пул скачивания и стриминга.
+
+### Принятое решение:
+1. В `TelegramService` добавлен изолированный планировщик `EnsureCaptionPacingDelayAsync` с собственным семафором `_captionPacingLock` и таймером слота `_nextCaptionAllowedSendUtc`, который не затрагивает общий `_globalPacingLock` / `_nextAllowedSendUtc` для скачивания и стриминга (`Upload_GetFile`).
+2. Задержка для фонового обновления подписей вычисляется динамически по формуле `Math.Max(350, _globalPacingDelayMs * 2)`: при стандартных `180` мс составляет `360` мс (`~2.77` req/s с запасом до порога `100` req / `30` сек), а при более низком пользовательском пейсинге скачивания гарантируется нижний порог `350` мс.
+3. `ProcessCaptionQueueAsync` переведён с `EnsurePacingDelayAsync(token)` на `EnsureCaptionPacingDelayAsync(token)`.
+
