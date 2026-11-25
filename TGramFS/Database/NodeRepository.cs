@@ -283,23 +283,25 @@ namespace TGramFS.Database
                 return originalParentId;
             }
 
-            var chain = new List<string>();
+            var chain = new List<(string Name, long? TgChannelId)>();
+            var visitedIds = new HashSet<int>();
             using (var connection = _dbManager.GetConnection())
             {
                 int currentId = originalParentId;
-                while (currentId != root.Id)
+                while (currentId != root.Id && visitedIds.Add(currentId))
                 {
                     using (var cmd = connection.CreateCommand())
                     {
-                        cmd.CommandText = "SELECT id, parent_id, name, is_dir FROM nodes WHERE id = @id LIMIT 1;";
+                        cmd.CommandText = "SELECT id, parent_id, name, is_dir, tg_channel_id FROM nodes WHERE id = @id LIMIT 1;";
                         cmd.Parameters.AddWithValue("@id", currentId);
                         using (var reader = cmd.ExecuteReader())
                         {
                             if (!reader.Read()) break;
                             string name = reader["name"].ToString() ?? "";
+                            long? tgChannelId = !reader.IsDBNull(4) ? reader.GetInt64(4) : (long?)null;
                             if (!string.IsNullOrEmpty(name))
                             {
-                                chain.Add(name);
+                                chain.Add((name, tgChannelId));
                             }
                             if (reader.IsDBNull(1)) break;
                             currentId = Convert.ToInt32(reader["parent_id"]);
@@ -314,20 +316,31 @@ namespace TGramFS.Database
             int currentTrashParentId = trash.Id;
 
             long primaryChannelId = GetPrimaryTelegramChannel()?.ChannelId ?? 0;
+            string dateSuffix = DateTime.Now.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
             using (var connection = _dbManager.GetConnection())
             {
-                foreach (var folderName in chain)
+                for (int i = 0; i < chain.Count; i++)
                 {
+                    var item = chain[i];
+                    bool isTopLevel = (i == 0);
+                    bool isBoundCustomChannel = item.TgChannelId.HasValue
+                        && item.TgChannelId.Value != 0
+                        && (primaryChannelId == 0 || item.TgChannelId.Value != primaryChannelId);
+
+                    string baseMirrorName = (isTopLevel || isBoundCustomChannel)
+                        ? $"{item.Name} ({dateSuffix})"
+                        : item.Name;
+
                     int? foundId = null;
-                    string candidateName = folderName;
+                    string candidateName = baseMirrorName;
                     int duplicateIndex = 1;
 
                     while (true)
                     {
                         using (var searchCmd = connection.CreateCommand())
                         {
-                            searchCmd.CommandText = "SELECT id, is_dir, tg_channel_id FROM nodes WHERE parent_id = @parentId AND name = @name AND in_trash = 1 LIMIT 1;";
+                            searchCmd.CommandText = "SELECT id, is_dir, tg_channel_id FROM nodes WHERE parent_id = @parentId AND name = @name COLLATE NOCASE AND in_trash = 1 LIMIT 1;";
                             searchCmd.Parameters.AddWithValue("@parentId", currentTrashParentId);
                             searchCmd.Parameters.AddWithValue("@name", candidateName);
                             using (var reader = searchCmd.ExecuteReader())
@@ -349,7 +362,7 @@ namespace TGramFS.Database
                         }
 
                         duplicateIndex++;
-                        candidateName = $"{folderName} ({duplicateIndex})";
+                        candidateName = $"{baseMirrorName} ({duplicateIndex})";
                     }
 
                     if (foundId.HasValue)
@@ -547,6 +560,12 @@ namespace TGramFS.Database
             var movedFiles = new List<Node>();
             GetFilesRecursive(nodeId, movedFiles);
 
+            long primaryChannelId = GetPrimaryTelegramChannel()?.ChannelId ?? 0;
+            bool isBoundCustomFolder = node.IsDir
+                && node.TgChannelId.HasValue
+                && node.TgChannelId.Value != 0
+                && (primaryChannelId == 0 || node.TgChannelId.Value != primaryChannelId);
+
             using (var connection = _dbManager.GetConnection())
             using (var transaction = connection.BeginTransaction())
             {
@@ -556,13 +575,16 @@ namespace TGramFS.Database
                     {
                         string finalName = node.Name;
                         int duplicateIndex = 1;
+                        string? collisionTimestamp = isBoundCustomFolder
+                            ? DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss", CultureInfo.InvariantCulture)
+                            : null;
 
                         while (true)
                         {
                             using (var checkCmd = connection.CreateCommand())
                             {
                                 checkCmd.Transaction = transaction;
-                                checkCmd.CommandText = "SELECT COUNT(*) FROM nodes WHERE parent_id = @parentId AND name = @name AND in_trash = 1 AND id != @nodeId;";
+                                checkCmd.CommandText = "SELECT COUNT(*) FROM nodes WHERE parent_id = @parentId AND name = @name COLLATE NOCASE AND in_trash = 1 AND id != @nodeId;";
                                 checkCmd.Parameters.AddWithValue("@parentId", targetTrashParentId);
                                 checkCmd.Parameters.AddWithValue("@name", finalName);
                                 checkCmd.Parameters.AddWithValue("@nodeId", nodeId);
@@ -570,7 +592,16 @@ namespace TGramFS.Database
                                 if (count == 0) break;
 
                                 duplicateIndex++;
-                                finalName = $"{node.Name} ({duplicateIndex})";
+                                if (isBoundCustomFolder && collisionTimestamp != null)
+                                {
+                                    finalName = duplicateIndex == 2
+                                        ? $"{node.Name} ({collisionTimestamp})"
+                                        : $"{node.Name} ({collisionTimestamp}) ({duplicateIndex - 1})";
+                                }
+                                else
+                                {
+                                    finalName = $"{node.Name} ({duplicateIndex})";
+                                }
                             }
                         }
 

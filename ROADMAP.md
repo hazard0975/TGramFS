@@ -1507,4 +1507,9 @@
   - Добавлен узкий счётчик `_activeUploadMessageRpcCount` (`BeginUploadMessageRpc`/`EndUploadMessageRpc`) строго вокруг `SendMessageAsync`, чтобы параллельные короткие `FLOOD_WAIT <= 60` сек из `ProcessCaptionQueueAsync` во время заливки байтов файла не атрибутировались к `Upload`.
   - Хранение `_activeFloodBanners` и `flood_state.json` переведено на мультислотовый формат `PersistedFloodStateFile.Entries` по `FloodWaitScope` (с обратной совместимостью): при истечении одного из таймеров удаляется только его запись.
   - В `TrayContext` и `TrayProgressOverlay` добавлена ротация всех одновременно активных плашек `FLOOD_WAIT` каждые `5` секунд с индикатором `(1/N)` в заголовке, мгновенным выводом вперёд нового критического флуда и сохранением фоновых пауз (`Caption`/`Background`) при временном показе прогресса скачивания/загрузки.
+- [x] **8.144. Дневная изоляция зеркал `.Trash`, таймстамп коллизий привязанных папок и звёздочка в корзине (`DECISIONS_LOG #152`, `NodeRepository.cs`, `WinFspServer.cs`)**:
+  - В `NodeRepository.EnsureTrashHierarchyForParent` верхнеуровневым и привязанным к кастомному каналу папкам в зеркале `.Trash` добавляется суффикс дня ` (yyyy-MM-dd)` (с `COLLATE NOCASE`), освобождая чистое имя `Имя` для удаления самой папки целиком.
+  - В `NodeRepository.SoftDeleteNode` при коллизии имени удаляемой привязанной папки в `.Trash` вместо `(2)` назначается `Имя (yyyy-MM-dd HH-mm-ss)`, а для обычных папок сохраняется `(2)`.
+  - В `WinFspServer.IsBoundChannelFolderUnfiltered` снято ограничение `node.InTrash`, благодаря чему привязанные папки сохраняют иконку со звёздочкой (`ReadOnly` + виртуальный `desktop.ini`) и внутри корзины.
+
 

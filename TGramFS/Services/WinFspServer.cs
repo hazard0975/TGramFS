@@ -442,7 +442,7 @@ namespace TGramFS.Services
 
         private bool IsBoundChannelFolderUnfiltered(Node? node)
         {
-            if (node == null || !node.IsDir || node.InTrash || node.Id <= 1)
+            if (node == null || !node.IsDir || node.Id <= 1)
                 return false;
 
             if (!node.TgChannelId.HasValue || node.TgChannelId.Value == 0)
