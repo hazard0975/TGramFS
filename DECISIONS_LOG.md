@@ -4499,3 +4499,19 @@ _telegramService.UpdateSettings(_settings);
    - В оба SQL-запроса `GetNodeByPath` (поиск `.Trash` и дочерних узлов) добавлен `COLLATE NOCASE`.
    - Лог `[GetNodeByPath NULL]` при обращении к отсутствующему родительскому узлу переведён с `Warn` на `Debug` для исключения шума при штатном опросе Проводника сразу после перемещения/удаления.
 
+---
+
+## 148. Отклонение операций записи в `WinFspServer` с `NT_STATUS_DEVICE_NOT_READY` во время `Upload HardStop` (`WinFspServer.cs`, `TelegramService.cs`)
+
+### Контекст и симптомы:
+При получении длительного `FLOOD_WAIT > 60 сек` (`FLOOD_WAIT_458`) во время массового копирования через Проводник Windows (`log.MD`, строки `764–2347`):
+1. `UploadFileAsync` корректно блокировал сетевую отправку через `ThrowIfUploadHardStopped`, но это происходило внутри `WinFspServer.Cleanup` (который в интерфейсе WinFsp имеет тип `void` и не может вернуть код ошибки ОС).
+2. Для всех последующих файлов (`531.jpg..672.jpg`) вызовы `Create`, `Write`, `SetBasicInfo` продолжали возвращать `STATUS_SUCCESS`, из-за чего Проводник Windows считал операцию копирования завершённой (или сбрасывал её без диалога повтора), а файлы фактически не сохранялись.
+
+### Первопричина:
+Отсутствие проверки активного `_uploadHardStopUntilUtc` на уровне возвращающих `NTSTATUS` методов записи `WinFspServer` (`Create`, `Overwrite`, `Write`, `SetFileSize`, `Flush`).
+
+### Принятое решение:
+1. В `TelegramService` добавлен публичный метод `TryGetUploadHardStop(out int remainingSeconds, out DateTime hardStopUntilUtc, string? fileName = null, bool notifyBanner = false)`.
+2. В `WinFspServer` добавлена константа `NT_STATUS_DEVICE_NOT_READY` (`0xC00000A3`, отображается в Win32 как `ERROR_NOT_READY` — «Устройство не готово», что заставляет Проводник Windows показать диалог **«Повторить / Пропустить / Отмена»** и удерживать очередь копирования до окончания флуда) и хелперы `TryRejectUploadOnHardStop` (с троттлингом лога и баннера раз в `2` сек) и `AbortWriteContextOnHardStop`.
+3. Проверка добавлена в `Create` (для файлов `!isDir`), `Overwrite` (до обнуления размера и контекста), `Write` (и при отказе запущенного `UploadTask`, и до старта новой буферизации/стриминга), `SetFileSize` (`newSize > 1`) и `Flush` (`ctx.IsModified`). При отказе в `Write`/`SetFileSize`/`Flush` контекст сбрасывается (`IsModified = false`, `RestorePreOverwriteState`, удаление из `_activeUploadNodes`), чтобы `Cleanup` не загрузил недописанный буфер.

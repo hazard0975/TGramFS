@@ -2807,6 +2807,19 @@ namespace TGramFS.Services
             return false;
         }
 
+        public bool TryGetUploadHardStop(out int remainingSeconds, out DateTime hardStopUntilUtc, string? fileName = null, bool notifyBanner = false)
+        {
+            if (TryGetRemainingUploadHardStopSeconds(out remainingSeconds, out hardStopUntilUtc))
+            {
+                if (notifyBanner)
+                {
+                    NotifyFloodWaitBanner(remainingSeconds, isUploadStopped: true, fileName, isDownload: false);
+                }
+                return true;
+            }
+            return false;
+        }
+
         private static void ThrowIfUploadHardStopped(string fileName)
         {
             if (TryGetRemainingUploadHardStopSeconds(out int remainingSec, out DateTime hardStopUntilUtc))

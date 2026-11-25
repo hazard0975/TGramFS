@@ -795,7 +795,55 @@ namespace TGramFS.Services
         private const int NT_STATUS_DIRECTORY_NOT_EMPTY = unchecked((int)0xC0000101);
         private const int NT_STATUS_CANNOT_DELETE = unchecked((int)0xC0000121);
         private const int NT_STATUS_IO_TIMEOUT = unchecked((int)0xC00000B5);
+        private const int NT_STATUS_DEVICE_NOT_READY = unchecked((int)0xC00000A3);
         private const int NT_STATUS_NETWORK_UNREACHABLE = unchecked((int)0xC000023C);
+
+        private static long _lastHardStopWinFspLogTicks = 0;
+
+        private bool TryRejectUploadOnHardStop(string virtualPathOrName, string fileName, out int ntStatus)
+        {
+            if (_telegramService.TryGetUploadHardStop(out int remainingSec, out DateTime hardStopUntilUtc, fileName, notifyBanner: false))
+            {
+                long nowTicks = DateTime.UtcNow.Ticks;
+                long prevTicks = Interlocked.Read(ref _lastHardStopWinFspLogTicks);
+                if (nowTicks - prevTicks >= TimeSpan.TicksPerSecond * 2 &&
+                    Interlocked.CompareExchange(ref _lastHardStopWinFspLogTicks, nowTicks, prevTicks) == prevTicks)
+                {
+                    AppLogger.Warn("WinFsp", $"[Upload HardStop] Отклонена запись '{virtualPathOrName}' (NT_STATUS_DEVICE_NOT_READY): активен FLOOD_WAIT Telegram (осталось {remainingSec} сек, до {hardStopUntilUtc.ToLocalTime():HH:mm:ss}).");
+                    _telegramService.TryGetUploadHardStop(out _, out _, fileName, notifyBanner: true);
+                }
+                ntStatus = NT_STATUS_DEVICE_NOT_READY;
+                return true;
+            }
+            ntStatus = STATUS_SUCCESS;
+            return false;
+        }
+
+        private void AbortWriteContextOnHardStop(Node node, FspNodeContext ctx, string fallbackFileName)
+        {
+            ctx.IsModified = false;
+            ctx.RestorePreOverwriteState();
+            string cleanFilePath = ResolveCleanupVirtualPath(node, ctx, fallbackFileName);
+            _activeUploadNodes.TryRemove(cleanFilePath, out _);
+
+            if (ctx.OwnsActiveVirtualCopy)
+            {
+                UnregisterActiveVirtualCopy(node.Id);
+                ctx.OwnsActiveVirtualCopy = false;
+            }
+
+            try { ctx.UploadCts?.Cancel(); } catch { }
+            try { ctx.UploadCts?.Dispose(); } catch { }
+            ctx.UploadCts = null;
+
+            try { ctx.PipeStream?.Dispose(); } catch { }
+            ctx.PipeStream = null;
+            ctx.UploadTask = null;
+            ctx.IsUploadStarted = false;
+
+            try { ctx.SmallFileBuffer?.Dispose(); } catch { }
+            ctx.SmallFileBuffer = null;
+        }
 
         private static int _isNetworkOfflineLogged = 0;
 
@@ -1161,6 +1209,15 @@ namespace TGramFS.Services
             }
             else
             {
+                if (TryRejectUploadOnHardStop(cleanPath, itemName, out int hardStopStatus))
+                {
+                    fileNode = null!;
+                    fileDesc = null!;
+                    fileInfo = default;
+                    normalizedName = null!;
+                    return hardStopStatus;
+                }
+
                 int initialFileAttrs = (fileAttributes != 0 && fileAttributes != unchecked((uint)-1))
                     ? (int)SanitizeFileAttributes(false, fileAttributes)
                     : 0;
@@ -1281,6 +1338,11 @@ namespace TGramFS.Services
             {
                 FillFileInfo(node, out fileInfo);
                 return NT_STATUS_ACCESS_DENIED;
+            }
+            if (!node.IsDir && TryRejectUploadOnHardStop(ctx.VirtualPath ?? node.Name, node.Name, out int hardStopStatus))
+            {
+                FillFileInfo(node, out fileInfo);
+                return hardStopStatus;
             }
             long prevSize = node.Size;
 
@@ -1427,6 +1489,23 @@ namespace TGramFS.Services
                 }
                 FillFileInfo(node, out fileInfo);
                 return STATUS_SUCCESS;
+            }
+
+            if (ctx.UploadTask != null && ctx.UploadTask.IsFaulted)
+            {
+                bool isHardStop = TryRejectUploadOnHardStop(ctx.VirtualPath ?? node.Name, node.Name, out int faultStatus);
+                AbortWriteContextOnHardStop(node, ctx, node.Name);
+                bytesTransferred = 0;
+                FillFileInfo(node, out fileInfo);
+                return isHardStop ? faultStatus : NT_STATUS_UNSUCCESSFUL;
+            }
+
+            if (!ctx.IsUploadStarted && TryRejectUploadOnHardStop(ctx.VirtualPath ?? node.Name, node.Name, out int writeHardStopStatus))
+            {
+                AbortWriteContextOnHardStop(node, ctx, node.Name);
+                bytesTransferred = 0;
+                FillFileInfo(node, out fileInfo);
+                return writeHardStopStatus;
             }
 
             byte[] poolBuffer = ArrayPool<byte>.Shared.Rent((int)length);
@@ -1595,6 +1674,18 @@ namespace TGramFS.Services
                 FillFileInfo(node, out fileInfo);
                 return NT_STATUS_ACCESS_DENIED;
             }
+            if (!setAllocationSize &&
+                !node.IsDir &&
+                newSize > 1 &&
+                !ctx.IsUploadStarted &&
+                ctx.VirtualSourceNode == null &&
+                !ctx.IsVirtualCopyPassThrough &&
+                TryRejectUploadOnHardStop(ctx.VirtualPath ?? node.Name, node.Name, out int hardStopStatus))
+            {
+                AbortWriteContextOnHardStop(node, ctx, node.Name);
+                FillFileInfo(node, out fileInfo);
+                return hardStopStatus;
+            }
             if (!setAllocationSize)
             {
                 if (newSize == 0)
@@ -1635,6 +1726,36 @@ namespace TGramFS.Services
                 ctx.KnownTargetSize = (long)newSize;
                 ctx.ExplicitTruncateToZero = false;
             }
+            FillFileInfo(node, out fileInfo);
+            return STATUS_SUCCESS;
+        }
+
+        public override int Flush(
+            object fileNode,
+            object fileDesc,
+            out FileInfo fileInfo)
+        {
+            var node = fileNode as Node;
+            var ctx = fileDesc as FspNodeContext;
+            if (node == null)
+            {
+                fileInfo = default;
+                return STATUS_SUCCESS;
+            }
+
+            if (ctx != null &&
+                ctx.IsModified &&
+                !ctx.IsVirtualSystemFile &&
+                !node.IsDir &&
+                ctx.VirtualSourceNode == null &&
+                !ctx.IsVirtualCopyPassThrough &&
+                TryRejectUploadOnHardStop(ctx.VirtualPath ?? node.Name, node.Name, out int hardStopStatus))
+            {
+                AbortWriteContextOnHardStop(node, ctx, node.Name);
+                FillFileInfo(node, out fileInfo);
+                return hardStopStatus;
+            }
+
             FillFileInfo(node, out fileInfo);
             return STATUS_SUCCESS;
         }

@@ -1490,3 +1490,7 @@
   - Все кэши и трекеры чтения (`_documentCache`, `_chunkMemoryCache`, `_networkAudits`, `_fileReadSequences`, `_fileDownloadLocks`, дисковый кэш) и очередь `MtprotoDownloadWorkerPool` переведены на составной ключ с `channelId`, добавлена очистка кэшей канала `EvictChannelCaches` в `DeleteChannelAsync`.
   - В `pending_caption_updates` (`Schema.sql`, `DatabaseManager.cs`, `NodeRepository.cs`) выполнена миграция уникальности с `tg_message_id` на `(channel_id, tg_message_id)`; добавлен опциональный `channelId` в `GetNodePartsByMessageId` и `HandleLostFileByMessageId`.
   - В `NodeRepository.GetNodeByPath` добавлен `COLLATE NOCASE` (фикс `/.trash/...`), а `[GetNodeByPath NULL]` переведён в `Debug`.
+- [x] **8.140. Возврат `NT_STATUS_DEVICE_NOT_READY` в `WinFspServer` при активном `Upload HardStop` для паузы и продолжения копирования в Проводнике Windows (`DECISIONS_LOG #148`, `WinFspServer.cs`, `TelegramService.cs`)**:
+  - В `TelegramService` добавлен публичный `TryGetUploadHardStop(...)`.
+  - В `WinFspServer` операции записи файлов (`Create`, `Overwrite`, `Write`, `SetFileSize`, `Flush`) при активном `HardStop` отклоняются кодом `NT_STATUS_DEVICE_NOT_READY` (`0xC00000A3`) с троттлингом лога и безопасным сбросом контекста записи (`AbortWriteContextOnHardStop`), чтобы Проводник показывал диалог «Повторить / Пропустить / Отмена» и позволял продолжить копирование после окончания `FLOOD_WAIT`.
+
