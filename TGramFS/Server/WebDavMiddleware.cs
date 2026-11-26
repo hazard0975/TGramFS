@@ -658,6 +658,15 @@ namespace TGramFS.Server
             Uri destUri = new Uri(destinationHeader);
             string destPath = Uri.UnescapeDataString(destUri.LocalPath);
 
+            string normalizedDestPath = destPath.TrimEnd('/');
+            if (normalizedDestPath.Equals("/.Trash", StringComparison.OrdinalIgnoreCase) ||
+                destPath.StartsWith("/.Trash/", StringComparison.OrdinalIgnoreCase))
+            {
+                AppLogger.Warn("WebDAV", $"[MOVE] Попытка перемещения или переименования внутри/в корзину отклонена: '{path}' -> '{destPath}'.");
+                context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+                return Task.CompletedTask;
+            }
+
             if (!GetParentPathAndName(destPath, out string destParentPath, out string destName))
             {
                 context.Response.StatusCode = (int)HttpStatusCode.Conflict;
@@ -668,6 +677,13 @@ namespace TGramFS.Server
             if (destParentNode == null)
             {
                 context.Response.StatusCode = (int)HttpStatusCode.Conflict;
+                return Task.CompletedTask;
+            }
+
+            if (repository.IsNodeInTrash(destParentNode.Id))
+            {
+                AppLogger.Warn("WebDAV", $"[MOVE] Попытка перемещения или переименования в подкаталог корзины отклонена: '{path}' -> '{destPath}'.");
+                context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
                 return Task.CompletedTask;
             }
 
@@ -795,6 +811,15 @@ namespace TGramFS.Server
             Uri destUri = new Uri(destinationHeader, UriKind.RelativeOrAbsolute);
             string destPath = destUri.IsAbsoluteUri ? Uri.UnescapeDataString(destUri.LocalPath) : Uri.UnescapeDataString(destinationHeader);
 
+            string normalizedCopyDestPath = destPath.TrimEnd('/');
+            if (normalizedCopyDestPath.Equals("/.Trash", StringComparison.OrdinalIgnoreCase) ||
+                destPath.StartsWith("/.Trash/", StringComparison.OrdinalIgnoreCase))
+            {
+                AppLogger.Warn("WebDAV", $"[COPY] Попытка копирования в корзину отклонена: '{path}' -> '{destPath}'.");
+                context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+                return;
+            }
+
             if (!GetParentPathAndName(destPath, out string destParentPath, out string destName))
             {
                 context.Response.StatusCode = (int)HttpStatusCode.Conflict;
@@ -805,6 +830,13 @@ namespace TGramFS.Server
             if (destParentNode == null)
             {
                 context.Response.StatusCode = (int)HttpStatusCode.Conflict;
+                return;
+            }
+
+            if (repository.IsNodeInTrash(destParentNode.Id))
+            {
+                AppLogger.Warn("WebDAV", $"[COPY] Попытка копирования в подкаталог корзины отклонена: '{path}' -> '{destPath}'.");
+                context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
                 return;
             }
 

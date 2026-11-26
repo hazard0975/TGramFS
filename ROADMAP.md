@@ -1511,5 +1511,10 @@
   - В `NodeRepository.EnsureTrashHierarchyForParent` верхнеуровневым и привязанным к кастомному каналу папкам в зеркале `.Trash` добавляется суффикс дня ` (yyyy-MM-dd)` (с `COLLATE NOCASE`), освобождая чистое имя `Имя` для удаления самой папки целиком.
   - В `NodeRepository.SoftDeleteNode` при коллизии имени удаляемой привязанной папки в `.Trash` вместо `(2)` назначается `Имя (yyyy-MM-dd HH-mm-ss)`, а для обычных папок сохраняется `(2)`.
   - В `WinFspServer.IsBoundChannelFolderUnfiltered` снято ограничение `node.InTrash`, благодаря чему привязанные папки сохраняют иконку со звёздочкой (`ReadOnly` + виртуальный `desktop.ini`) и внутри корзины.
+- [x] **8.145. Защита `.Trash` от прямой записи, копирования и переименования/перемещения в `WinFspServer` и `WebDavMiddleware` (`DECISIONS_LOG #153`)**:
+  - В `WinFspServer` (`Create`, `Overwrite`, `Write`, `SetFileSize`) добавлена блокировка создания, перезаписи и изменения файлов/папок внутри `.Trash` (`NT_STATUS_ACCESS_DENIED`, без блокировки `Open`).
+  - В `WinFspServer.Rename` добавлена защита самой системной папки `.Trash`, а в `WinFspServer.Rename` и `WebDavMiddleware.HandleMoveAsync` запрещены переименование и перемещение внутрь/в пределах `.Trash` (восстановление перемещением из `.Trash` наружу сохранено).
+  - В `WebDavMiddleware.HandleCopyAsync` запрещено копирование внутрь `.Trash` (`403 Forbidden`).
+
 
 

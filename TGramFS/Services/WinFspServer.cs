@@ -819,6 +819,25 @@ namespace TGramFS.Services
             return false;
         }
 
+        private static bool IsTrashVirtualPath(string? cleanPath)
+        {
+            if (string.IsNullOrWhiteSpace(cleanPath)) return false;
+            string normalized = cleanPath.Replace('\\', '/').TrimEnd('/');
+            return normalized.Equals("/.Trash", StringComparison.OrdinalIgnoreCase) ||
+                   normalized.StartsWith("/.Trash/", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private bool IsNodeOrParentInTrash(Node? node, string? cleanPath = null)
+        {
+            if (!string.IsNullOrWhiteSpace(cleanPath) && IsTrashVirtualPath(cleanPath))
+                return true;
+            if (node == null) return false;
+            if (node.InTrash) return true;
+            if (node.Id > 0) return _repository.IsNodeInTrash(node.Id);
+            if (node.ParentId.HasValue && node.ParentId.Value > 0) return _repository.IsNodeInTrash(node.ParentId.Value);
+            return false;
+        }
+
         private void AbortWriteContextOnHardStop(Node node, FspNodeContext ctx, string fallbackFileName)
         {
             ctx.IsModified = false;
@@ -1137,6 +1156,16 @@ namespace TGramFS.Services
             int callerPid = 0;
             try { callerPid = FileSystemBase.GetOperationProcessId(); } catch { }
 
+            if (IsTrashVirtualPath(cleanPath))
+            {
+                AppLogger.Warn("WinFsp", $"[.Trash Protection] Отклонено создание/перезапись в корзине: '{cleanPath}' (pid={callerPid}).");
+                fileNode = null!;
+                fileDesc = null!;
+                fileInfo = default;
+                normalizedName = null!;
+                return NT_STATUS_ACCESS_DENIED;
+            }
+
             string parentPath = GetParentPath(cleanPath);
             string itemName = GetFileName(cleanPath);
             var parentNode = parentPath == "/" ? _repository.GetRootNode() : _repository.GetNodeByPath(parentPath);
@@ -1147,6 +1176,16 @@ namespace TGramFS.Services
                 fileInfo = default;
                 normalizedName = null!;
                 return NT_STATUS_OBJECT_PATH_NOT_FOUND;
+            }
+
+            if (IsNodeOrParentInTrash(parentNode))
+            {
+                AppLogger.Warn("WinFsp", $"[.Trash Protection] Отклонено создание в папке корзины (ParentID={parentNode.Id}): '{cleanPath}' (pid={callerPid}).");
+                fileNode = null!;
+                fileDesc = null!;
+                fileInfo = default;
+                normalizedName = null!;
+                return NT_STATUS_ACCESS_DENIED;
             }
 
             uint createDisposition = (createOptions >> 24) & 0xFF;
@@ -1334,8 +1373,12 @@ namespace TGramFS.Services
         {
             var node = (Node)fileNode;
             var ctx = (FspNodeContext)fileDesc;
-            if (ctx.IsVirtualSystemFile)
+            if (ctx.IsVirtualSystemFile || IsNodeOrParentInTrash(node, ctx.VirtualPath))
             {
+                if (!ctx.IsVirtualSystemFile)
+                {
+                    AppLogger.Warn("WinFsp", $"[.Trash Protection] Отклонена перезапись файла в корзине: '{ctx.VirtualPath ?? node.Name}' (ID {node.Id}).");
+                }
                 FillFileInfo(node, out fileInfo);
                 return NT_STATUS_ACCESS_DENIED;
             }
@@ -1455,8 +1498,12 @@ namespace TGramFS.Services
         {
             var node = (Node)fileNode;
             var ctx = (FspNodeContext)fileDesc;
-            if (ctx.IsVirtualSystemFile)
+            if (ctx.IsVirtualSystemFile || IsNodeOrParentInTrash(node, ctx.VirtualPath))
             {
+                if (!ctx.IsVirtualSystemFile)
+                {
+                    AppLogger.Warn("WinFsp", $"[.Trash Protection] Отклонена запись в файл корзины: '{ctx.VirtualPath ?? node.Name}' (ID {node.Id}).");
+                }
                 bytesTransferred = 0;
                 FillFileInfo(node, out fileInfo);
                 return NT_STATUS_ACCESS_DENIED;
@@ -1669,8 +1716,12 @@ namespace TGramFS.Services
         {
             var node = (Node)fileNode;
             var ctx = (FspNodeContext)fileDesc;
-            if (ctx.IsVirtualSystemFile)
+            if (ctx.IsVirtualSystemFile || IsNodeOrParentInTrash(node, ctx.VirtualPath))
             {
+                if (!ctx.IsVirtualSystemFile)
+                {
+                    AppLogger.Warn("WinFsp", $"[.Trash Protection] Отклонено изменение размера файла в корзине: '{ctx.VirtualPath ?? node.Name}' (ID {node.Id}).");
+                }
                 FillFileInfo(node, out fileInfo);
                 return NT_STATUS_ACCESS_DENIED;
             }
@@ -1954,13 +2005,32 @@ namespace TGramFS.Services
             string oldClean = NormalizePath(fileName);
             string newClean = NormalizePath(newFileName);
 
+            if (_repository.IsTrashFolder(node.Id) ||
+                oldClean.TrimEnd('/').Equals("/.Trash", StringComparison.OrdinalIgnoreCase))
+            {
+                AppLogger.Warn("WinFsp", $"[.Trash Protection] Попытка переименования или перемещения системной папки '.Trash' отклонена ('{oldClean}' -> '{newClean}').");
+                return NT_STATUS_ACCESS_DENIED;
+            }
+
             string newParentPath = GetParentPath(newClean);
             string newName = GetFileName(newClean);
+
+            if (IsTrashVirtualPath(newClean) || IsTrashVirtualPath(newParentPath))
+            {
+                AppLogger.Warn("WinFsp", $"[.Trash Protection] Запрещено переименование или перемещение внутрь корзины: '{oldClean}' -> '{newClean}'.");
+                return NT_STATUS_ACCESS_DENIED;
+            }
 
             var targetParent = newParentPath == "/" ? _repository.GetRootNode() : _repository.GetNodeByPath(newParentPath);
             if (targetParent == null)
             {
                 return NT_STATUS_OBJECT_PATH_NOT_FOUND;
+            }
+
+            if (IsNodeOrParentInTrash(targetParent))
+            {
+                AppLogger.Warn("WinFsp", $"[.Trash Protection] Запрещено перемещение или переименование в целевой папке корзины (ID {targetParent.Id}): '{oldClean}' -> '{newClean}'.");
+                return NT_STATUS_ACCESS_DENIED;
             }
 
             try

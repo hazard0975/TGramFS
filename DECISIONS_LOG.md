@@ -4594,4 +4594,24 @@ _telegramService.UpdateSettings(_settings);
    - Удалена проверка `node.InTrash` из `IsBoundChannelFolderUnfiltered`, чтобы привязанные папки внутри `.Trash` сохраняли атрибут `ReadOnly` и виртуальный `desktop.ini` (визуальное отличие привязанных папок со звёздочкой от обычных папок и зеркал без звёздочки).
    - Дополнение: при тестировании удаления привязанной папки из `.Trash` Проводник вызывал диалог UAC из-за оставшегося `!node.InTrash` в `WinFspServer.SetBasicInfo` (при снятии `ReadOnly` не срабатывал `SuppressVirtualDesktopIni`, и `FillFileInfo` возвращал `ReadOnly` обратно). Проверка `!node.InTrash` удалена и из `SetBasicInfo`.
 
+---
+
+## 153. Запрет прямой записи, копирования и переименования/перемещения в `.Trash` для WinFsp и WebDAV (`WinFspServer.cs`, `WebDavMiddleware.cs`)
+
+### Контекст и симптомы:
+1. В `WebDavMiddleware` прямая запись (`HandlePutAsync`) и создание папок (`HandleMkColAsync`) в `.Trash` уже отклонялись с `403 Forbidden`, а вот `HandleCopyAsync` не проверял назначение внутри `.Trash`.
+2. В `WinFspServer` (`Create`, `Overwrite`, `Write`, `SetFileSize`) проверки `.Trash`/`InTrash` отсутствовали (блокировалось только создание папок через `EnsureDirectoryPathExists`). При тестировании в Проводнике Windows создание нового файла или копирование внутрь `/.Trash/...` через WinFsp успешно загружало файл в Telegram (`🟢 /.Trash/... #latest`) и сохраняло запись в SQLite с `in_trash = 0` внутри удалённой папки.
+3. В `WinFspServer.Rename` отсутствовала защита самой папки `.Trash` от переименования/перемещения, а `WinFspServer.Rename` и `WebDavMiddleware.HandleMoveAsync` проверяли коллизии в цели через `GetChildByName(..., inTrash: false)`, не обнаруживая дубликатов внутри `.Trash`, а при переименовании привязанной папки в корзине переименовывали Telegram-канал (`EditChannelTitleAsync`) и ставили подписи в очередь.
+
+### Принятое решение:
+1. **Защита от прямой записи и копирования в `.Trash` (`WinFspServer.cs`, `WebDavMiddleware.cs`)**:
+   - В `WinFspServer` добавлены хелперы `IsTrashVirtualPath` и `IsNodeOrParentInTrash`.
+   - `WinFspServer.Create`, `Overwrite`, `Write` и `SetFileSize` отклоняют любые операции создания, перезаписи, записи и изменения размера в `.Trash` кодом `NT_STATUS_ACCESS_DENIED` (метод `Open` по `grantedAccess` не блокируется, чтобы не ломать удаление и восстановление в Проводнике при запросе `MAXIMUM_ALLOWED`).
+   - В `WebDavMiddleware.HandleCopyAsync` добавлена проверка назначения (`destPath` и `IsNodeInTrash(destParentNode.Id)`): копирование в `.Trash` отклоняется с `403 Forbidden` (копирование из `.Trash` наружу сохранено).
+2. **Единое правило для `Rename` / `MOVE` (Вариант 1 — поведение системной корзины)**:
+   - В `WinFspServer.Rename` добавлена защита самой папки `.Trash` (`NT_STATUS_ACCESS_DENIED`), приведённая в соответствие с `WebDavMiddleware.HandleMoveAsync`.
+   - В `WinFspServer.Rename` (`NT_STATUS_ACCESS_DENIED`) и `WebDavMiddleware.HandleMoveAsync` (`403 Forbidden`) запрещено любое переименование или перемещение, если целевая директория находится в `.Trash` (как переименование/перемещение внутри корзины, так и прямое перемещение снаружи внутрь `.Trash` в обход `SoftDeleteNode`).
+   - Перемещение элементов **из `.Trash` наружу** (восстановление через «Вырезать → Вставить» / перетаскивание) и окончательное удаление из `.Trash` продолжают работать в штатном режиме.
+
+
 
