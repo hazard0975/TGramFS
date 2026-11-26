@@ -1871,7 +1871,7 @@ namespace TGramFS.Services
             if (fileAttributes != 0 && fileAttributes != unchecked((uint)-1))
             {
                 uint sanitizedAttrs = SanitizeFileAttributes(node.IsDir, fileAttributes);
-                if (node.IsDir && !node.InTrash && node.Id > 1 &&
+                if (node.IsDir && node.Id > 1 &&
                     (sanitizedAttrs & (uint)System.IO.FileAttributes.ReadOnly) == 0 &&
                     IsBoundChannelFolderUnfiltered(node))
                 {

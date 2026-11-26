@@ -4590,6 +4590,8 @@ _telegramService.UpdateSettings(_settings);
    - Поиск зеркал выполняется с `COLLATE NOCASE`. Чистое имя `.Trash/Тест` остаётся свободным для самой привязанной папки при её полном удалении.
 2. **Метка времени при повторном удалении привязанной папки (`NodeRepository.SoftDeleteNode`)**:
    - При коллизии имени удаляемой папки в `.Trash` для привязанных к кастомному каналу папок вместо `(2)` используется формат `Имя (yyyy-MM-dd HH-mm-ss)` (с проверкой уникальности через `COLLATE NOCASE`), для обычных папок сохраняется `Имя (2)`.
-3. **Сохранение иконки привязанной папки в корзине (`WinFspServer.IsBoundChannelFolderUnfiltered`)**:
-   - Удалена проверка `node.InTrash`, чтобы привязанные папки внутри `.Trash` сохраняли атрибут `ReadOnly` и виртуальный `desktop.ini` (визуальное отличие привязанных папок со звёздочкой от обычных папок и зеркал без звёздочки).
+3. **Сохранение иконки привязанной папки в корзине (`WinFspServer.IsBoundChannelFolderUnfiltered`, `WinFspServer.SetBasicInfo`)**:
+   - Удалена проверка `node.InTrash` из `IsBoundChannelFolderUnfiltered`, чтобы привязанные папки внутри `.Trash` сохраняли атрибут `ReadOnly` и виртуальный `desktop.ini` (визуальное отличие привязанных папок со звёздочкой от обычных папок и зеркал без звёздочки).
+   - Дополнение: при тестировании удаления привязанной папки из `.Trash` Проводник вызывал диалог UAC из-за оставшегося `!node.InTrash` в `WinFspServer.SetBasicInfo` (при снятии `ReadOnly` не срабатывал `SuppressVirtualDesktopIni`, и `FillFileInfo` возвращал `ReadOnly` обратно). Проверка `!node.InTrash` удалена и из `SetBasicInfo`.
+
 
