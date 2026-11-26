@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -766,6 +767,9 @@ namespace TGramFS.Services
         /// </summary>
         public async Task PingOrReconnectAsync()
         {
+            ClearPersistedFloodStateIfExpired();
+            WakeFloodWaitDelaysOnResume();
+
             if (_client == null || !IsAuthorized)
             {
                 AppLogger.Info("TelegramService", "Клиент Telegram не подключен/не авторизован при пробуждении. Запуск восстановления...");
@@ -1303,8 +1307,12 @@ namespace TGramFS.Services
                 }
                 catch (TL.RpcException rpcEx) when (rpcEx.Code == 420) // FLOOD_WAIT_X
                 {
-                    AppLogger.Warn("TelegramService", $"FloodWait при фоновом обновлении подписей: пауза {rpcEx.X} секунд...");
-                    await Task.Delay(Math.Max(5000, rpcEx.X * 1000), token);
+                    if (rpcEx.X <= 0)
+                    {
+                        AppLogger.Warn("TelegramService", "FloodWait при фоновом обновлении подписей (без указания секунд): пауза 5 сек...");
+                        await Task.Delay(5000, token);
+                    }
+                    continue;
                 }
                 catch (TL.RpcException rpcEx) when (rpcEx.Code == 400)
                 {
@@ -2109,6 +2117,8 @@ namespace TGramFS.Services
                                     _connectionReadyTcs = null;
                                 }
                                 TelegramWinFspFileSystem.ResetNetworkOfflineState();
+                                ClearPersistedFloodStateIfExpired();
+                                WakeFloodWaitDelaysOnResume();
                                 AppLogger.Info("TelegramService", "[Reactor] Сессия Telegram успешно восстановлена!");
                                 break;
                             }
@@ -2591,79 +2601,117 @@ namespace TGramFS.Services
             return $"Слишком много запросов (FLOOD_WAIT). Сервер Telegram просит подождать {seconds} сек перед повторной попыткой.";
         }
 
+        private const int FloodWaitPollSliceMs = 10000;
+        private static readonly object _floodWakeLock = new();
+        private static CancellationTokenSource _floodWakeCts = new();
+
+        /// <summary>
+        /// Пробуждает все активные ожидания FLOOD_WAIT после выхода Windows из сна/гибернации,
+        /// чтобы они немедленно сверились с реальным временем DateTime.UtcNow.
+        /// </summary>
+        public static void WakeFloodWaitDelaysOnResume()
+        {
+            CancellationTokenSource previous;
+            lock (_floodWakeLock)
+            {
+                previous = _floodWakeCts;
+                _floodWakeCts = new CancellationTokenSource();
+            }
+            try { previous.Cancel(); } catch { }
+        }
+
+        private static async Task WaitUntilUtcWakeableAsync(Func<DateTime> getUntilUtc, string? logLabel, CancellationToken cancellationToken)
+        {
+            bool logged = false;
+            while (true)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var now = DateTime.UtcNow;
+                var until = getUntilUtc();
+                if (until <= now) break;
+
+                var remaining = until - now;
+                if (!logged && !string.IsNullOrEmpty(logLabel))
+                {
+                    AppLogger.Warn("TelegramService", $"[{logLabel}] Пауза до {until.ToLocalTime():HH:mm:ss} ({remaining.TotalSeconds:F1} сек)...");
+                    logged = true;
+                }
+
+                int sliceMs = (int)Math.Min(FloodWaitPollSliceMs, Math.Ceiling(remaining.TotalMilliseconds));
+                if (sliceMs <= 0) break;
+
+                CancellationToken wakeToken;
+                lock (_floodWakeLock)
+                {
+                    wakeToken = _floodWakeCts.Token;
+                }
+
+                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, wakeToken);
+                try
+                {
+                    await Task.Delay(sliceMs, linkedCts.Token);
+                }
+                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+                {
+                    // Прервано пробуждением после сна — сразу перепроверяем DateTime.UtcNow
+                }
+            }
+
+            if (logged)
+            {
+                _activeInstance?.ClearPersistedFloodStateIfExpired();
+            }
+        }
+
         /// <summary>
         /// Ожидание сессионного FLOOD_WAIT (авторизация, восстановление подключения, общие вызовы).
         /// Изолирован от очередей скачивания, обновления подписей и фонового удаления/миграции.
         /// </summary>
-        public static async Task EnsureFloodWaitDelayAsync(CancellationToken cancellationToken = default)
+        public static Task EnsureFloodWaitDelayAsync(CancellationToken cancellationToken = default)
         {
-            var until = _sessionFloodWaitUntilUtc;
-            if (until > DateTime.UtcNow)
-            {
-                var delay = until - DateTime.UtcNow;
-                if (delay.TotalMilliseconds > 0)
-                {
-                    AppLogger.Warn("TelegramService", $"[Session FLOOD_WAIT] Задержка потока до {until.ToLocalTime():HH:mm:ss} ({delay.TotalSeconds:F1} сек)...");
-                    await Task.Delay(delay, cancellationToken);
-                }
-            }
+            return WaitUntilUtcWakeableAsync(
+                () => _sessionFloodWaitUntilUtc,
+                "Session FLOOD_WAIT",
+                cancellationToken);
         }
 
         /// <summary>
         /// Ожидание FLOOD_WAIT для контура скачивания и стриминга (учитывает только паузу скачивания и общую паузу сессии).
         /// </summary>
-        public static async Task EnsureDownloadFloodWaitDelayAsync(CancellationToken cancellationToken = default)
+        public static Task EnsureDownloadFloodWaitDelayAsync(CancellationToken cancellationToken = default)
         {
-            var until = _downloadFloodWaitUntilUtc > _sessionFloodWaitUntilUtc
-                ? _downloadFloodWaitUntilUtc
-                : _sessionFloodWaitUntilUtc;
-            if (until > DateTime.UtcNow)
-            {
-                var delay = until - DateTime.UtcNow;
-                if (delay.TotalMilliseconds > 0)
-                {
-                    AppLogger.Warn("TelegramService", $"[Download FLOOD_WAIT] Пауза скачивания до {until.ToLocalTime():HH:mm:ss} ({delay.TotalSeconds:F1} сек)...");
-                    await Task.Delay(delay, cancellationToken);
-                }
-            }
+            return WaitUntilUtcWakeableAsync(
+                () => _downloadFloodWaitUntilUtc > _sessionFloodWaitUntilUtc
+                    ? _downloadFloodWaitUntilUtc
+                    : _sessionFloodWaitUntilUtc,
+                "Download FLOOD_WAIT",
+                cancellationToken);
         }
 
         /// <summary>
         /// Ожидание FLOOD_WAIT для изолированной фоновой очереди обновления подписей.
         /// </summary>
-        public static async Task EnsureCaptionFloodWaitDelayAsync(CancellationToken cancellationToken = default)
+        public static Task EnsureCaptionFloodWaitDelayAsync(CancellationToken cancellationToken = default)
         {
-            var until = _captionFloodWaitUntilUtc > _sessionFloodWaitUntilUtc
-                ? _captionFloodWaitUntilUtc
-                : _sessionFloodWaitUntilUtc;
-            if (until > DateTime.UtcNow)
-            {
-                var delay = until - DateTime.UtcNow;
-                if (delay.TotalMilliseconds > 0)
-                {
-                    AppLogger.Warn("TelegramService", $"[Caption FLOOD_WAIT] Пауза очереди подписей до {until.ToLocalTime():HH:mm:ss} ({delay.TotalSeconds:F1} сек)...");
-                    await Task.Delay(delay, cancellationToken);
-                }
-            }
+            return WaitUntilUtcWakeableAsync(
+                () => _captionFloodWaitUntilUtc > _sessionFloodWaitUntilUtc
+                    ? _captionFloodWaitUntilUtc
+                    : _sessionFloodWaitUntilUtc,
+                "Caption FLOOD_WAIT",
+                cancellationToken);
         }
 
         /// <summary>
         /// Ожидание FLOOD_WAIT для фоновых сервисных очередей (удаление, миграция каналов, копирование-форвард, аватарки).
         /// </summary>
-        public static async Task EnsureBackgroundFloodWaitDelayAsync(CancellationToken cancellationToken = default)
+        public static Task EnsureBackgroundFloodWaitDelayAsync(CancellationToken cancellationToken = default)
         {
-            var until = _backgroundFloodWaitUntilUtc > _sessionFloodWaitUntilUtc
-                ? _backgroundFloodWaitUntilUtc
-                : _sessionFloodWaitUntilUtc;
-            if (until > DateTime.UtcNow)
-            {
-                var delay = until - DateTime.UtcNow;
-                if (delay.TotalMilliseconds > 0)
-                {
-                    AppLogger.Warn("TelegramService", $"[Background FLOOD_WAIT] Пауза фоновых операций до {until.ToLocalTime():HH:mm:ss} ({delay.TotalSeconds:F1} сек)...");
-                    await Task.Delay(delay, cancellationToken);
-                }
-            }
+            return WaitUntilUtcWakeableAsync(
+                () => _backgroundFloodWaitUntilUtc > _sessionFloodWaitUntilUtc
+                    ? _backgroundFloodWaitUntilUtc
+                    : _sessionFloodWaitUntilUtc,
+                "Background FLOOD_WAIT",
+                cancellationToken);
         }
 
         // Выделенный планировщик слотов времени отправки для скачивания и стриминга (Token-Bucket Pacing)
@@ -2703,26 +2751,89 @@ namespace TGramFS.Services
         }
 
         // Изолированный планировщик для фоновой очереди обновления подписей (ProcessCaptionQueueAsync).
-        // Использует удвоенный интервал глобального пейсинга с нижним порогом 350 мс (Math.Max(350, _globalPacingDelayMs * 2)),
-        // чтобы не упираться в лимит Telegram на Messages_EditMessage (~100 запросов / 30 сек) и не сдвигать слоты скачивания/стриминга.
+        // Базовый интервал >= 350 мс (Math.Max(350, _globalPacingDelayMs * 2)) защищает от короткого лимита (~100 запр/30 сек),
+        // а ступенчатое замедление на длинных сериях (>300 -> 750 мс, >800 -> 1400 мс, пауза 20 сек каждые 500) + реакция на FLOOD_WAIT
+        // сдерживают длинное скользящее окно (~2000 редактирований). При простое >= 5 мин серия и усиление сбрасываются.
         private const int MinCaptionPacingDelayMs = 350;
+        private const int CaptionTier1Threshold = 300;
+        private const int CaptionTier1DelayMs = 750;
+        private const int CaptionTier2Threshold = 800;
+        private const int CaptionTier2DelayMs = 1400;
+        private const int CaptionCooldownIntervalCount = 500;
+        private const int CaptionCooldownDurationMs = 20000;
+        private const int CaptionBurstIdleResetMinutes = 5;
+        private const int CaptionAdaptiveMaxFloorMs = 2000;
         private static readonly SemaphoreSlim _captionPacingLock = new SemaphoreSlim(1, 1);
         private static DateTime _nextCaptionAllowedSendUtc = DateTime.MinValue;
+        private static DateTime _lastCaptionSlotReservedUtc = DateTime.MinValue;
+        private static DateTime _lastCaptionFloodDetectedUtc = DateTime.MinValue;
+        private static int _captionBurstCount = 0;
+        private static int _captionAdaptiveFloorDelayMs = 0;
 
         public static async Task EnsureCaptionPacingDelayAsync(CancellationToken cancellationToken = default)
         {
             int globalDelayMs = Volatile.Read(ref _globalPacingDelayMs);
-            int effectiveDelayMs = Math.Max(MinCaptionPacingDelayMs, globalDelayMs * 2);
+            int baseDelayMs = Math.Max(MinCaptionPacingDelayMs, globalDelayMs * 2);
 
             DateTime scheduledTime;
+            int cooldownAppliedBurst = 0;
+            int tierTransitionDelayMs = 0;
+            int tierTransitionCount = 0;
+            bool resetByIdle = false;
+
             await _captionPacingLock.WaitAsync(cancellationToken);
             try
             {
                 var now = DateTime.UtcNow;
+                if (_lastCaptionSlotReservedUtc != DateTime.MinValue &&
+                    (now - _lastCaptionSlotReservedUtc).TotalMinutes >= CaptionBurstIdleResetMinutes &&
+                    (_captionBurstCount > 0 || _captionAdaptiveFloorDelayMs > 0))
+                {
+                    _captionBurstCount = 0;
+                    _captionAdaptiveFloorDelayMs = 0;
+                    resetByIdle = true;
+                }
+
+                _captionBurstCount++;
+                _lastCaptionSlotReservedUtc = now;
+
+                int tierDelayMs = baseDelayMs;
+                if (_captionBurstCount > CaptionTier2Threshold)
+                {
+                    tierDelayMs = Math.Max(baseDelayMs, CaptionTier2DelayMs);
+                    if (_captionBurstCount == CaptionTier2Threshold + 1)
+                    {
+                        tierTransitionDelayMs = tierDelayMs;
+                        tierTransitionCount = _captionBurstCount;
+                    }
+                }
+                else if (_captionBurstCount > CaptionTier1Threshold)
+                {
+                    tierDelayMs = Math.Max(baseDelayMs, CaptionTier1DelayMs);
+                    if (_captionBurstCount == CaptionTier1Threshold + 1)
+                    {
+                        tierTransitionDelayMs = tierDelayMs;
+                        tierTransitionCount = _captionBurstCount;
+                    }
+                }
+
+                int effectiveDelayMs = Math.Max(tierDelayMs, _captionAdaptiveFloorDelayMs);
+
                 if (_nextCaptionAllowedSendUtc < now)
                 {
                     _nextCaptionAllowedSendUtc = now;
                 }
+
+                if (_captionBurstCount > 0 && _captionBurstCount % CaptionCooldownIntervalCount == 0)
+                {
+                    var cooldownTarget = now.AddMilliseconds(CaptionCooldownDurationMs);
+                    if (cooldownTarget > _nextCaptionAllowedSendUtc)
+                    {
+                        _nextCaptionAllowedSendUtc = cooldownTarget;
+                    }
+                    cooldownAppliedBurst = _captionBurstCount;
+                }
+
                 scheduledTime = _nextCaptionAllowedSendUtc;
                 _nextCaptionAllowedSendUtc = _nextCaptionAllowedSendUtc.AddMilliseconds(effectiveDelayMs);
             }
@@ -2731,10 +2842,22 @@ namespace TGramFS.Services
                 _captionPacingLock.Release();
             }
 
-            var waitMs = (scheduledTime - DateTime.UtcNow).TotalMilliseconds;
-            if (waitMs > 0)
+            if (resetByIdle)
             {
-                await Task.Delay((int)waitMs, cancellationToken);
+                AppLogger.Info("TelegramService", $"[Caption Pacing] Простой >= {CaptionBurstIdleResetMinutes} мин: серия и интервал подписей сброшены к базовому режиму ({baseDelayMs} мс).");
+            }
+            if (tierTransitionDelayMs > 0)
+            {
+                AppLogger.Info("TelegramService", $"[Caption Pacing] Серия достигла {tierTransitionCount} записей: интервал обновления подписей увеличен до {tierTransitionDelayMs} мс.");
+            }
+            if (cooldownAppliedBurst > 0)
+            {
+                AppLogger.Info("TelegramService", $"[Caption Pacing] Пройдено {cooldownAppliedBurst} записей подряд — охлаждение {CaptionCooldownDurationMs / 1000} сек...");
+            }
+
+            if (scheduledTime > DateTime.UtcNow)
+            {
+                await WaitUntilUtcWakeableAsync(() => scheduledTime, null, cancellationToken);
             }
         }
 
@@ -2844,17 +2967,28 @@ namespace TGramFS.Services
         public static void TriggerCaptionFloodWait(int seconds, string? source = null)
         {
             if (seconds <= 0) return;
-            var targetTime = DateTime.UtcNow.AddSeconds(seconds);
+            var now = DateTime.UtcNow;
+            var targetTime = now.AddSeconds(seconds);
             if (targetTime > _captionFloodWaitUntilUtc)
             {
                 _captionFloodWaitUntilUtc = targetTime;
             }
+
+            int updatedFloorDelay = 0;
             _captionPacingLock.Wait();
             try
             {
                 if (targetTime > _nextCaptionAllowedSendUtc)
                 {
                     _nextCaptionAllowedSendUtc = targetTime;
+                }
+                if ((now - _lastCaptionFloodDetectedUtc).TotalMilliseconds >= 1500)
+                {
+                    _lastCaptionFloodDetectedUtc = now;
+                    _captionAdaptiveFloorDelayMs = _captionAdaptiveFloorDelayMs == 0
+                        ? CaptionTier1DelayMs
+                        : Math.Min(CaptionAdaptiveMaxFloorMs, _captionAdaptiveFloorDelayMs * 2);
+                    updatedFloorDelay = _captionAdaptiveFloorDelayMs;
                 }
             }
             finally
@@ -2863,7 +2997,8 @@ namespace TGramFS.Services
             }
 
             string srcTag = string.IsNullOrWhiteSpace(source) ? string.Empty : $" ({source})";
-            AppLogger.Warn("TelegramService", $"[Caption Flood] Получен FLOOD_WAIT на {seconds} сек{srcTag}. Очередь обновления подписей приостановлена до {_captionFloodWaitUntilUtc.ToLocalTime():HH:mm:ss} (скачивание и загрузка не затронуты).");
+            string floorTag = updatedFloorDelay > 0 ? $" Минимальный интервал подписей повышен до {updatedFloorDelay} мс." : string.Empty;
+            AppLogger.Warn("TelegramService", $"[Caption Flood] Получен FLOOD_WAIT на {seconds} сек{srcTag}. Очередь обновления подписей приостановлена до {_captionFloodWaitUntilUtc.ToLocalTime():HH:mm:ss} (скачивание и загрузка не затронуты).{floorTag}");
             if (_activeInstance?.IsAuthorized == true)
             {
                 const string captionBannerTitle = "Фоновое обновление подписей";
@@ -2948,11 +3083,17 @@ namespace TGramFS.Services
         {
             public List<PersistedFloodState>? Entries { get; set; }
             // Поля для обратной совместимости со старым однослотовым форматом flood_state.json
+            [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
             public DateTime FloodWaitUntilUtc { get; set; }
+            [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
             public int InitialSeconds { get; set; }
+            [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
             public bool IsUploadStopped { get; set; }
+            [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
             public bool IsDownload { get; set; }
+            [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
             public string? FileName { get; set; }
+            [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
             public FloodWaitScope? Scope { get; set; }
         }
 

@@ -4614,5 +4614,22 @@ _telegramService.UpdateSettings(_settings);
    - Перемещение элементов **из `.Trash` наружу** (восстановление через «Вырезать → Вставить» / перетаскивание) и окончательное удаление из `.Trash` продолжают работать в штатном режиме.
    - Дополнение: при проверке по `log.MD` выявлено, что Проводник Windows при отклонении `Create` / `Rename` в `.Trash` делает до `30` повторных попыток за ~`70` мс. Добавлен троттлинг логирования `WarnTrashProtectionThrottled` (не чаще `1` раза в `2` секунды на пару `операция:путь`), чтобы не забивать `app.log` дубликатами при сохранении мгновенного возврата `NT_STATUS_ACCESS_DENIED`.
 
+---
 
+## 154. Устойчивость очередей `FLOOD_WAIT` ко сну Windows, ступенчатый троттлинг длинных очередей подписей и очистка формата `flood_state.json` (`TelegramService.cs`)
 
+### Контекст и симптомы:
+1. При массовом переименовании папки (`2096` элементов в очереди `pending_caption_updates`) базовый пейсинг `360 мс` полностью исключил короткие лимиты `FLOOD_WAIT_3..9` (`~100 запросов / 30 сек`), но через `12` минут (`1995` успешных `Messages_EditMessage`) сработал длинный лимит Telegram `FLOOD_WAIT_2436` (`40 мин 36 сек`, до `04:10:38`).
+2. Спустя ~`5` минут после начала паузы ПК ушёл в сон/гибернацию на `48528` сек (`~13.5` часов). После пробуждения `TrayProgressOverlay` корректно определил истечение таймера по `DateTime.UtcNow` и удалил `flood_state.json`, но сама очередь подписей `ProcessCaptionQueueAsync` не возобновилась: в .NET на Windows `await Task.Delay(2436000, token)` в блоке `catch (420)` отсчитывал только время активной работы CPU без учёта сна и завис на оставшихся ~`35` минутах ожидания.
+3. Аналогичный монолитный `await Task.Delay(delay)` использовался во всех `Ensure*FloodWaitDelayAsync`, а `PersistedFloodStateFile` при сериализации записывал в `flood_state.json` пустые legacy-поля со значениями по умолчанию (`0001-01-01T00:00:00`, `0`, `false`, `null`).
+
+### Принятое решение:
+1. **Пробуждаемое ожидание `FLOOD_WAIT` по реальному времени `DateTime.UtcNow` (`TelegramService.cs`)**:
+   - В `ProcessCaptionQueueAsync` удалён дублирующий `await Task.Delay(rpcEx.X * 1000, token)` в `catch (420)` — пауза полностью контролируется через `EnsureCaptionFloodWaitDelayAsync`.
+   - Во всех `EnsureFloodWaitDelayAsync`, `EnsureDownloadFloodWaitDelayAsync`, `EnsureCaptionFloodWaitDelayAsync` и `EnsureBackgroundFloodWaitDelayAsync` внедрён общий хелпер `WaitUntilUtcWakeableAsync`: ожидание разбивается на шаги до `10` секунд с перепроверкой `DateTime.UtcNow < until` и прерывается по `WakeFloodWaitDelaysOnResume()`.
+   - В `PingOrReconnectAsync` (выход из сна) и в `TriggerReactorReconnect` (после восстановления сессии) добавлены вызовы `ClearPersistedFloodStateIfExpired()` и `WakeFloodWaitDelaysOnResume()`.
+2. **Ступенчатое замедление длинных серий в `EnsureCaptionPacingDelayAsync` и реакция на `Caption Flood`**:
+   - Введена серия последовательных слотов `_captionBurstCount` (сброс при простое `>= 5` мин): `1–300` — базовый интервал (`360 мс`), `301–800` — `750 мс`, `> 800` — `1400 мс`, а каждые `500` записей добавляется охлаждение `20` секунд (также через `WaitUntilUtcWakeableAsync`).
+   - При получении `TriggerCaptionFloodWait` (с дедупликацией `1.5` сек) повышается минимальный адаптивный порог интервала `_captionAdaptiveFloorDelayMs` (`0 -> 750 -> 1500 -> 2000 мс`), который также сбрасывается после `5` минут простоя.
+3. **Чистая сериализация `flood_state.json`**:
+   - Устаревшие корневые поля в `PersistedFloodStateFile` помечены `[JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]`: совместимость на чтение старых файлов сохранена, новые файлы содержат только массив `Entries`.

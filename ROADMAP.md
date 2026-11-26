@@ -1516,6 +1516,8 @@
   - В `WinFspServer.Rename` добавлена защита самой системной папки `.Trash`, а в `WinFspServer.Rename` и `WebDavMiddleware.HandleMoveAsync` запрещены переименование и перемещение внутрь/в пределах `.Trash` (восстановление перемещением из `.Trash` наружу сохранено).
   - В `WebDavMiddleware.HandleCopyAsync` запрещено копирование внутрь `.Trash` (`403 Forbidden`).
   - В `WinFspServer` добавлен 2-секундный троттлинг предупреждений `WarnTrashProtectionThrottled` на пару `операция:путь` для защиты `app.log` от спама при серии повторов Проводника Windows.
-
-
-
+- [x] **8.146. Пробуждение ожиданий `FLOOD_WAIT` после сна Windows, ступенчатый троттлинг длинной очереди подписей и очистка `flood_state.json` (`DECISIONS_LOG #154`, `TelegramService.cs`)**:
+  - Из `ProcessCaptionQueueAsync` удалён дублирующий `await Task.Delay(rpcEx.X * 1000, token)` в `catch (420)`: вся пауза опирается на `EnsureCaptionFloodWaitDelayAsync`.
+  - Во всех `Ensure*FloodWaitDelayAsync` (`Session`, `Download`, `Caption`, `Background`) длинный одиночный `Task.Delay` заменён на `WaitUntilUtcWakeableAsync` (шаги до `10` сек с проверкой `DateTime.UtcNow < until` и мгновенным пробуждением `WakeFloodWaitDelaysOnResume()` из `PingOrReconnectAsync` и `TriggerReactorReconnect`), что исключает «залипание» очередей после сна/гибернации Windows.
+  - В `EnsureCaptionPacingDelayAsync` и `TriggerCaptionFloodWait` добавлен ступенчатый троттлинг длинных серий (`1–300` -> базовый `360` мс, `301–800` -> `750` мс, `>800` -> `1400` мс, охлаждение `20` сек каждые `500` записей, автоповышение порога после `Caption Flood` до `2000` мс и полный сброс при простое `>= 5` мин).
+  - Устаревшие поля верхнего уровня в `PersistedFloodStateFile` помечены `[JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]` (чтение старых файлов сохранено, запись очищена).
