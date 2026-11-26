@@ -1515,6 +1515,7 @@
   - В `WinFspServer` (`Create`, `Overwrite`, `Write`, `SetFileSize`) добавлена блокировка создания, перезаписи и изменения файлов/папок внутри `.Trash` (`NT_STATUS_ACCESS_DENIED`, без блокировки `Open`).
   - В `WinFspServer.Rename` добавлена защита самой системной папки `.Trash`, а в `WinFspServer.Rename` и `WebDavMiddleware.HandleMoveAsync` запрещены переименование и перемещение внутрь/в пределах `.Trash` (восстановление перемещением из `.Trash` наружу сохранено).
   - В `WebDavMiddleware.HandleCopyAsync` запрещено копирование внутрь `.Trash` (`403 Forbidden`).
+  - В `WinFspServer` добавлен 2-секундный троттлинг предупреждений `WarnTrashProtectionThrottled` на пару `операция:путь` для защиты `app.log` от спама при серии повторов Проводника Windows.
 
 
 

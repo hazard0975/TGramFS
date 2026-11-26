@@ -4612,6 +4612,7 @@ _telegramService.UpdateSettings(_settings);
    - В `WinFspServer.Rename` добавлена защита самой папки `.Trash` (`NT_STATUS_ACCESS_DENIED`), приведённая в соответствие с `WebDavMiddleware.HandleMoveAsync`.
    - В `WinFspServer.Rename` (`NT_STATUS_ACCESS_DENIED`) и `WebDavMiddleware.HandleMoveAsync` (`403 Forbidden`) запрещено любое переименование или перемещение, если целевая директория находится в `.Trash` (как переименование/перемещение внутри корзины, так и прямое перемещение снаружи внутрь `.Trash` в обход `SoftDeleteNode`).
    - Перемещение элементов **из `.Trash` наружу** (восстановление через «Вырезать → Вставить» / перетаскивание) и окончательное удаление из `.Trash` продолжают работать в штатном режиме.
+   - Дополнение: при проверке по `log.MD` выявлено, что Проводник Windows при отклонении `Create` / `Rename` в `.Trash` делает до `30` повторных попыток за ~`70` мс. Добавлен троттлинг логирования `WarnTrashProtectionThrottled` (не чаще `1` раза в `2` секунды на пару `операция:путь`), чтобы не забивать `app.log` дубликатами при сохранении мгновенного возврата `NT_STATUS_ACCESS_DENIED`.
 
 
 

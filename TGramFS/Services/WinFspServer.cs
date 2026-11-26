@@ -827,6 +827,44 @@ namespace TGramFS.Services
                    normalized.StartsWith("/.Trash/", StringComparison.OrdinalIgnoreCase);
         }
 
+        private static readonly object _trashLogThrottleLock = new object();
+        private static readonly Dictionary<string, long> _lastTrashProtectionLogTicks = new(StringComparer.OrdinalIgnoreCase);
+
+        private static void WarnTrashProtectionThrottled(string throttleKey, string message)
+        {
+            long nowTicks = DateTime.UtcNow.Ticks;
+            long minIntervalTicks = TimeSpan.TicksPerSecond * 2;
+            bool shouldLog = false;
+
+            lock (_trashLogThrottleLock)
+            {
+                if (!_lastTrashProtectionLogTicks.TryGetValue(throttleKey, out long prevTicks) ||
+                    nowTicks - prevTicks >= minIntervalTicks)
+                {
+                    _lastTrashProtectionLogTicks[throttleKey] = nowTicks;
+                    shouldLog = true;
+                }
+
+                if (_lastTrashProtectionLogTicks.Count > 256)
+                {
+                    long pruneThresholdTicks = TimeSpan.TicksPerMinute;
+                    var staleKeys = _lastTrashProtectionLogTicks
+                        .Where(kv => nowTicks - kv.Value >= pruneThresholdTicks)
+                        .Select(kv => kv.Key)
+                        .ToList();
+                    foreach (var key in staleKeys)
+                    {
+                        _lastTrashProtectionLogTicks.Remove(key);
+                    }
+                }
+            }
+
+            if (shouldLog)
+            {
+                AppLogger.Warn("WinFsp", message);
+            }
+        }
+
         private bool IsNodeOrParentInTrash(Node? node, string? cleanPath = null)
         {
             if (!string.IsNullOrWhiteSpace(cleanPath) && IsTrashVirtualPath(cleanPath))
@@ -1158,7 +1196,7 @@ namespace TGramFS.Services
 
             if (IsTrashVirtualPath(cleanPath))
             {
-                AppLogger.Warn("WinFsp", $"[.Trash Protection] Отклонено создание/перезапись в корзине: '{cleanPath}' (pid={callerPid}).");
+                WarnTrashProtectionThrottled($"Create:{cleanPath}", $"[.Trash Protection] Отклонено создание/перезапись в корзине: '{cleanPath}' (pid={callerPid}).");
                 fileNode = null!;
                 fileDesc = null!;
                 fileInfo = default;
@@ -1180,7 +1218,7 @@ namespace TGramFS.Services
 
             if (IsNodeOrParentInTrash(parentNode))
             {
-                AppLogger.Warn("WinFsp", $"[.Trash Protection] Отклонено создание в папке корзины (ParentID={parentNode.Id}): '{cleanPath}' (pid={callerPid}).");
+                WarnTrashProtectionThrottled($"Create:{cleanPath}", $"[.Trash Protection] Отклонено создание в папке корзины (ParentID={parentNode.Id}): '{cleanPath}' (pid={callerPid}).");
                 fileNode = null!;
                 fileDesc = null!;
                 fileInfo = default;
@@ -1377,7 +1415,8 @@ namespace TGramFS.Services
             {
                 if (!ctx.IsVirtualSystemFile)
                 {
-                    AppLogger.Warn("WinFsp", $"[.Trash Protection] Отклонена перезапись файла в корзине: '{ctx.VirtualPath ?? node.Name}' (ID {node.Id}).");
+                    string targetLabel = ctx.VirtualPath ?? node.Name;
+                    WarnTrashProtectionThrottled($"Overwrite:{targetLabel}", $"[.Trash Protection] Отклонена перезапись файла в корзине: '{targetLabel}' (ID {node.Id}).");
                 }
                 FillFileInfo(node, out fileInfo);
                 return NT_STATUS_ACCESS_DENIED;
@@ -1502,7 +1541,8 @@ namespace TGramFS.Services
             {
                 if (!ctx.IsVirtualSystemFile)
                 {
-                    AppLogger.Warn("WinFsp", $"[.Trash Protection] Отклонена запись в файл корзины: '{ctx.VirtualPath ?? node.Name}' (ID {node.Id}).");
+                    string targetLabel = ctx.VirtualPath ?? node.Name;
+                    WarnTrashProtectionThrottled($"Write:{targetLabel}", $"[.Trash Protection] Отклонена запись в файл корзины: '{targetLabel}' (ID {node.Id}).");
                 }
                 bytesTransferred = 0;
                 FillFileInfo(node, out fileInfo);
@@ -1720,7 +1760,8 @@ namespace TGramFS.Services
             {
                 if (!ctx.IsVirtualSystemFile)
                 {
-                    AppLogger.Warn("WinFsp", $"[.Trash Protection] Отклонено изменение размера файла в корзине: '{ctx.VirtualPath ?? node.Name}' (ID {node.Id}).");
+                    string targetLabel = ctx.VirtualPath ?? node.Name;
+                    WarnTrashProtectionThrottled($"SetFileSize:{targetLabel}", $"[.Trash Protection] Отклонено изменение размера файла в корзине: '{targetLabel}' (ID {node.Id}).");
                 }
                 FillFileInfo(node, out fileInfo);
                 return NT_STATUS_ACCESS_DENIED;
@@ -2008,7 +2049,7 @@ namespace TGramFS.Services
             if (_repository.IsTrashFolder(node.Id) ||
                 oldClean.TrimEnd('/').Equals("/.Trash", StringComparison.OrdinalIgnoreCase))
             {
-                AppLogger.Warn("WinFsp", $"[.Trash Protection] Попытка переименования или перемещения системной папки '.Trash' отклонена ('{oldClean}' -> '{newClean}').");
+                WarnTrashProtectionThrottled($"RenameRoot:{oldClean}->{newClean}", $"[.Trash Protection] Попытка переименования или перемещения системной папки '.Trash' отклонена ('{oldClean}' -> '{newClean}').");
                 return NT_STATUS_ACCESS_DENIED;
             }
 
@@ -2017,7 +2058,7 @@ namespace TGramFS.Services
 
             if (IsTrashVirtualPath(newClean) || IsTrashVirtualPath(newParentPath))
             {
-                AppLogger.Warn("WinFsp", $"[.Trash Protection] Запрещено переименование или перемещение внутрь корзины: '{oldClean}' -> '{newClean}'.");
+                WarnTrashProtectionThrottled($"Rename:{oldClean}->{newClean}", $"[.Trash Protection] Запрещено переименование или перемещение внутрь корзины: '{oldClean}' -> '{newClean}'.");
                 return NT_STATUS_ACCESS_DENIED;
             }
 
@@ -2029,7 +2070,7 @@ namespace TGramFS.Services
 
             if (IsNodeOrParentInTrash(targetParent))
             {
-                AppLogger.Warn("WinFsp", $"[.Trash Protection] Запрещено перемещение или переименование в целевой папке корзины (ID {targetParent.Id}): '{oldClean}' -> '{newClean}'.");
+                WarnTrashProtectionThrottled($"Rename:{oldClean}->{newClean}", $"[.Trash Protection] Запрещено перемещение или переименование в целевой папке корзины (ID {targetParent.Id}): '{oldClean}' -> '{newClean}'.");
                 return NT_STATUS_ACCESS_DENIED;
             }
 
