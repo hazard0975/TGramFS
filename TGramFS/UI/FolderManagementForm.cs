@@ -80,6 +80,24 @@ namespace TGramFS.UI
             return dpi > 0 ? dpi / 96f : 1.0f;
         }
 
+        private void UpdateFormClientSize(float dpiScale)
+        {
+            int targetW = UITheme.Scale(BaseClientWidth, dpiScale);
+            int targetH = UITheme.Scale(BaseClientHeight, dpiScale);
+            Rectangle workingArea = IsHandleCreated
+                ? Screen.FromHandle(Handle).WorkingArea
+                : Screen.FromPoint(Cursor.Position).WorkingArea;
+
+            Size nonClient = Size - ClientSize;
+            int maxW = Math.Max(420, workingArea.Width - Math.Max(0, nonClient.Width));
+            int maxH = Math.Max(360, workingArea.Height - Math.Max(0, nonClient.Height));
+
+            MinimumSize = new Size(
+                Math.Min(UITheme.Scale(520, dpiScale), maxW),
+                Math.Min(UITheme.Scale(420, dpiScale), maxH));
+            ClientSize = new Size(Math.Min(targetW, maxW), Math.Min(targetH, maxH));
+        }
+
         private void ApplyDpiScale(float dpiScale)
         {
             if (dpiScale <= 0f) dpiScale = 1.0f;
@@ -93,20 +111,7 @@ namespace TGramFS.UI
                     scaler(dpiScale);
                 }
 
-                int targetW = UITheme.Scale(BaseClientWidth, dpiScale);
-                int targetH = UITheme.Scale(BaseClientHeight, dpiScale);
-                Rectangle workingArea = IsHandleCreated
-                    ? Screen.FromHandle(Handle).WorkingArea
-                    : Screen.FromPoint(Cursor.Position).WorkingArea;
-
-                Size nonClient = Size - ClientSize;
-                int maxW = Math.Max(420, workingArea.Width - Math.Max(0, nonClient.Width));
-                int maxH = Math.Max(360, workingArea.Height - Math.Max(0, nonClient.Height));
-
-                MinimumSize = new Size(
-                    UITheme.Scale(520, dpiScale),
-                    UITheme.Scale(420, dpiScale));
-                ClientSize = new Size(Math.Min(targetW, maxW), Math.Min(targetH, maxH));
+                UpdateFormClientSize(dpiScale);
             }
             finally
             {
@@ -122,6 +127,10 @@ namespace TGramFS.UI
             if (Math.Abs(actualScale - _currentDpiScale) > 0.01f)
             {
                 ApplyDpiScale(actualScale);
+            }
+            else
+            {
+                UpdateFormClientSize(actualScale);
             }
             ResizeBoundColumns();
             ResizeRuleListColumns();
@@ -141,6 +150,7 @@ namespace TGramFS.UI
         {
             Text = "TGramFS — Управление папками";
             Icon = AppIconHelper.GetAppIcon();
+            AutoScaleMode = AutoScaleMode.None;
             StartPosition = FormStartPosition.CenterScreen;
             Font = UITheme.BaseFont;
             MaximizeBox = true;
@@ -226,11 +236,6 @@ namespace TGramFS.UI
                 ForeColor = UITheme.TextMuted,
                 Dock = DockStyle.Top
             };
-            RegisterDpiScaler(scale =>
-            {
-                lblHint.Margin = UITheme.Scale(new Padding(0, 0, 0, 8), scale);
-                lblHint.MaximumSize = new Size(UITheme.Scale(BaseClientWidth - 60, scale), 0);
-            });
 
             _lvBoundFolders = new ListView
             {
@@ -260,7 +265,24 @@ namespace TGramFS.UI
                 ForeColor = UITheme.TextMuted,
                 Visible = false
             };
-            RegisterDpiScaler(scale => _lblBoundEmptyHint.Margin = UITheme.Scale(new Padding(0, 6, 0, 2), scale));
+
+            void UpdateBoundTabWrapWidths()
+            {
+                int availW = root.ClientSize.Width > 40
+                    ? root.ClientSize.Width - root.Padding.Horizontal - UITheme.Scale(6, _currentDpiScale)
+                    : UITheme.Scale(BaseClientWidth - 60, _currentDpiScale);
+                availW = Math.Max(UITheme.Scale(200, _currentDpiScale), availW);
+                lblHint.MaximumSize = new Size(availW, 0);
+                _lblBoundEmptyHint.MaximumSize = new Size(availW, 0);
+            }
+
+            root.SizeChanged += (s, e) => UpdateBoundTabWrapWidths();
+            RegisterDpiScaler(scale =>
+            {
+                lblHint.Margin = UITheme.Scale(new Padding(0, 0, 0, 8), scale);
+                _lblBoundEmptyHint.Margin = UITheme.Scale(new Padding(0, 6, 0, 2), scale);
+                UpdateBoundTabWrapWidths();
+            });
 
             var btnRow = new FlowLayoutPanel
             {
@@ -340,10 +362,20 @@ namespace TGramFS.UI
                 ForeColor = UITheme.TextMuted,
                 Dock = DockStyle.Top
             };
+
+            void UpdateRuleTabWrapWidth()
+            {
+                int availW = root.ClientSize.Width > 40
+                    ? root.ClientSize.Width - root.Padding.Horizontal - UITheme.Scale(6, _currentDpiScale)
+                    : UITheme.Scale(BaseClientWidth - 60, _currentDpiScale);
+                lblHint.MaximumSize = new Size(Math.Max(UITheme.Scale(200, _currentDpiScale), availW), 0);
+            }
+
+            root.SizeChanged += (s, e) => UpdateRuleTabWrapWidth();
             RegisterDpiScaler(scale =>
             {
                 lblHint.Margin = UITheme.Scale(new Padding(0, 0, 0, 8), scale);
-                lblHint.MaximumSize = new Size(UITheme.Scale(BaseClientWidth - 60, scale), 0);
+                UpdateRuleTabWrapWidth();
             });
 
             var splitGrid = new TableLayoutPanel
@@ -688,7 +720,7 @@ namespace TGramFS.UI
                     normalizedPath = "/";
                     return true;
                 }
-                errorMessage = "Укажите имя или путь папки на виртуальном диске (например, /Музыка).";
+                errorMessage = "Укажите имя или путь папки на виртуальном диске (например, Музыка).";
                 return false;
             }
 
@@ -714,55 +746,170 @@ namespace TGramFS.UI
 
         private static string? PromptNewSubfolderName(IWin32Window owner, string parentPath)
         {
-            using var form = new Form
-            {
-                Text = "Новая папка",
-                Icon = AppIconHelper.GetAppIcon(),
-                StartPosition = FormStartPosition.CenterParent,
-                FormBorderStyle = FormBorderStyle.FixedDialog,
-                MaximizeBox = false,
-                MinimizeBox = false,
-                Font = UITheme.BaseFont,
-                ClientSize = new Size(380, 125)
-            };
+            using var dlg = new NewSubfolderDialog(parentPath);
+            return dlg.ShowDialog(owner) == DialogResult.OK ? dlg.FolderName : null;
+        }
 
-            var lbl = new Label
-            {
-                Text = $"Создать папку внутри «{parentPath}»:",
-                AutoSize = true,
-                Location = new Point(14, 14),
-                MaximumSize = new Size(350, 0)
-            };
+        private sealed class NewSubfolderDialog : Form
+        {
+            private const int BaseWidth = 400;
+            private const int BaseHeight = 135;
+            private readonly List<Action<float>> _dpiScalers = new();
+            private float _currentDpiScale = 1.0f;
 
-            var txt = new TextBox
-            {
-                Location = new Point(14, 42),
-                Width = 350
-            };
+            private readonly string _parentPath;
+            private TextBox _txtName = null!;
+            public string? FolderName { get; private set; }
 
-            var btnOk = new Button
+            public NewSubfolderDialog(string parentPath)
             {
-                Text = "Создать",
-                DialogResult = DialogResult.OK,
-                Location = new Point(204, 82),
-                Size = new Size(76, 28)
-            };
+                _parentPath = parentPath;
+                InitializeDialog();
+            }
 
-            var btnCancel = new Button
+            private void RegisterDpiScaler(Action<float> scaler) => _dpiScalers.Add(scaler);
+
+            private float GetDpiScale()
             {
-                Text = "Отмена",
-                DialogResult = DialogResult.Cancel,
-                Location = new Point(288, 82),
-                Size = new Size(76, 28)
-            };
+                int dpi = DeviceDpi;
+                if (dpi <= 0 && IsHandleCreated)
+                {
+                    using var g = CreateGraphics();
+                    dpi = (int)Math.Round(g.DpiX);
+                }
+                return dpi > 0 ? dpi / 96f : 1.0f;
+            }
 
-            form.Controls.AddRange(new Control[] { lbl, txt, btnOk, btnCancel });
-            form.AcceptButton = btnOk;
-            form.CancelButton = btnCancel;
-
-            while (form.ShowDialog(owner) == DialogResult.OK)
+            private void ApplyDpiScale(float dpiScale)
             {
-                string name = txt.Text.Trim();
+                if (dpiScale <= 0f) dpiScale = 1.0f;
+                _currentDpiScale = dpiScale;
+
+                SuspendLayout();
+                try
+                {
+                    foreach (var scaler in _dpiScalers)
+                    {
+                        scaler(dpiScale);
+                    }
+                    ClientSize = new Size(UITheme.Scale(BaseWidth, dpiScale), UITheme.Scale(BaseHeight, dpiScale));
+                }
+                finally
+                {
+                    ResumeLayout(true);
+                    PerformLayout();
+                }
+            }
+
+            protected override void OnLoad(EventArgs e)
+            {
+                base.OnLoad(e);
+                float actualScale = GetDpiScale();
+                if (Math.Abs(actualScale - _currentDpiScale) > 0.01f)
+                {
+                    ApplyDpiScale(actualScale);
+                }
+            }
+
+            protected override void OnDpiChanged(DpiChangedEventArgs e)
+            {
+                base.OnDpiChanged(e);
+                float newScale = e.DeviceDpiNew > 0 ? e.DeviceDpiNew / 96f : GetDpiScale();
+                if (Math.Abs(newScale - _currentDpiScale) > 0.01f)
+                {
+                    ApplyDpiScale(newScale);
+                }
+            }
+
+            private void InitializeDialog()
+            {
+                Text = "Новая папка";
+                Icon = AppIconHelper.GetAppIcon();
+                AutoScaleMode = AutoScaleMode.None;
+                StartPosition = FormStartPosition.CenterParent;
+                FormBorderStyle = FormBorderStyle.FixedDialog;
+                MaximizeBox = false;
+                MinimizeBox = false;
+                Font = UITheme.BaseFont;
+
+                var root = new TableLayoutPanel
+                {
+                    Dock = DockStyle.Fill,
+                    ColumnCount = 1,
+                    RowCount = 3
+                };
+                root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+                root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+                root.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+                root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+                RegisterDpiScaler(scale => root.Padding = UITheme.Scale(new Padding(14), scale));
+
+                var lbl = new Label
+                {
+                    Text = $"Создать папку внутри «{_parentPath}»:",
+                    AutoSize = true,
+                    Dock = DockStyle.Top
+                };
+                RegisterDpiScaler(scale =>
+                {
+                    lbl.Margin = UITheme.Scale(new Padding(0, 0, 0, 8), scale);
+                    lbl.MaximumSize = new Size(UITheme.Scale(BaseWidth - 32, scale), 0);
+                });
+
+                _txtName = new TextBox
+                {
+                    Dock = DockStyle.Top,
+                    Font = UITheme.BaseFont
+                };
+                RegisterDpiScaler(scale => _txtName.Margin = UITheme.Scale(new Padding(0, 0, 0, 10), scale));
+
+                var btnRow = new TableLayoutPanel
+                {
+                    Dock = DockStyle.Fill,
+                    AutoSize = true,
+                    ColumnCount = 3,
+                    RowCount = 1
+                };
+                btnRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+                btnRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+                btnRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+
+                var btnOk = UIFactory.CreateButton(
+                    "Создать",
+                    (s, e) => TryAccept(),
+                    isPrimary: true,
+                    width: 105,
+                    registerScaler: RegisterDpiScaler);
+
+                var btnCancel = UIFactory.CreateButton(
+                    "Отмена",
+                    width: 105,
+                    registerScaler: RegisterDpiScaler);
+                btnCancel.DialogResult = DialogResult.Cancel;
+
+                RegisterDpiScaler(scale =>
+                {
+                    btnOk.Margin = UITheme.Scale(new Padding(0, 0, 8, 0), scale);
+                    btnCancel.Margin = Padding.Empty;
+                });
+
+                btnRow.Controls.Add(btnOk, 1, 0);
+                btnRow.Controls.Add(btnCancel, 2, 0);
+
+                root.Controls.Add(lbl, 0, 0);
+                root.Controls.Add(_txtName, 0, 1);
+                root.Controls.Add(btnRow, 0, 2);
+
+                Controls.Add(root);
+                AcceptButton = btnOk;
+                CancelButton = btnCancel;
+
+                ApplyDpiScale(GetDpiScale());
+            }
+
+            private void TryAccept()
+            {
+                string name = _txtName.Text.Trim();
                 if (string.IsNullOrWhiteSpace(name) ||
                     name == "." ||
                     name == ".." ||
@@ -771,19 +918,20 @@ namespace TGramFS.UI
                     name.Contains('\\') ||
                     name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
                 {
-                    MessageBox.Show(form, "Введите корректное имя папки без слэшей и спецсимволов.", "Некорректное имя", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    continue;
+                    MessageBox.Show(this, "Введите корректное имя папки без слэшей и спецсимволов.", "Некорректное имя", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
                 }
-                return name;
-            }
 
-            return null;
+                FolderName = name;
+                DialogResult = DialogResult.OK;
+                Close();
+            }
         }
 
         private static void PopulateFolderTree(
             TreeView tree,
             List<FolderTreeNodeInfo> nodes,
-            Func<FolderTreeNodeInfo, (string Label, Color? Color)>? formatter = null,
+            Func<FolderTreeNodeInfo, (string Label, Color? Color, bool IsBold)>? formatter = null,
             string? pathToSelect = null)
         {
             tree.BeginUpdate();
@@ -796,17 +944,29 @@ namespace TGramFS.UI
                 {
                     string display = info.ParentId == null ? "/ (Корень диска)" : info.Name;
                     Color? color = null;
+                    bool isBold = false;
                     if (formatter != null)
                     {
-                        var (suffix, c) = formatter(info);
+                        var (suffix, c, bold) = formatter(info);
                         if (!string.IsNullOrEmpty(suffix))
                         {
                             display += "  " + suffix;
                         }
                         color = c;
+                        isBold = bold;
+                    }
+
+                    // Запас в 2 пробела для жирного NodeFont, чтобы WinForms не обрезал последний символ при расчете по базовому шрифту TreeView
+                    if (isBold)
+                    {
+                        display += "  ";
                     }
 
                     var tn = new TreeNode(display) { Tag = info };
+                    if (isBold)
+                    {
+                        tn.NodeFont = UITheme.BoldFont;
+                    }
                     if (color.HasValue)
                     {
                         tn.ForeColor = color.Value;
@@ -870,9 +1030,14 @@ namespace TGramFS.UI
         /// </summary>
         private sealed class FolderRulePickerDialog : Form
         {
+            private const int BaseClientWidth = 560;
+            private const int BaseClientHeight = 450;
+
             private readonly NodeRepository _repository;
             private readonly bool _isPreviewRule;
             private readonly int _targetMode;
+            private readonly List<Action<float>> _dpiScalers = new();
+            private float _currentDpiScale = 1.0f;
 
             private TreeView _tree = null!;
             private TextBox _txtPath = null!;
@@ -890,26 +1055,100 @@ namespace TGramFS.UI
                 ReloadTree("/");
             }
 
+            private void RegisterDpiScaler(Action<float> scaler) => _dpiScalers.Add(scaler);
+
+            private float GetDpiScale()
+            {
+                int dpi = DeviceDpi;
+                if (dpi <= 0 && IsHandleCreated)
+                {
+                    using var g = CreateGraphics();
+                    dpi = (int)Math.Round(g.DpiX);
+                }
+                return dpi > 0 ? dpi / 96f : 1.0f;
+            }
+
+            private void UpdateDialogClientSize(float dpiScale)
+            {
+                int targetW = UITheme.Scale(BaseClientWidth, dpiScale);
+                int targetH = UITheme.Scale(BaseClientHeight, dpiScale);
+                Rectangle workingArea = IsHandleCreated
+                    ? Screen.FromHandle(Handle).WorkingArea
+                    : Screen.FromPoint(Cursor.Position).WorkingArea;
+
+                Size nonClient = Size - ClientSize;
+                int maxW = Math.Max(420, workingArea.Width - Math.Max(0, nonClient.Width));
+                int maxH = Math.Max(340, workingArea.Height - Math.Max(0, nonClient.Height));
+
+                MinimumSize = new Size(
+                    Math.Min(UITheme.Scale(460, dpiScale), maxW),
+                    Math.Min(UITheme.Scale(360, dpiScale), maxH));
+                ClientSize = new Size(Math.Min(targetW, maxW), Math.Min(targetH, maxH));
+            }
+
+            private void ApplyDpiScale(float dpiScale)
+            {
+                if (dpiScale <= 0f) dpiScale = 1.0f;
+                _currentDpiScale = dpiScale;
+
+                SuspendLayout();
+                try
+                {
+                    foreach (var scaler in _dpiScalers)
+                    {
+                        scaler(dpiScale);
+                    }
+                    UpdateDialogClientSize(dpiScale);
+                }
+                finally
+                {
+                    ResumeLayout(true);
+                    PerformLayout();
+                }
+            }
+
+            protected override void OnLoad(EventArgs e)
+            {
+                base.OnLoad(e);
+                float actualScale = GetDpiScale();
+                if (Math.Abs(actualScale - _currentDpiScale) > 0.01f)
+                {
+                    ApplyDpiScale(actualScale);
+                }
+                else
+                {
+                    UpdateDialogClientSize(actualScale);
+                }
+            }
+
+            protected override void OnDpiChanged(DpiChangedEventArgs e)
+            {
+                base.OnDpiChanged(e);
+                float newScale = e.DeviceDpiNew > 0 ? e.DeviceDpiNew / 96f : GetDpiScale();
+                if (Math.Abs(newScale - _currentDpiScale) > 0.01f)
+                {
+                    ApplyDpiScale(newScale);
+                }
+            }
+
             private void InitializeDialog()
             {
                 string ruleName = _isPreviewRule ? "фото-превью" : "подписей в Telegram";
                 string actionName = _targetMode == 1 ? "Разрешить" : "Добавить исключение";
                 Text = $"{actionName} — {ruleName}";
                 Icon = AppIconHelper.GetAppIcon();
+                AutoScaleMode = AutoScaleMode.None;
                 StartPosition = FormStartPosition.CenterParent;
                 FormBorderStyle = FormBorderStyle.Sizable;
                 MaximizeBox = false;
                 MinimizeBox = false;
                 Font = UITheme.BaseFont;
-                ClientSize = new Size(490, 420);
-                MinimumSize = new Size(420, 340);
 
                 var root = new TableLayoutPanel
                 {
                     Dock = DockStyle.Fill,
                     ColumnCount = 1,
-                    RowCount = 5,
-                    Padding = new Padding(12)
+                    RowCount = 5
                 };
                 root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
                 root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -917,36 +1156,14 @@ namespace TGramFS.UI
                 root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
                 root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
                 root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-
-                var topBar = new TableLayoutPanel
-                {
-                    Dock = DockStyle.Fill,
-                    AutoSize = true,
-                    ColumnCount = 2,
-                    RowCount = 1,
-                    Margin = new Padding(0, 0, 0, 6)
-                };
-                topBar.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-                topBar.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+                RegisterDpiScaler(scale => root.Padding = UITheme.Scale(new Padding(12), scale));
 
                 var lblPrompt = new Label
                 {
                     Text = "Выберите папку из базы или введите путь (несуществующая папка будет создана):",
                     AutoSize = true,
-                    Dock = DockStyle.Fill,
-                    TextAlign = ContentAlignment.MiddleLeft
+                    Dock = DockStyle.Top
                 };
-                var btnNewSubfolder = new Button
-                {
-                    Text = "+ Новая папка",
-                    AutoSize = true,
-                    Height = 26,
-                    Padding = new Padding(8, 2, 8, 2)
-                };
-                btnNewSubfolder.Click += (s, e) => CreateSubfolderInTree();
-
-                topBar.Controls.Add(lblPrompt, 0, 0);
-                topBar.Controls.Add(btnNewSubfolder, 1, 0);
 
                 _tree = new TreeView
                 {
@@ -976,20 +1193,21 @@ namespace TGramFS.UI
                     Dock = DockStyle.Fill,
                     AutoSize = true,
                     ColumnCount = 2,
-                    RowCount = 1,
-                    Margin = new Padding(0, 8, 0, 4)
+                    RowCount = 1
                 };
                 pathPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
                 pathPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+                RegisterDpiScaler(scale => pathPanel.Margin = UITheme.Scale(new Padding(0, 8, 0, 4), scale));
 
                 var lblPath = new Label
                 {
                     Text = "Путь папки:",
                     AutoSize = true,
                     Dock = DockStyle.Fill,
-                    TextAlign = ContentAlignment.MiddleLeft,
-                    Margin = new Padding(0, 0, 8, 0)
+                    TextAlign = ContentAlignment.MiddleLeft
                 };
+                RegisterDpiScaler(scale => lblPath.Margin = UITheme.Scale(new Padding(0, 0, 8, 0), scale));
+
                 _txtPath = new TextBox
                 {
                     Dock = DockStyle.Fill,
@@ -1004,27 +1222,70 @@ namespace TGramFS.UI
                 {
                     AutoSize = true,
                     Font = UITheme.SmallFont,
-                    ForeColor = UITheme.TextMuted,
-                    Margin = new Padding(0, 2, 0, 8),
-                    MaximumSize = new Size(450, 0)
+                    ForeColor = UITheme.TextMuted
                 };
 
-                var bottomBtns = new FlowLayoutPanel
+                void UpdateWrapWidths()
+                {
+                    int availW = root.ClientSize.Width > 40
+                        ? root.ClientSize.Width - root.Padding.Horizontal - UITheme.Scale(6, _currentDpiScale)
+                        : UITheme.Scale(BaseClientWidth - 40, _currentDpiScale);
+                    availW = Math.Max(UITheme.Scale(200, _currentDpiScale), availW);
+                    lblPrompt.MaximumSize = new Size(availW, 0);
+                    _lblStatus.MaximumSize = new Size(availW, 0);
+                }
+
+                root.SizeChanged += (s, e) => UpdateWrapWidths();
+                RegisterDpiScaler(scale =>
+                {
+                    lblPrompt.Margin = UITheme.Scale(new Padding(0, 0, 0, 6), scale);
+                    _lblStatus.Margin = UITheme.Scale(new Padding(0, 2, 0, 8), scale);
+                    UpdateWrapWidths();
+                });
+
+                var bottomBtns = new TableLayoutPanel
                 {
                     Dock = DockStyle.Fill,
                     AutoSize = true,
-                    FlowDirection = FlowDirection.RightToLeft,
-                    WrapContents = false
+                    ColumnCount = 4,
+                    RowCount = 1
                 };
+                bottomBtns.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+                bottomBtns.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+                bottomBtns.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+                bottomBtns.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
 
-                var btnCancel = new Button { Text = "Отмена", Size = new Size(96, 28), DialogResult = DialogResult.Cancel };
-                var btnApply = new Button { Text = "Применить", Size = new Size(106, 28), Font = UITheme.BoldFont, Margin = new Padding(0, 0, 8, 0) };
-                btnApply.Click += (s, e) => ApplyAndClose();
+                var btnNewSubfolder = UIFactory.CreateButton(
+                    "Новая папка",
+                    (s, e) => CreateSubfolderInTree(),
+                    width: 115,
+                    registerScaler: RegisterDpiScaler);
 
-                bottomBtns.Controls.Add(btnCancel);
-                bottomBtns.Controls.Add(btnApply);
+                var btnApply = UIFactory.CreateButton(
+                    "Применить",
+                    (s, e) => ApplyAndClose(),
+                    isPrimary: true,
+                    width: 115,
+                    registerScaler: RegisterDpiScaler);
 
-                root.Controls.Add(topBar, 0, 0);
+                var btnCancel = UIFactory.CreateButton(
+                    "Отмена",
+                    width: 115,
+                    registerScaler: RegisterDpiScaler);
+                btnCancel.DialogResult = DialogResult.Cancel;
+
+                RegisterDpiScaler(scale =>
+                {
+                    btnNewSubfolder.Margin = UITheme.Scale(new Padding(0, 0, 8, 0), scale);
+                    btnApply.Margin = Padding.Empty;
+                    btnCancel.Margin = Padding.Empty;
+                });
+
+                bottomBtns.Controls.Add(btnNewSubfolder, 0, 0);
+                bottomBtns.Controls.Add(btnApply, 1, 0);
+                bottomBtns.Controls.Add(btnCancel, 3, 0);
+
+                root.Controls.Add(lblPrompt, 0, 0);
                 root.Controls.Add(_tree, 0, 1);
                 root.Controls.Add(pathPanel, 0, 2);
                 root.Controls.Add(_lblStatus, 0, 3);
@@ -1033,6 +1294,8 @@ namespace TGramFS.UI
                 Controls.Add(root);
                 AcceptButton = btnApply;
                 CancelButton = btnCancel;
+
+                ApplyDpiScale(GetDpiScale());
             }
 
             private void ReloadTree(string? selectPath)
@@ -1070,10 +1333,10 @@ namespace TGramFS.UI
 
                             if (info.IsCustomBoundChannel)
                             {
-                                tags.Add("[канал]");
+                                tags.Add("(привязано)");
                             }
 
-                            return (string.Join(" ", tags), color);
+                            return (string.Join(" ", tags), color, info.IsCustomBoundChannel);
                         },
                         selectPath);
                 }
@@ -1180,10 +1443,15 @@ namespace TGramFS.UI
         /// </summary>
         private sealed class CreateOrBindFolderDialog : Form
         {
+            private const int BaseClientWidth = 600;
+            private const int BaseClientHeight = 490;
+
             private readonly ConfigManager _configManager;
             private readonly NodeRepository _repository;
             private readonly TelegramService _telegramService;
             private readonly VirtualDriveManager? _virtualDriveManager;
+            private readonly List<Action<float>> _dpiScalers = new();
+            private float _currentDpiScale = 1.0f;
 
             private TreeView _tree = null!;
             private TextBox _txtPath = null!;
@@ -1211,24 +1479,98 @@ namespace TGramFS.UI
                 ReloadTree("/");
             }
 
+            private void RegisterDpiScaler(Action<float> scaler) => _dpiScalers.Add(scaler);
+
+            private float GetDpiScale()
+            {
+                int dpi = DeviceDpi;
+                if (dpi <= 0 && IsHandleCreated)
+                {
+                    using var g = CreateGraphics();
+                    dpi = (int)Math.Round(g.DpiX);
+                }
+                return dpi > 0 ? dpi / 96f : 1.0f;
+            }
+
+            private void UpdateDialogClientSize(float dpiScale)
+            {
+                int targetW = UITheme.Scale(BaseClientWidth, dpiScale);
+                int targetH = UITheme.Scale(BaseClientHeight, dpiScale);
+                Rectangle workingArea = IsHandleCreated
+                    ? Screen.FromHandle(Handle).WorkingArea
+                    : Screen.FromPoint(Cursor.Position).WorkingArea;
+
+                Size nonClient = Size - ClientSize;
+                int maxW = Math.Max(420, workingArea.Width - Math.Max(0, nonClient.Width));
+                int maxH = Math.Max(360, workingArea.Height - Math.Max(0, nonClient.Height));
+
+                MinimumSize = new Size(
+                    Math.Min(UITheme.Scale(480, dpiScale), maxW),
+                    Math.Min(UITheme.Scale(400, dpiScale), maxH));
+                ClientSize = new Size(Math.Min(targetW, maxW), Math.Min(targetH, maxH));
+            }
+
+            private void ApplyDpiScale(float dpiScale)
+            {
+                if (dpiScale <= 0f) dpiScale = 1.0f;
+                _currentDpiScale = dpiScale;
+
+                SuspendLayout();
+                try
+                {
+                    foreach (var scaler in _dpiScalers)
+                    {
+                        scaler(dpiScale);
+                    }
+                    UpdateDialogClientSize(dpiScale);
+                }
+                finally
+                {
+                    ResumeLayout(true);
+                    PerformLayout();
+                }
+            }
+
+            protected override void OnLoad(EventArgs e)
+            {
+                base.OnLoad(e);
+                float actualScale = GetDpiScale();
+                if (Math.Abs(actualScale - _currentDpiScale) > 0.01f)
+                {
+                    ApplyDpiScale(actualScale);
+                }
+                else
+                {
+                    UpdateDialogClientSize(actualScale);
+                }
+            }
+
+            protected override void OnDpiChanged(DpiChangedEventArgs e)
+            {
+                base.OnDpiChanged(e);
+                float newScale = e.DeviceDpiNew > 0 ? e.DeviceDpiNew / 96f : GetDpiScale();
+                if (Math.Abs(newScale - _currentDpiScale) > 0.01f)
+                {
+                    ApplyDpiScale(newScale);
+                }
+            }
+
             private void InitializeDialog()
             {
                 Text = "Создать / привязать папку к каналу";
                 Icon = AppIconHelper.GetAppIcon();
+                AutoScaleMode = AutoScaleMode.None;
                 StartPosition = FormStartPosition.CenterParent;
                 FormBorderStyle = FormBorderStyle.Sizable;
                 MaximizeBox = false;
                 MinimizeBox = false;
                 Font = UITheme.BaseFont;
-                ClientSize = new Size(510, 470);
-                MinimumSize = new Size(440, 390);
 
                 var root = new TableLayoutPanel
                 {
                     Dock = DockStyle.Fill,
                     ColumnCount = 1,
-                    RowCount = 6,
-                    Padding = new Padding(12)
+                    RowCount = 6
                 };
                 root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
                 root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -1237,36 +1579,14 @@ namespace TGramFS.UI
                 root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
                 root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
                 root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-
-                var topBar = new TableLayoutPanel
-                {
-                    Dock = DockStyle.Fill,
-                    AutoSize = true,
-                    ColumnCount = 2,
-                    RowCount = 1,
-                    Margin = new Padding(0, 0, 0, 6)
-                };
-                topBar.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-                topBar.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+                RegisterDpiScaler(scale => root.Padding = UITheme.Scale(new Padding(12), scale));
 
                 var lblPrompt = new Label
                 {
-                    Text = "Выберите существующую папку или введите путь новой папки (например, /Музыка):",
+                    Text = "Выберите существующую папку или введите путь новой папки (например, Музыка):",
                     AutoSize = true,
-                    Dock = DockStyle.Fill,
-                    TextAlign = ContentAlignment.MiddleLeft
+                    Dock = DockStyle.Top
                 };
-                _btnNewSubfolder = new Button
-                {
-                    Text = "+ Новая папка",
-                    AutoSize = true,
-                    Height = 26,
-                    Padding = new Padding(8, 2, 8, 2)
-                };
-                _btnNewSubfolder.Click += (s, e) => CreateSubfolderInTree();
-
-                topBar.Controls.Add(lblPrompt, 0, 0);
-                topBar.Controls.Add(_btnNewSubfolder, 1, 0);
 
                 _tree = new TreeView
                 {
@@ -1279,7 +1599,7 @@ namespace TGramFS.UI
                     if (_suppressTreeSync) return;
                     if (e.Node?.Tag is FolderTreeNodeInfo info)
                     {
-                        _txtPath.Text = info.FullPath == "/" ? "/" : info.FullPath;
+                        _txtPath.Text = info.FullPath == "/" ? string.Empty : info.FullPath.TrimStart('/');
                         UpdateStatusHint();
                     }
                 };
@@ -1289,24 +1609,26 @@ namespace TGramFS.UI
                     Dock = DockStyle.Fill,
                     AutoSize = true,
                     ColumnCount = 2,
-                    RowCount = 1,
-                    Margin = new Padding(0, 8, 0, 4)
+                    RowCount = 1
                 };
                 pathPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
                 pathPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+                RegisterDpiScaler(scale => pathPanel.Margin = UITheme.Scale(new Padding(0, 8, 0, 4), scale));
 
                 var lblPath = new Label
                 {
                     Text = "Путь на диске:",
                     AutoSize = true,
                     Dock = DockStyle.Fill,
-                    TextAlign = ContentAlignment.MiddleLeft,
-                    Margin = new Padding(0, 0, 8, 0)
+                    TextAlign = ContentAlignment.MiddleLeft
                 };
+                RegisterDpiScaler(scale => lblPath.Margin = UITheme.Scale(new Padding(0, 0, 8, 0), scale));
+
                 _txtPath = new TextBox
                 {
                     Dock = DockStyle.Fill,
-                    Font = UITheme.BaseFont
+                    Font = UITheme.BaseFont,
+                    PlaceholderText = "Например: Музыка или Сборник/Рок"
                 };
                 _txtPath.TextChanged += (s, e) => UpdateStatusHint();
 
@@ -1318,21 +1640,20 @@ namespace TGramFS.UI
                     Dock = DockStyle.Fill,
                     AutoSize = true,
                     FlowDirection = FlowDirection.TopDown,
-                    WrapContents = false,
-                    Margin = new Padding(0, 4, 0, 4)
+                    WrapContents = false
                 };
-                _chkPreview = new CheckBox
-                {
-                    Text = "Включить фото-превью для галереи Telegram (для этой папки и подпапок)",
-                    AutoSize = true,
-                    Margin = new Padding(0, 2, 0, 4)
-                };
-                _chkCaptions = new CheckBox
-                {
-                    Text = "Включить текстовые подписи в Telegram (для этой папки и подпапок)",
-                    AutoSize = true,
-                    Margin = new Padding(0, 2, 0, 2)
-                };
+                RegisterDpiScaler(scale => optsPanel.Margin = UITheme.Scale(new Padding(0, 4, 0, 4), scale));
+
+                _chkPreview = UIFactory.CreateCheckBox(
+                    "Включить фото-превью для галереи Telegram (для этой папки и подпапок)",
+                    isChecked: false,
+                    registerScaler: RegisterDpiScaler);
+
+                _chkCaptions = UIFactory.CreateCheckBox(
+                    "Включить текстовые подписи в Telegram (для этой папки и подпапок)",
+                    isChecked: false,
+                    registerScaler: RegisterDpiScaler);
+
                 optsPanel.Controls.Add(_chkPreview);
                 optsPanel.Controls.Add(_chkCaptions);
 
@@ -1340,27 +1661,74 @@ namespace TGramFS.UI
                 {
                     AutoSize = true,
                     Font = UITheme.SmallFont,
-                    ForeColor = UITheme.TextMuted,
-                    Margin = new Padding(0, 2, 0, 8),
-                    MaximumSize = new Size(470, 0)
+                    ForeColor = UITheme.TextMuted
                 };
 
-                var bottomBtns = new FlowLayoutPanel
+                void UpdateWrapWidths()
+                {
+                    int availW = root.ClientSize.Width > 40
+                        ? root.ClientSize.Width - root.Padding.Horizontal - UITheme.Scale(6, _currentDpiScale)
+                        : UITheme.Scale(BaseClientWidth - 40, _currentDpiScale);
+                    availW = Math.Max(UITheme.Scale(200, _currentDpiScale), availW);
+                    int checkBoxMaxW = Math.Max(UITheme.Scale(180, _currentDpiScale), availW - UITheme.Scale(24, _currentDpiScale));
+
+                    lblPrompt.MaximumSize = new Size(availW, 0);
+                    _lblStatus.MaximumSize = new Size(availW, 0);
+                    _chkPreview.MaximumSize = new Size(checkBoxMaxW, 0);
+                    _chkCaptions.MaximumSize = new Size(checkBoxMaxW, 0);
+                }
+
+                root.SizeChanged += (s, e) => UpdateWrapWidths();
+                RegisterDpiScaler(scale =>
+                {
+                    lblPrompt.Margin = UITheme.Scale(new Padding(0, 0, 0, 6), scale);
+                    _lblStatus.Margin = UITheme.Scale(new Padding(0, 2, 0, 8), scale);
+                    UpdateWrapWidths();
+                });
+
+                var bottomBtns = new TableLayoutPanel
                 {
                     Dock = DockStyle.Fill,
                     AutoSize = true,
-                    FlowDirection = FlowDirection.RightToLeft,
-                    WrapContents = false
+                    ColumnCount = 4,
+                    RowCount = 1
                 };
+                bottomBtns.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+                bottomBtns.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+                bottomBtns.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+                bottomBtns.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
 
-                _btnCancel = new Button { Text = "Отмена", Size = new Size(96, 28), DialogResult = DialogResult.Cancel };
-                _btnCreateBind = new Button { Text = "Создать и привязать", Size = new Size(155, 28), Font = UITheme.BoldFont, Margin = new Padding(0, 0, 8, 0) };
-                _btnCreateBind.Click += async (s, e) => await CreateAndBindAsync();
+                _btnNewSubfolder = UIFactory.CreateButton(
+                    "Новая папка",
+                    (s, e) => CreateSubfolderInTree(),
+                    width: 115,
+                    registerScaler: RegisterDpiScaler);
 
-                bottomBtns.Controls.Add(_btnCancel);
-                bottomBtns.Controls.Add(_btnCreateBind);
+                _btnCreateBind = UIFactory.CreateButton(
+                    "Привязать",
+                    async (s, e) => await CreateAndBindAsync(),
+                    isPrimary: true,
+                    width: 115,
+                    registerScaler: RegisterDpiScaler);
 
-                root.Controls.Add(topBar, 0, 0);
+                _btnCancel = UIFactory.CreateButton(
+                    "Отмена",
+                    width: 115,
+                    registerScaler: RegisterDpiScaler);
+                _btnCancel.DialogResult = DialogResult.Cancel;
+
+                RegisterDpiScaler(scale =>
+                {
+                    _btnNewSubfolder.Margin = UITheme.Scale(new Padding(0, 0, 8, 0), scale);
+                    _btnCreateBind.Margin = Padding.Empty;
+                    _btnCancel.Margin = Padding.Empty;
+                });
+
+                bottomBtns.Controls.Add(_btnNewSubfolder, 0, 0);
+                bottomBtns.Controls.Add(_btnCreateBind, 1, 0);
+                bottomBtns.Controls.Add(_btnCancel, 3, 0);
+
+                root.Controls.Add(lblPrompt, 0, 0);
                 root.Controls.Add(_tree, 0, 1);
                 root.Controls.Add(pathPanel, 0, 2);
                 root.Controls.Add(optsPanel, 0, 3);
@@ -1370,6 +1738,8 @@ namespace TGramFS.UI
                 Controls.Add(root);
                 AcceptButton = _btnCreateBind;
                 CancelButton = _btnCancel;
+
+                ApplyDpiScale(GetDpiScale());
             }
 
             private void ReloadTree(string? selectPath)
@@ -1382,8 +1752,8 @@ namespace TGramFS.UI
                         _tree,
                         _folderItems,
                         info => info.IsCustomBoundChannel
-                            ? ($"[канал: {info.ChannelTitle ?? info.TgChannelId?.ToString()}]", UITheme.TextMuted)
-                            : (string.Empty, null),
+                            ? ("(привязано)", null, true)
+                            : (string.Empty, null, false),
                         selectPath);
                 }
                 finally
@@ -1393,7 +1763,7 @@ namespace TGramFS.UI
 
                 if (_tree.SelectedNode?.Tag is FolderTreeNodeInfo selectedInfo)
                 {
-                    _txtPath.Text = selectedInfo.FullPath;
+                    _txtPath.Text = selectedInfo.FullPath == "/" ? string.Empty : selectedInfo.FullPath.TrimStart('/');
                 }
                 UpdateStatusHint();
             }
@@ -1422,18 +1792,27 @@ namespace TGramFS.UI
 
             private void UpdateStatusHint()
             {
-                if (!TryNormalizeVirtualFolderPath(_txtPath.Text, allowRoot: false, out string normalized, out string err))
+                string raw = _txtPath.Text.Trim();
+                if (string.IsNullOrEmpty(raw) || raw == "/" || raw == "\\")
+                {
+                    _lblStatus.ForeColor = UITheme.TextMuted;
+                    _lblStatus.Text = "Выберите существующую папку в дереве или введите имя новой папки (например, Музыка).";
+                    return;
+                }
+
+                if (!TryNormalizeVirtualFolderPath(raw, allowRoot: false, out string normalized, out string err))
                 {
                     _lblStatus.ForeColor = UITheme.TextDanger;
                     _lblStatus.Text = err;
                     return;
                 }
 
+                string displayPath = normalized.TrimStart('/');
                 var existing = _folderItems.FirstOrDefault(f => string.Equals(f.FullPath, normalized, StringComparison.OrdinalIgnoreCase));
                 if (existing != null && existing.IsCustomBoundChannel)
                 {
                     _lblStatus.ForeColor = UITheme.TextDanger;
-                    _lblStatus.Text = $"Папка «{normalized}» уже привязана к каналу «{existing.ChannelTitle ?? existing.TgChannelId?.ToString()}». Введите имя подпапки или выберите другую папку.";
+                    _lblStatus.Text = $"Папка «{displayPath}» уже привязана к каналу «{existing.ChannelTitle ?? existing.TgChannelId?.ToString()}». Введите имя подпапки или выберите другую папку.";
                 }
                 else if (existing != null)
                 {
@@ -1443,7 +1822,7 @@ namespace TGramFS.UI
                 else
                 {
                     _lblStatus.ForeColor = UITheme.TextMuted;
-                    _lblStatus.Text = $"Папка «{normalized}» будет создана на диске и привязана к новому каналу Telegram.";
+                    _lblStatus.Text = $"Папка «{displayPath}» будет создана на диске и привязана к новому каналу Telegram.";
                 }
             }
 
@@ -1545,7 +1924,7 @@ namespace TGramFS.UI
                 _btnNewSubfolder.Enabled = !busy;
                 _btnCreateBind.Enabled = !busy;
                 _btnCancel.Enabled = !busy;
-                _btnCreateBind.Text = busy ? "Создание канала..." : "Создать и привязать";
+                _btnCreateBind.Text = busy ? "Привязка..." : "Привязать";
                 UseWaitCursor = busy;
             }
         }
