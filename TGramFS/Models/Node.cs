@@ -27,5 +27,9 @@ namespace TGramFS.Models
 
         // Windows FileAttributes bitmask (0 = default Directory/Normal)
         public int FileAttributes { get; set; }
+
+        // Per-folder rules (NULL = inherit from parent, 1 = enabled, 0 = disabled/excluded)
+        public int? PhotoPreviewMode { get; set; }
+        public int? CaptionMode { get; set; }
     }
 }

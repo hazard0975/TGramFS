@@ -45,6 +45,8 @@ CREATE TABLE IF NOT EXISTS nodes (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     inline_data BLOB,
     file_attributes INTEGER NOT NULL DEFAULT 0,
+    photo_preview_mode INTEGER,
+    caption_mode INTEGER,
     
     FOREIGN KEY (parent_id) REFERENCES nodes(id)
 );

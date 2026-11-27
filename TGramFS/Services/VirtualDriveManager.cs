@@ -30,6 +30,11 @@ namespace TGramFS.Services
             _winFspServer = winFspServer;
         }
 
+        public void NotifyBoundFolderUpdated(string relPath)
+        {
+            _winFspServer.NotifyBoundFolderUpdated(relPath);
+        }
+
         /// <summary>
         /// Монтирует виртуальный диск согласно текущей конфигурации приложения.
         /// Если запрошенная буква занята внешним устройством (флешкой/диском), автоматически

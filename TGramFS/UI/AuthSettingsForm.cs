@@ -63,7 +63,6 @@ namespace TGramFS.UI
         private CheckBox _chkHideTrash = null!;
         private CheckBox _chkContextMenu = null!;
         private CheckBox _chkAutoShowProgressOverlay = null!;
-        private CheckBox _chkGalleryPreview = null!;
         private CheckBox _chkAutoVacuum = null!;
         private CheckBox _chkEnableDiskCache = null!;
         private NumericUpDown _numDownloadWorkers = null!;
@@ -383,10 +382,9 @@ namespace TGramFS.UI
             _chkHideTrash = UIFactory.CreateCheckBox("Скрывать папку .Trash из корня диска (чистый корень)", _settings.Server.HideTrashFromRoot, registerScaler: RegisterDpiScaler);
             _chkContextMenu = UIFactory.CreateCheckBox("Пункт «Открыть корзину TGramFS» в контекстном меню Windows", _settings.Server.AddTrashToContextMenu, registerScaler: RegisterDpiScaler);
             _chkAutoShowProgressOverlay = UIFactory.CreateCheckBox("Отображать индикатор прогресса операций с файлами", _settings.Server.AutoShowProgressOverlay, registerScaler: RegisterDpiScaler);
-            _chkGalleryPreview = UIFactory.CreateCheckBox("Создавать фото-превью для галереи Telegram", _settings.Server.CreatePhotoGalleryPreview, registerScaler: RegisterDpiScaler);
 
             pnlIntegrationInner.Controls.AddRange(new Control[] {
-                _chkAutoStart, _chkHideTrash, _chkContextMenu, _chkAutoShowProgressOverlay, _chkGalleryPreview
+                _chkAutoStart, _chkHideTrash, _chkContextMenu, _chkAutoShowProgressOverlay
             });
             grpIntegration.Controls.Add(pnlIntegrationInner);
 
@@ -1690,7 +1688,6 @@ namespace TGramFS.UI
             _settings.Server.HideTrashFromRoot = _chkHideTrash.Checked;
             _settings.Server.AddTrashToContextMenu = _chkContextMenu.Checked;
             _settings.Server.AutoShowProgressOverlay = _chkAutoShowProgressOverlay.Checked;
-            _settings.Server.CreatePhotoGalleryPreview = _chkGalleryPreview.Checked;
             _settings.Server.EnableDiskReadCache = _chkEnableDiskCache.Checked;
             _settings.Server.DownloadWorkerCount = (int)_numDownloadWorkers.Value;
             _settings.Server.PacingDelayMs = (int)_numPacingDelayMs.Value;

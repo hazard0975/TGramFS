@@ -29,6 +29,7 @@ namespace TGramFS.UI
         private readonly TrayProgressOverlay _progressOverlay;
         private AppSettings _settings;
         private AuthSettingsForm? _settingsForm;
+        private FolderManagementForm? _folderManagementForm;
         private AboutForm? _aboutForm;
 
         public TrayContext(
@@ -218,6 +219,11 @@ namespace TGramFS.UI
 
             menu.Items.Add(new ToolStripSeparator());
 
+            // Управление папками (привязанные каналы, фото-превью, подписи)
+            var itemFolderMgmt = new ToolStripMenuItem("Управление папками");
+            itemFolderMgmt.Click += (s, e) => ShowFolderManagementDialog();
+            menu.Items.Add(itemFolderMgmt);
+
             // Настройки и авторизация
             var itemSettings = new ToolStripMenuItem("Настройки");
             itemSettings.Click += (s, e) => ShowSettingsDialog();
@@ -347,6 +353,30 @@ namespace TGramFS.UI
             _settingsForm.Show();
             _settingsForm.BringToFront();
             _settingsForm.Activate();
+        }
+
+        private void ShowFolderManagementDialog()
+        {
+            if (_folderManagementForm != null && !_folderManagementForm.IsDisposed)
+            {
+                if (_folderManagementForm.WindowState == FormWindowState.Minimized)
+                {
+                    _folderManagementForm.WindowState = FormWindowState.Normal;
+                }
+                _folderManagementForm.RefreshAllTabs();
+                _folderManagementForm.BringToFront();
+                _folderManagementForm.Activate();
+                return;
+            }
+
+            _folderManagementForm = new FolderManagementForm(_configManager, _repository, _telegramService, _virtualDriveManager);
+            _folderManagementForm.FormClosed += (s, e) =>
+            {
+                _folderManagementForm = null;
+            };
+            _folderManagementForm.Show();
+            _folderManagementForm.BringToFront();
+            _folderManagementForm.Activate();
         }
 
         private void OpenDriveInExplorer()
@@ -553,6 +583,9 @@ namespace TGramFS.UI
 
             _notifyIcon.Visible = false;
             _notifyIcon.Dispose();
+            try { _folderManagementForm?.Close(); } catch { }
+            try { _settingsForm?.Close(); } catch { }
+            try { _aboutForm?.Close(); } catch { }
             _progressOverlay.Dispose();
             _virtualDriveManager.Dispose();
             _webDavServer?.Stop();

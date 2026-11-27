@@ -47,9 +47,6 @@ namespace TGramFS.Config
         public bool AutoExpandDiskCapacity { get; set; } = true;
         public bool IncludeTrashInUsedSpace { get; set; } = true;
 
-        // Публикация изображений
-        public bool CreatePhotoGalleryPreview { get; set; } = true; // Создавать фото-превью для нативной галереи Telegram
-
         // Константы по умолчанию и диапазоны для MTProto скачивания
         public const int DefaultDownloadWorkerCount = 3;
         public const int MinDownloadWorkerCount = 1;

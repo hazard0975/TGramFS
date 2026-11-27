@@ -484,6 +484,7 @@ namespace TGramFS.Database
 
             string[] parts = directoryPath.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
             Node currentNode = root;
+            bool createdAny = false;
 
             using (var connection = _dbManager.GetConnection())
             {
@@ -518,6 +519,7 @@ namespace TGramFS.Database
                             insertCmd.Parameters.AddWithValue("@name", part);
                             insertCmd.Parameters.AddWithValue("@tgChannelId", DBNull.Value);
                             int newFolderId = Convert.ToInt32(insertCmd.ExecuteScalar());
+                            createdAny = true;
 
                             using (var fetchCmd = connection.CreateCommand())
                             {
@@ -530,6 +532,11 @@ namespace TGramFS.Database
                         }
                     }
                 }
+            }
+
+            if (createdAny)
+            {
+                NotifyNodeChanged();
             }
 
             return currentNode;
@@ -556,9 +563,10 @@ namespace TGramFS.Database
             int targetTrashParentId = EnsureTrashHierarchyForParent(originalParentId);
 
             // Собираем точный список перемещаемых файлов ДО выполнения операции в БД,
-            // чтобы обновить подписи ТОЛЬКО для них (не затрагивая файлы, уже лежащие в корзине)
+            // чтобы обновить подписи ТОЛЬКО для них (и только если подписи были включены в исходной папке)
             var movedFiles = new List<Node>();
             GetFilesRecursive(nodeId, movedFiles);
+            var captionFiles = movedFiles.Where(f => GetEffectiveCaptionsEnabled(f.ParentId)).ToList();
 
             long primaryChannelId = GetPrimaryTelegramChannel()?.ChannelId ?? 0;
             bool isBoundCustomFolder = node.IsDir
@@ -661,14 +669,17 @@ namespace TGramFS.Database
                 }
             }
 
-            // Ставим в очередь обновление подписей на #trash ТОЛЬКО для реально перемещенных в корзину файлов
-            try
+            // Ставим в очередь обновление подписей на #trash ТОЛЬКО для реально перемещенных файлов с включёнными подписями
+            if (captionFiles.Count > 0)
             {
-                EnqueueCaptionUpdatesForFiles(movedFiles);
-            }
-            catch (Exception ex)
-            {
-                AppLogger.Warn("Database", $"Не удалось поставить в очередь обновление подписей корзины: {ex.Message}");
+                try
+                {
+                    EnqueueCaptionUpdatesForFiles(captionFiles);
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Warn("Database", $"Не удалось поставить в очередь обновление подписей корзины: {ex.Message}");
+                }
             }
 
             NotifyNodeChanged();
@@ -1220,6 +1231,14 @@ namespace TGramFS.Database
             bool isTrash = IsNodeInTrash(newParentId);
             int inTrashVal = isTrash ? 1 : 0;
 
+            List<Node>? preTrashCaptionFiles = null;
+            if (isTrash)
+            {
+                var preMoveFiles = new List<Node>();
+                GetFilesRecursive(nodeId, preMoveFiles);
+                preTrashCaptionFiles = preMoveFiles.Where(f => GetEffectiveCaptionsEnabled(f.ParentId)).ToList();
+            }
+
             using (var connection = _dbManager.GetConnection())
             using (var transaction = connection.BeginTransaction())
             {
@@ -1248,8 +1267,18 @@ namespace TGramFS.Database
                 }
             }
 
-            // Автоматически ставим в стойкую очередь SQLite все файлы перемещаемого/переименовываемого поддерева
-            EnqueueCaptionUpdatesForSubtree(nodeId);
+            // Ставим в стойкую очередь SQLite только те файлы перемещаемого/переименовываемого поддерева, для которых подписи включены
+            if (isTrash)
+            {
+                if (preTrashCaptionFiles != null && preTrashCaptionFiles.Count > 0)
+                {
+                    EnqueueCaptionUpdatesForFiles(preTrashCaptionFiles);
+                }
+            }
+            else
+            {
+                EnqueueCaptionUpdatesForSubtreeIfEnabled(nodeId);
+            }
             NotifyNodeChanged();
         }
 
@@ -1411,6 +1440,282 @@ namespace TGramFS.Database
         }
 
         /// <summary>
+        /// Возвращает эффективный статус создания фото-превью для галереи Telegram (по умолчанию false).
+        /// Идёт вверх от parentId к корню: 1 = разрешено, 0 = исключение/запрещено, NULL = наследовать.
+        /// </summary>
+        public bool GetEffectivePhotoPreviewEnabled(int? parentId)
+        {
+            return GetEffectiveFolderRule(parentId, "photo_preview_mode", defaultValue: false);
+        }
+
+        /// <summary>
+        /// Возвращает эффективный статус создания текстовых подписей в Telegram (по умолчанию false).
+        /// Идёт вверх от parentId к корню: 1 = разрешено, 0 = исключение/запрещено, NULL = наследовать.
+        /// </summary>
+        public bool GetEffectiveCaptionsEnabled(int? parentId)
+        {
+            return GetEffectiveFolderRule(parentId, "caption_mode", defaultValue: false);
+        }
+
+        private bool GetEffectiveFolderRule(int? folderOrParentId, string columnName, bool defaultValue)
+        {
+            if (!folderOrParentId.HasValue || folderOrParentId.Value <= 0)
+            {
+                return defaultValue;
+            }
+
+            using (var connection = _dbManager.GetConnection())
+            {
+                int currentId = folderOrParentId.Value;
+                var visited = new HashSet<int>();
+                while (currentId > 0 && visited.Add(currentId))
+                {
+                    using (var cmd = connection.CreateCommand())
+                    {
+                        cmd.CommandText = $"SELECT parent_id, {columnName} FROM nodes WHERE id = @id LIMIT 1;";
+                        cmd.Parameters.AddWithValue("@id", currentId);
+                        using (var reader = cmd.ExecuteReader())
+                        {
+                            if (!reader.Read()) break;
+                            if (!reader.IsDBNull(1))
+                            {
+                                int mode = Convert.ToInt32(reader[1]);
+                                return mode == 1;
+                            }
+                            if (reader.IsDBNull(0)) break;
+                            currentId = Convert.ToInt32(reader[0]);
+                        }
+                    }
+                }
+            }
+
+            return defaultValue;
+        }
+
+        /// <summary>
+        /// Устанавливает явное правило фото-превью для папки (1 = разрешено, 0 = исключение, null = наследовать).
+        /// </summary>
+        public void SetFolderPhotoPreviewMode(int folderNodeId, int? mode)
+        {
+            SetFolderRuleMode(folderNodeId, "photo_preview_mode", mode);
+        }
+
+        /// <summary>
+        /// Устанавливает явное правило подписей Telegram для папки (1 = разрешено, 0 = исключение, null = наследовать).
+        /// </summary>
+        public void SetFolderCaptionMode(int folderNodeId, int? mode)
+        {
+            SetFolderRuleMode(folderNodeId, "caption_mode", mode);
+        }
+
+        private void SetFolderRuleMode(int folderNodeId, string columnName, int? mode)
+        {
+            if (mode.HasValue && mode.Value != 0 && mode.Value != 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(mode), "Режим правила должен быть null, 0 или 1.");
+            }
+
+            using (var connection = _dbManager.GetConnection())
+            using (var command = connection.CreateCommand())
+            {
+                command.CommandText = $"UPDATE nodes SET {columnName} = @mode, updated_at = CURRENT_TIMESTAMP WHERE id = @folderNodeId AND is_dir = 1;";
+                command.Parameters.AddWithValue("@mode", (object?)mode ?? DBNull.Value);
+                command.Parameters.AddWithValue("@folderNodeId", folderNodeId);
+                command.ExecuteNonQuery();
+            }
+            NotifyNodeChanged();
+        }
+
+        /// <summary>
+        /// Возвращает список всех активных папок, привязанных к отдельным каналам Telegram (включая вложенные).
+        /// </summary>
+        public List<BoundFolderInfo> GetBoundChannelFolders()
+        {
+            long primaryChannelId = GetPrimaryTelegramChannel()?.ChannelId ?? 0;
+            var allDirs = LoadActiveDirectoriesMap();
+            var channelTitles = GetTelegramChannels().ToDictionary(c => c.ChannelId, c => c.Title);
+            var result = new List<BoundFolderInfo>();
+
+            foreach (var dir in allDirs.Values)
+            {
+                if (!dir.TgChannelId.HasValue || dir.TgChannelId.Value == 0) continue;
+                if (primaryChannelId != 0 && dir.TgChannelId.Value == primaryChannelId) continue;
+
+                string fullPath = BuildFullPathFromMap(dir.Id, allDirs);
+                if (IsPathInsideTrash(fullPath)) continue;
+
+                long chId = dir.TgChannelId.Value;
+                string chTitle = channelTitles.TryGetValue(chId, out var t) ? t : $"Канал {chId}";
+                result.Add(new BoundFolderInfo
+                {
+                    NodeId = dir.Id,
+                    Name = dir.Name,
+                    FullPath = fullPath,
+                    ChannelId = chId,
+                    ChannelTitle = chTitle
+                });
+            }
+
+            return result
+                .OrderBy(x => x.FullPath, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
+        /// <summary>
+        /// Возвращает папки с явно заданным правилом фото-превью (1 = разрешено, 0 = исключение).
+        /// </summary>
+        public List<FolderRuleItem> GetFoldersWithExplicitPhotoPreviewMode()
+        {
+            return GetFoldersWithExplicitRule(d => d.PhotoPreviewMode);
+        }
+
+        /// <summary>
+        /// Возвращает папки с явно заданным правилом подписей в Telegram (1 = разрешено, 0 = исключение).
+        /// </summary>
+        public List<FolderRuleItem> GetFoldersWithExplicitCaptionMode()
+        {
+            return GetFoldersWithExplicitRule(d => d.CaptionMode);
+        }
+
+        private List<FolderRuleItem> GetFoldersWithExplicitRule(Func<DirRow, int?> selector)
+        {
+            var allDirs = LoadActiveDirectoriesMap();
+            var result = new List<FolderRuleItem>();
+
+            foreach (var dir in allDirs.Values)
+            {
+                int? mode = selector(dir);
+                if (!mode.HasValue) continue;
+
+                string fullPath = BuildFullPathFromMap(dir.Id, allDirs);
+                if (IsPathInsideTrash(fullPath)) continue;
+
+                result.Add(new FolderRuleItem
+                {
+                    NodeId = dir.Id,
+                    Name = dir.Name,
+                    FullPath = fullPath,
+                    Mode = mode.Value
+                });
+            }
+
+            return result
+                .OrderBy(x => x.FullPath, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
+        /// <summary>
+        /// Возвращает дерево всех активных папок виртуального диска (без .Trash) с вычисленными эффективными правилами.
+        /// </summary>
+        public List<FolderTreeNodeInfo> GetActiveFolderTree()
+        {
+            long primaryChannelId = GetPrimaryTelegramChannel()?.ChannelId ?? 0;
+            var allDirs = LoadActiveDirectoriesMap();
+            var channelTitles = GetTelegramChannels().ToDictionary(c => c.ChannelId, c => c.Title);
+            var result = new List<FolderTreeNodeInfo>();
+
+            foreach (var dir in allDirs.Values)
+            {
+                string fullPath = BuildFullPathFromMap(dir.Id, allDirs);
+                if (IsPathInsideTrash(fullPath)) continue;
+
+                bool isCustomBound = dir.TgChannelId.HasValue && dir.TgChannelId.Value != 0 &&
+                                     (primaryChannelId == 0 || dir.TgChannelId.Value != primaryChannelId);
+                string? chTitle = isCustomBound && channelTitles.TryGetValue(dir.TgChannelId!.Value, out var t) ? t : null;
+
+                result.Add(new FolderTreeNodeInfo
+                {
+                    Id = dir.Id,
+                    ParentId = dir.ParentId,
+                    Name = dir.Name,
+                    FullPath = fullPath,
+                    TgChannelId = dir.TgChannelId,
+                    IsCustomBoundChannel = isCustomBound,
+                    ChannelTitle = chTitle,
+                    PhotoPreviewMode = dir.PhotoPreviewMode,
+                    CaptionMode = dir.CaptionMode,
+                    EffectivePhotoPreview = ResolveRuleFromMap(dir.Id, allDirs, d => d.PhotoPreviewMode),
+                    EffectiveCaption = ResolveRuleFromMap(dir.Id, allDirs, d => d.CaptionMode)
+                });
+            }
+
+            return result
+                .OrderBy(x => x.ParentId.HasValue ? 1 : 0)
+                .ThenBy(x => x.FullPath, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
+        private sealed class DirRow
+        {
+            public int Id { get; init; }
+            public int? ParentId { get; init; }
+            public string Name { get; init; } = string.Empty;
+            public long? TgChannelId { get; init; }
+            public int? PhotoPreviewMode { get; init; }
+            public int? CaptionMode { get; init; }
+        }
+
+        private Dictionary<int, DirRow> LoadActiveDirectoriesMap()
+        {
+            var dict = new Dictionary<int, DirRow>();
+            using var connection = _dbManager.GetConnection();
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText = "SELECT id, parent_id, name, tg_channel_id, photo_preview_mode, caption_mode FROM nodes WHERE is_dir = 1 AND in_trash = 0;";
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                int id = reader.GetInt32(0);
+                dict[id] = new DirRow
+                {
+                    Id = id,
+                    ParentId = reader.IsDBNull(1) ? null : reader.GetInt32(1),
+                    Name = reader.GetString(2),
+                    TgChannelId = reader.IsDBNull(3) ? null : reader.GetInt64(3),
+                    PhotoPreviewMode = reader.IsDBNull(4) ? null : reader.GetInt32(4),
+                    CaptionMode = reader.IsDBNull(5) ? null : reader.GetInt32(5)
+                };
+            }
+            return dict;
+        }
+
+        private static string BuildFullPathFromMap(int dirId, Dictionary<int, DirRow> allDirs)
+        {
+            var segments = new Stack<string>();
+            var visited = new HashSet<int>();
+            int? currentId = dirId;
+            while (currentId.HasValue && visited.Add(currentId.Value) && allDirs.TryGetValue(currentId.Value, out var row))
+            {
+                if (!row.ParentId.HasValue)
+                {
+                    // Root
+                    break;
+                }
+                segments.Push(row.Name);
+                currentId = row.ParentId;
+            }
+            return segments.Count == 0 ? "/" : "/" + string.Join("/", segments);
+        }
+
+        private static bool ResolveRuleFromMap(int dirId, Dictionary<int, DirRow> allDirs, Func<DirRow, int?> selector)
+        {
+            var visited = new HashSet<int>();
+            int? currentId = dirId;
+            while (currentId.HasValue && visited.Add(currentId.Value) && allDirs.TryGetValue(currentId.Value, out var row))
+            {
+                int? mode = selector(row);
+                if (mode.HasValue) return mode.Value == 1;
+                currentId = row.ParentId;
+            }
+            return false;
+        }
+
+        private static bool IsPathInsideTrash(string fullPath)
+        {
+            return fullPath.Equals("/.Trash", StringComparison.OrdinalIgnoreCase) ||
+                   fullPath.StartsWith("/.Trash/", StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
         /// Проверяет, осталась ли в базе хотя бы одна папка или файл с данным tg_channel_id.
         /// </summary>
         public bool HasActiveNodesForChannel(long channelId)
@@ -1525,6 +1830,7 @@ namespace TGramFS.Database
                     // Версионирование: Отправляем старый в корзину, создаем новый с версией + 1
                     int targetTrashParentId = EnsureTrashHierarchyForParent(parentId);
                     string oldPathWithVersion = GetNodeFullPathWithVersion(existingNode.Id);
+                    bool captionsEnabledForParent = GetEffectiveCaptionsEnabled(parentId);
 
                     using (var transaction = connection.BeginTransaction())
                     {
@@ -1613,10 +1919,11 @@ namespace TGramFS.Database
                             SaveNodePartsInternal(connection, targetNodeId, parts, transaction);
                         }
 
-                        // Старая версия отправляется в корзину: обновляем её подпись в Telegram на #trash (мастер, дочерние части и фото-превью)
+                        // Старая версия отправляется в корзину: обновляем её подпись в Telegram на #trash (мастер, дочерние части и фото-превью),
+                        // но только если для папки включены текстовые подписи в Telegram.
                         long? existingEffectiveChannelId = existingNode.TgChannelId ?? effectiveTgChannelId;
 
-                        if (existingNode.TgMessageId.HasValue && existingNode.TgMessageId.Value > 1)
+                        if (captionsEnabledForParent && existingNode.TgMessageId.HasValue && existingNode.TgMessageId.Value > 1)
                         {
                             string masterTrashPath = oldPathWithVersion;
                             if (oldParts.Count > 1)
@@ -1645,7 +1952,7 @@ namespace TGramFS.Database
                             }
                         }
 
-                        if (oldParts.Count > 1)
+                        if (captionsEnabledForParent && oldParts.Count > 1)
                         {
                             foreach (var part in oldParts.Where(p => p.PartIndex > 0))
                             {
@@ -1673,7 +1980,7 @@ namespace TGramFS.Database
                             }
                         }
 
-                        if (existingNode.TgPreviewMessageId.HasValue && existingNode.TgPreviewMessageId.Value > 1)
+                        if (captionsEnabledForParent && existingNode.TgPreviewMessageId.HasValue && existingNode.TgPreviewMessageId.Value > 1)
                         {
                             string trashPreviewCaption = FormatTelegramCaption(oldPathWithVersion, existingNode.TgPreviewMessageId.Value, isLatest: false);
                             using (var captionCmd = connection.CreateCommand())
@@ -1822,7 +2129,9 @@ namespace TGramFS.Database
                 CreatedAt = ParseDateTime(reader["created_at"]),
                 UpdatedAt = ParseDateTime(reader["updated_at"]),
                 InlineData = reader["inline_data"] != DBNull.Value ? (byte[])reader["inline_data"] : null,
-                FileAttributes = reader["file_attributes"] != DBNull.Value ? Convert.ToInt32(reader["file_attributes"]) : 0
+                FileAttributes = reader["file_attributes"] != DBNull.Value ? Convert.ToInt32(reader["file_attributes"]) : 0,
+                PhotoPreviewMode = reader["photo_preview_mode"] != DBNull.Value ? Convert.ToInt32(reader["photo_preview_mode"]) : (int?)null,
+                CaptionMode = reader["caption_mode"] != DBNull.Value ? Convert.ToInt32(reader["caption_mode"]) : (int?)null
             };
 
             return node;
@@ -2077,6 +2386,21 @@ namespace TGramFS.Database
             var filesToUpdate = new List<Node>();
             GetFilesRecursive(nodeId, filesToUpdate);
             EnqueueCaptionUpdatesForFiles(filesToUpdate);
+        }
+
+        /// <summary>
+        /// Поставить в очередь обновление подписей только для тех файлов в поддереве,
+        /// у которых в целевой папке включено формирование подписей в Telegram.
+        /// </summary>
+        public void EnqueueCaptionUpdatesForSubtreeIfEnabled(int nodeId)
+        {
+            var filesToUpdate = new List<Node>();
+            GetFilesRecursive(nodeId, filesToUpdate);
+            var enabledFiles = filesToUpdate.Where(f => GetEffectiveCaptionsEnabled(f.ParentId)).ToList();
+            if (enabledFiles.Count > 0)
+            {
+                EnqueueCaptionUpdatesForFiles(enabledFiles);
+            }
         }
 
         private void GetFilesRecursive(int parentId, List<Node> result)
@@ -2767,5 +3091,37 @@ namespace TGramFS.Database
         public long SourceChannelId { get; set; }
         public long TargetChannelId { get; set; }
         public string Status { get; set; } = "pending";
+    }
+
+    public class BoundFolderInfo
+    {
+        public int NodeId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string FullPath { get; set; } = "/";
+        public long ChannelId { get; set; }
+        public string ChannelTitle { get; set; } = string.Empty;
+    }
+
+    public class FolderRuleItem
+    {
+        public int NodeId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string FullPath { get; set; } = "/";
+        public int Mode { get; set; }
+    }
+
+    public class FolderTreeNodeInfo
+    {
+        public int Id { get; set; }
+        public int? ParentId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string FullPath { get; set; } = "/";
+        public long? TgChannelId { get; set; }
+        public bool IsCustomBoundChannel { get; set; }
+        public string? ChannelTitle { get; set; }
+        public int? PhotoPreviewMode { get; set; }
+        public int? CaptionMode { get; set; }
+        public bool EffectivePhotoPreview { get; set; }
+        public bool EffectiveCaption { get; set; }
     }
 }

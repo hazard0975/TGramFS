@@ -409,6 +409,8 @@ namespace TGramFS.Server
 
                             // Прямая потоковая загрузка в Telegram с сохранением TCP Flow Control для Проводника
                             long? targetChannelId = repository.GetEffectiveChannelId(parentNode.Id);
+                            bool createGalleryPreview = repository.GetEffectivePhotoPreviewEnabled(parentNode.Id);
+                            bool enableCaptions = repository.GetEffectiveCaptionsEnabled(parentNode.Id);
                             string? webDavAudioTagsSummary = AudioMetadataExtractor.FormatTagsSummary(audioMeta);
                             if (audioMeta != null)
                             {
@@ -416,7 +418,7 @@ namespace TGramFS.Server
                                     (targetChannelId != null ? $", канал: {targetChannelId}" : "") +
                                     (!string.IsNullOrEmpty(webDavAudioTagsSummary) ? $", теги: '{webDavAudioTagsSummary}'" : "") + "...");
                             }
-                            uploadResult = await telegramService.UploadFileAsync(uploadStream, name, uploadLength, displayFileName: tgDisplayName, caption: fullPathWithVersion, audioMeta: audioMeta, videoMeta: videoMeta, targetChannelId: targetChannelId);
+                            uploadResult = await telegramService.UploadFileAsync(uploadStream, name, uploadLength, displayFileName: tgDisplayName, caption: fullPathWithVersion, audioMeta: audioMeta, videoMeta: videoMeta, targetChannelId: targetChannelId, createGalleryPreview: createGalleryPreview, enableCaptions: enableCaptions);
                             tgMessageId = uploadResult?.MessageId;
                             tgPreviewMessageId = uploadResult?.PreviewMessageId;
 
@@ -915,12 +917,16 @@ namespace TGramFS.Server
                     string nameNoExt = Path.GetFileNameWithoutExtension(destFileName);
                     string fullPathWithVersion = $"{parentFullPath}/{nameNoExt}_v{nextVersion}{ext}";
 
+                    bool includePreview = repository.GetEffectivePhotoPreviewEnabled(destParentId);
+                    bool enableCaptions = repository.GetEffectiveCaptionsEnabled(destParentId);
                     var fwdResult = await telegramService.ForwardFileAsync(
                         sourceFile.TgMessageId.Value,
                         sourceFile.TgPreviewMessageId,
                         sourceChannelId,
                         targetChannelId,
-                        fullPathWithVersion
+                        fullPathWithVersion,
+                        includePreview: includePreview,
+                        enableCaptions: enableCaptions
                     );
 
                     if (fwdResult != null && fwdResult.MessageId > 0)

@@ -1162,12 +1162,14 @@ namespace TGramFS.Services
                         {
                             int oldMessageId = file.TgMessageId.Value;
                             int? oldPreviewId = file.TgPreviewMessageId;
+                            bool targetPreviewEnabled = _repository.GetEffectivePhotoPreviewEnabled(file.ParentId);
+                            bool targetCaptionsEnabled = _repository.GetEffectiveCaptionsEnabled(file.ParentId);
 
                             int newMsgId = 0;
                             int? newPreviewId = null;
 
-                            // 1. Сначала пересылаем превью для галереи (если есть), чтобы оно появилось в ленте первым
-                            if (oldPreviewId.HasValue && oldPreviewId.Value > 0)
+                            // 1. Сначала пересылаем превью для галереи (если есть и в целевой папке превью включены), чтобы оно появилось в ленте первым
+                            if (targetPreviewEnabled && oldPreviewId.HasValue && oldPreviewId.Value > 0)
                             {
                                 var fwdPreviewReq = new TL.Methods.Messages_ForwardMessages
                                 {
@@ -1239,10 +1241,18 @@ namespace TGramFS.Services
                                 // 4. Обновляем данные файла в БД
                                 _repository.UpdateNodeTelegramData(file.Id, newMsgId, newPreviewId, item.TargetChannelId);
 
-                                // 5. Обновляем текстовые подписи
-                                string fullPathWithVersion = _repository.GetNodeFullPathWithVersion(file.Id);
-                                string newCaption = NodeRepository.FormatTelegramCaption(fullPathWithVersion, newMsgId, isLatest: !file.InTrash);
-                                _repository.EnqueueCaptionUpdate(file.Id, newMsgId, newCaption);
+                                // 5. Обновляем текстовые подписи (только если они включены для целевой папки)
+                                if (targetCaptionsEnabled)
+                                {
+                                    string fullPathWithVersion = _repository.GetNodeFullPathWithVersion(file.Id);
+                                    string newCaption = NodeRepository.FormatTelegramCaption(fullPathWithVersion, newMsgId, isLatest: !file.InTrash);
+                                    _repository.EnqueueCaptionUpdate(file.Id, newMsgId, newCaption, item.TargetChannelId);
+                                    if (newPreviewId.HasValue && newPreviewId.Value > 0)
+                                    {
+                                        string previewCaption = NodeRepository.FormatTelegramCaption(fullPathWithVersion, newPreviewId.Value, isLatest: !file.InTrash);
+                                        _repository.EnqueueCaptionUpdate(file.Id, newPreviewId.Value, previewCaption, item.TargetChannelId);
+                                    }
+                                }
 
                                 _repository.DeleteChannelMigration(item.Id);
                                 AppLogger.Info("TelegramService", $"[MigrationQueue] Файл '{file.Name}' успешно перенесен: старый msg #{oldMessageId} -> новый msg #{newMsgId} в канале ID {item.TargetChannelId}.");
@@ -3855,6 +3865,8 @@ namespace TGramFS.Services
             VideoMetadataResult? videoMeta = null,
             string? originalFilePath = null,
             long? targetChannelId = null,
+            bool createGalleryPreview = false,
+            bool enableCaptions = true,
             CancellationToken cancellationToken = default)
         {
             Interlocked.Increment(ref _pendingUploadsCount);
@@ -3862,9 +3874,11 @@ namespace TGramFS.Services
             bool didAttemptNetworkUpload = false;
             string effectiveFileName = !string.IsNullOrEmpty(displayFileName) ? displayFileName : fileName;
             string rawCaptionPath = !string.IsNullOrEmpty(caption) ? caption : effectiveFileName;
-            string effectiveCaption = rawCaptionPath.StartsWith("🟢") || rawCaptionPath.StartsWith("🗑️")
-                ? rawCaptionPath
-                : NodeRepository.FormatTelegramCaption(rawCaptionPath, null, isLatest: true);
+            string effectiveCaption = !enableCaptions
+                ? string.Empty
+                : (rawCaptionPath.StartsWith("🟢") || rawCaptionPath.StartsWith("🗑️")
+                    ? rawCaptionPath
+                    : NodeRepository.FormatTelegramCaption(rawCaptionPath, null, isLatest: true));
 
             Stream uploadStream = source;
             string? tempFilePath = null;
@@ -3893,7 +3907,7 @@ namespace TGramFS.Services
                     throw new InvalidOperationException("Клиент Telegram не подключен или не авторизован.");
 
                 var peer = await GetStoragePeerAsync(targetChannelId);
-                bool isGallery = _configManager.CurrentSettings.Server.CreatePhotoGalleryPreview && IsGalleryImage(effectiveFileName);
+                bool isGallery = createGalleryPreview && IsGalleryImage(effectiveFileName);
 
                 // Если поток не поддерживает Seek (входящий сетевой поток WebDAV от Проводника)
                 // или если это уже StreamingUploadStream (переданный после извлечения аудио-тегов)
@@ -3976,6 +3990,7 @@ namespace TGramFS.Services
                         rawCaptionPath,
                         audioMeta,
                         videoMeta,
+                        enableCaptions,
                         cancellationToken
                     );
                 }
@@ -3989,7 +4004,7 @@ namespace TGramFS.Services
                     progress: (pos, total) => OnUploadProgress?.Invoke(effectiveFileName, pos, total)
                 );
 
-                AppLogger.Info("TelegramService", $"Файл '{effectiveFileName}' загружен в MTProto, финализация сообщения в канале (подпись: '{effectiveCaption}')...");
+                AppLogger.Info("TelegramService", $"Файл '{effectiveFileName}' загружен в MTProto, финализация сообщения в канале" + (enableCaptions ? $" (подпись: '{effectiveCaption}')" : " (без подписи)") + "...");
                 
                 bool isAudio = AudioMetadataExtractor.IsAudioFile(effectiveFileName);
                 bool isVideo = VideoMetadataExtractor.IsVideoFile(effectiveFileName);
@@ -4283,7 +4298,7 @@ namespace TGramFS.Services
                         if (resolvedChannelId <= 0) resolvedChannelId = null;
 
                         List<PendingCaptionUpdate>? pendingCaptions = null;
-                        if (message.ID > 0)
+                        if (enableCaptions && message.ID > 0)
                         {
                             string finalizedCaption = NodeRepository.FormatTelegramCaption(rawCaptionPath, message.ID, isLatest: true);
                             pendingCaptions = new List<PendingCaptionUpdate>
@@ -4305,7 +4320,7 @@ namespace TGramFS.Services
                     if (resolvedChannelId <= 0) resolvedChannelId = null;
 
                     List<PendingCaptionUpdate>? pendingCaptions = null;
-                    if (message.ID > 0)
+                    if (enableCaptions && message.ID > 0)
                     {
                         string finalizedCaption = NodeRepository.FormatTelegramCaption(rawCaptionPath, message.ID, isLatest: true);
                         pendingCaptions = new List<PendingCaptionUpdate>
@@ -4398,6 +4413,7 @@ namespace TGramFS.Services
             string rawCaptionPath,
             AudioMetadataResult? audioMeta,
             VideoMetadataResult? videoMeta,
+            bool enableCaptions = true,
             CancellationToken cancellationToken = default)
         {
             int partCount = (int)Math.Ceiling((double)fileLength / maxPartSize);
@@ -4485,7 +4501,9 @@ namespace TGramFS.Services
                     {
                         double totalGb = (double)fileLength / (1024.0 * 1024.0 * 1024.0);
                         string masterCaptionPath = $"{rawCaptionPath} [Часть 1 из {partCount}, total={totalGb:F2} ГБ]";
-                        partCaption = NodeRepository.FormatTelegramCaption(masterCaptionPath, null, isLatest: true);
+                        partCaption = enableCaptions
+                            ? NodeRepository.FormatTelegramCaption(masterCaptionPath, null, isLatest: true)
+                            : string.Empty;
                         try
                         {
                             await EnsureUploadMessagePacingAsync(cancellationToken);
@@ -4518,7 +4536,7 @@ namespace TGramFS.Services
                         masterMessageId = message.ID;
                         AppLogger.Info("TelegramService", $"[BigFile Chunking] Заглавная Часть 1/{partCount} успешно отправлена в канал (Message ID: {masterMessageId}).");
 
-                        if (masterMessageId > 0)
+                        if (enableCaptions && masterMessageId > 0)
                         {
                             string finalizedCaption = NodeRepository.FormatTelegramCaption(masterCaptionPath, masterMessageId, isLatest: true);
                             pendingCaptions.Add(new PendingCaptionUpdate(masterMessageId, finalizedCaption, channelId > 0 ? channelId : null));
@@ -4527,7 +4545,7 @@ namespace TGramFS.Services
                     else
                     {
                         string childCaptionPath = $"{rawCaptionPath} [Часть {partDisplayNum} из {partCount}]";
-                        partCaption = $"↳ {childCaptionPath}";
+                        partCaption = enableCaptions ? $"↳ {childCaptionPath}" : string.Empty;
                         try
                         {
                             await EnsureUploadMessagePacingAsync(cancellationToken);
@@ -4559,7 +4577,7 @@ namespace TGramFS.Services
 
                         AppLogger.Info("TelegramService", $"[BigFile Chunking] Дочерняя Часть {partDisplayNum}/{partCount} успешно отправлена в канал (Message ID: {message.ID}, ReplyTo: {masterMessageId}).");
 
-                        if (message.ID > 0)
+                        if (enableCaptions && message.ID > 0)
                         {
                             string finalizedChildCaption = $"↳ {childCaptionPath}\nID: {message.ID}";
                             pendingCaptions.Add(new PendingCaptionUpdate(message.ID, finalizedChildCaption, channelId > 0 ? channelId : null));
@@ -4572,7 +4590,7 @@ namespace TGramFS.Services
                 NotifyUploadMessageSucceeded();
                 AppLogger.Info("TelegramService", $"[BigFile Chunking] Все {parts.Count} частей для '{effectiveFileName}' успешно загружены в Telegram!");
                 OnUploadCompleted?.Invoke(effectiveFileName);
-                return new FileUploadResult(masterMessageId, null, parts, pendingCaptions);
+                return new FileUploadResult(masterMessageId, null, parts, pendingCaptions.Count > 0 ? pendingCaptions : null);
             }
             catch (Exception ex)
             {
@@ -4872,6 +4890,8 @@ namespace TGramFS.Services
             string? newCaption = null,
             int targetNodeId = 0,
             List<Models.NodePart>? sourceParts = null,
+            bool includePreview = true,
+            bool enableCaptions = true,
             CancellationToken cancellationToken = default)
         {
             if (_client == null || !IsAuthorized || sourceMessageId <= 0)
@@ -4915,8 +4935,8 @@ namespace TGramFS.Services
                 int? newPreviewId = null;
                 int newMsgId = 0;
 
-                // 1. Форвардим превью (если есть)
-                if (sourcePreviewMessageId.HasValue && sourcePreviewMessageId.Value > 0)
+                // 1. Форвардим превью (если есть и включены фото-превью для целевой папки)
+                if (includePreview && sourcePreviewMessageId.HasValue && sourcePreviewMessageId.Value > 0)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     try
@@ -5064,8 +5084,8 @@ namespace TGramFS.Services
                     cancellationToken.ThrowIfCancellationRequested();
                 }
 
-                // 4. Если задана новая подпись, планируем её стандартизированное обновление через очередь
-                if (!string.IsNullOrEmpty(newCaption))
+                // 4. Если задана новая подпись и подписи включены для целевой папки, планируем её обновление через очередь
+                if (enableCaptions && !string.IsNullOrEmpty(newCaption))
                 {
                     string effectiveCaption;
                     if (newParts != null && newParts.Count > 1)

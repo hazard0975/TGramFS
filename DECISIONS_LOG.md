@@ -4633,3 +4633,30 @@ _telegramService.UpdateSettings(_settings);
    - При получении `TriggerCaptionFloodWait` (с дедупликацией `1.5` сек) повышается минимальный адаптивный порог интервала `_captionAdaptiveFloorDelayMs` (`0 -> 750 -> 1500 -> 2000 мс`), который также сбрасывается после `5` минут простоя.
 3. **Чистая сериализация `flood_state.json`**:
    - Устаревшие корневые поля в `PersistedFloodStateFile` помечены `[JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]`: совместимость на чтение старых файлов сохранена, новые файлы содержат только массив `Entries`.
+
+---
+
+## 155. По-папочные правила фото-превью и подписей в Telegram и окно «Управление папками» (`FolderManagementForm.cs`, `TrayContext.cs`, `AuthSettingsForm.cs`, `NodeRepository.cs`, `TelegramService.cs`, `WinFspServer.cs`, `WebDavMiddleware.cs`, `BoundFolderShellHelper.cs`, `DatabaseManager.cs`, `Schema.sql`)
+
+### Контекст и мотивация:
+1. Глобальная галочка «Создавать фото-превью для галереи Telegram» распространялась на весь диск целиком, хотя галерейные превью требуются лишь для отдельных папок (например, с фотографиями), а в остальных папках создают лишние сообщения и удваивают нагрузку на API.
+2. Аналогично текстовые подписи сообщений (`🟢 /path ... #latest` / `🗑️ ... #trash` и подписи частей `UploadMultiPartFileAsync`) полезны для выборочных разделов (например, музыка или фото), но при массовом копировании/перемещении обычных папок и многотомных архивов порождают лишние вызовы `Messages_EditMessage` и риск `FLOOD_WAIT`.
+3. Для работы с привязанными к кастомным каналам папками и по-папочными правилами требовалось единое окно управления в системном трее с возможностью заранее создать/привязать папку на пустом диске и сразу включить для неё нужные правила.
+
+### Принятое решение:
+1. **Схема БД и модель наследования (`Schema.sql`, `DatabaseManager.cs`, `Node.cs`, `NodeRepository.cs`)**:
+   - В таблицу `nodes` добавлены две nullable-колонки `photo_preview_mode INTEGER` и `caption_mode INTEGER` (`NULL` = наследовать от родителя, `1` = разрешено, `0` = исключение/запрещено). При отсутствии явного правила у предков значение по умолчанию на всём диске — **выключено (`false`)**.
+   - В `DatabaseManager.ApplySchema` добавлена безопасная миграция существующих баз через `ALTER TABLE nodes ADD COLUMN ...`.
+   - В `NodeRepository` добавлены `GetEffectivePhotoPreviewEnabled(int? parentId)`, `GetEffectiveCaptionsEnabled(int? parentId)`, `SetFolderPhotoPreviewMode`, `SetFolderCaptionMode`, а также выборки `GetBoundChannelFolders`, `GetFoldersWithExplicitPhotoPreviewMode`, `GetFoldersWithExplicitCaptionMode` и `GetActiveFolderTree`.
+   - В `SoftDeleteNode`, `MoveNode` и `CreateOrUpdateFile` (при ротации старой версии) постановка задач в `pending_caption_updates` выполняется только для файлов, у которых подписи эффективны (`GetEffectiveCaptionsEnabled`), оценивая правило до переноса в корзину при удалении и по целевому `ParentId` при активном перемещении.
+2. **Учёт правил при загрузке, копировании и миграции (`TelegramService.cs`, `WinFspServer.cs`, `WebDavMiddleware.cs`)**:
+   - В `TelegramService.UploadFileAsync` и `UploadMultiPartFileAsync` добавлены параметры `createGalleryPreview` (по умолчанию `false`) и `enableCaptions` (по умолчанию `true` на уровне сигнатуры, с передачей реального значения от вызывающей стороны). При `enableCaptions == false` сообщения отправляются с пустой подписью (`string.Empty`), а отложенные обновления `ID:` (`PendingCaptions`) не формируются ни для одиночных файлов, ни для фото-превью, ни для мастер- и дочерних сообщений многотомных файлов.
+   - В `ForwardFileAsync` (`includePreview`, `enableCaptions`) и `ProcessChannelMigrationsAsync` при копировании/миграции в папку с выключенными фото-превью `PreviewMessageId` отбрасывается (не пересылается в целевую папку/канал, а старое превью при миграции канала удаляется и `tg_preview_message_id` сбрасывается в `NULL`). Повторная генерация превью для старых файлов без превью при переносе в папку с превью не выполняется.
+   - Все точки записи и серверного копирования в `WinFspServer` (`Create`, `Overwrite`, `Write`, `Cleanup`) и `WebDavMiddleware` (`HandlePutAsync`, `CopySingleFileAsync`) переведены на `GetEffectivePhotoPreviewEnabled` / `GetEffectiveCaptionsEnabled`.
+3. **UI и удаление глобального чекбокса (`FolderManagementForm.cs`, `TrayContext.cs`, `AuthSettingsForm.cs`, `BoundFolderShellHelper.cs`, `Program.cs`)**:
+   - Удалены `ServerSettings.CreatePhotoGalleryPreview` из `AppSettings.cs` и чекбокс `_chkGalleryPreview` из `AuthSettingsForm.cs`.
+   - В контекстное меню трея (`TrayContext.cs`) добавлен пункт **«Управление папками»**, открывающий `FolderManagementForm` с тремя вкладками:
+     1. **«Привязанные папки»**: таблица привязанных папок (путь, название канала, ID канала — без колонок превью/подписей, чтобы не искажать картину при наследовании/исключениях в подпапках), «Открыть в Проводнике», «Обновить» и модальный диалог «Создать / привязать папку...» (с деревом папок из `base.db`, созданием подпапок на лету, опциональным включением фото-превью и подписей до запуска фоновой миграции канала и обновлением иконки-звёздочки в Проводнике через общий `BoundFolderShellHelper`).
+     2. **«Фото-превью»** и **«Подписи в Telegram»**: отдельные списки разрешённых папок и исключений с выбором/созданием папок через дерево из `base.db` (подсвечивается текущее и унаследованное состояние) или вводом пути и автоматическим созданием промежуточных каталогов.
+4. **Примечание (отложено)**: баг ложного срабатывания `VirtualCopy` при создании пустого файла сторонней программой (например, `mspaint`) в `WinFspServer` сознательно оставлен без изменений на текущем этапе по решению пользователя.
+

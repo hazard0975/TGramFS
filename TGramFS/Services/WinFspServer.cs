@@ -1345,6 +1345,8 @@ namespace TGramFS.Services
                         string nameNoExt = Path.GetFileNameWithoutExtension(itemName);
                         string fullPathWithVersion = $"{parentFullPath}/{nameNoExt}_v{nextVersion}{ext}";
 
+                        bool includePreview = _repository.GetEffectivePhotoPreviewEnabled(parentNode.Id);
+                        bool enableCaptions = _repository.GetEffectiveCaptionsEnabled(parentNode.Id);
                         AppLogger.Info("WinFsp", $"[VirtualCopy] Запуск мгновенного форвардинга сообщения #{virtualSource.TgMessageId.Value} в Telegram ({sourceChannelId} -> {targetChannelId})...");
                         vCtx.UploadCts = new CancellationTokenSource();
                         var fwdToken = vCtx.UploadCts.Token;
@@ -1355,6 +1357,8 @@ namespace TGramFS.Services
                             targetChannelId,
                             fullPathWithVersion,
                             vNode.Id,
+                            includePreview: includePreview,
+                            enableCaptions: enableCaptions,
                             cancellationToken: fwdToken
                         ));
                     }
@@ -1502,6 +1506,8 @@ namespace TGramFS.Services
                     string nameNoExt = Path.GetFileNameWithoutExtension(node.Name);
                     string fullPathWithVersion = $"{parentFullPath}/{nameNoExt}_v{nextVersion}{ext}";
 
+                    bool includePreview = _repository.GetEffectivePhotoPreviewEnabled(parentId);
+                    bool enableCaptions = _repository.GetEffectiveCaptionsEnabled(parentId);
                     ctx.UploadCts = new CancellationTokenSource();
                     var fwdToken = ctx.UploadCts.Token;
                     ctx.ForwardTask = Task.Run(() => _telegramService.ForwardFileAsync(
@@ -1511,6 +1517,8 @@ namespace TGramFS.Services
                         targetChannelId,
                         fullPathWithVersion,
                         node.Id,
+                        includePreview: includePreview,
+                        enableCaptions: enableCaptions,
                         cancellationToken: fwdToken
                     ));
                 }
@@ -1681,6 +1689,8 @@ namespace TGramFS.Services
                         }
 
                         long? targetChannelId = _repository.GetEffectiveChannelId(node.ParentId);
+                        bool createGalleryPreview = _repository.GetEffectivePhotoPreviewEnabled(parentId);
+                        bool enableCaptions = _repository.GetEffectiveCaptionsEnabled(parentId);
                         ctx.PendingAudioMeta = audioMeta;
                         string? audioTagsSummary = AudioMetadataExtractor.FormatTagsSummary(audioMeta);
                         AppLogger.Info("WinFsp", $"Запуск прямой потоковой передачи '{nodeName}' ({AppLogger.FormatSizeDetailed(targetTotalSize)}) в Telegram" + 
@@ -1696,6 +1706,8 @@ namespace TGramFS.Services
                             videoMeta: videoMeta,
                             originalFilePath: ctx.OriginalSourcePath,
                             targetChannelId: targetChannelId,
+                            createGalleryPreview: createGalleryPreview,
+                            enableCaptions: enableCaptions,
                             cancellationToken: ctx.UploadCts?.Token ?? default
                         ));
                     }
@@ -2716,6 +2728,8 @@ namespace TGramFS.Services
                                 }
 
                                 long? targetChannelId = _repository.GetEffectiveChannelId(parentId);
+                                bool createGalleryPreview = _repository.GetEffectivePhotoPreviewEnabled(parentId);
+                                bool enableCaptions = _repository.GetEffectiveCaptionsEnabled(parentId);
                                 string? fspAudioTagsSummary = AudioMetadataExtractor.FormatTagsSummary(fspAudioMeta);
                                 AppLogger.Info("WinFsp", $"Отправка файла '{nodeName}' ({AppLogger.FormatSizeDetailed(finalLength)}) из памяти в Telegram (Zero-Temp)" +
                                     (targetChannelId != null ? $", канал: {targetChannelId}" : "") +
@@ -2729,7 +2743,9 @@ namespace TGramFS.Services
                                     audioMeta: fspAudioMeta,
                                     videoMeta: fspVideoMeta,
                                     originalFilePath: ctx.OriginalSourcePath,
-                                    targetChannelId: targetChannelId
+                                    targetChannelId: targetChannelId,
+                                    createGalleryPreview: createGalleryPreview,
+                                    enableCaptions: enableCaptions
                                 ).GetAwaiter().GetResult();
 
                                 if (uploadResult?.MessageId != null)

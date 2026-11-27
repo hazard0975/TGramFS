@@ -171,6 +171,8 @@ CREATE TABLE IF NOT EXISTS nodes (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     inline_data BLOB,
     file_attributes INTEGER NOT NULL DEFAULT 0,
+    photo_preview_mode INTEGER,
+    caption_mode INTEGER,
     
     FOREIGN KEY (parent_id) REFERENCES nodes(id)
 );
@@ -375,6 +377,33 @@ CREATE INDEX IF NOT EXISTS idx_node_parts_node ON node_parts(node_id);
             catch
             {
                 // Игнорируем ошибку
+            }
+
+            // Миграция: колонки по-папочных правил превью фото и подписей в таблице nodes
+            try
+            {
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = "ALTER TABLE nodes ADD COLUMN photo_preview_mode INTEGER;";
+                    command.ExecuteNonQuery();
+                }
+            }
+            catch
+            {
+                // Колонка уже существует, игнорируем ошибку
+            }
+
+            try
+            {
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = "ALTER TABLE nodes ADD COLUMN caption_mode INTEGER;";
+                    command.ExecuteNonQuery();
+                }
+            }
+            catch
+            {
+                // Колонка уже существует, игнорируем ошибку
             }
         }
 
