@@ -296,7 +296,6 @@ namespace TGramFS.UI
             _btnCreateBindFolder = UIFactory.CreateButton(
                 "Создать / привязать папку...",
                 (s, e) => OpenCreateOrBindFolderDialog(),
-                isPrimary: true,
                 autoSize: true,
                 registerScaler: RegisterDpiScaler);
 
@@ -877,7 +876,6 @@ namespace TGramFS.UI
                 var btnOk = UIFactory.CreateButton(
                     "Создать",
                     (s, e) => TryAccept(),
-                    isPrimary: true,
                     width: 105,
                     registerScaler: RegisterDpiScaler);
 
@@ -928,10 +926,80 @@ namespace TGramFS.UI
             }
         }
 
+        private const string BoundSuffixTag = "[привязано]";
+        private const string BoundSuffixWithPad = "  " + BoundSuffixTag;
+
+        private static void ConfigureBoundTagTreeDrawing(TreeView tree)
+        {
+            tree.DrawMode = TreeViewDrawMode.OwnerDrawText;
+            tree.DrawNode += (s, e) =>
+            {
+                if (e.Node == null) return;
+                e.DrawDefault = false;
+
+                string fullText = e.Node.Text ?? string.Empty;
+                Font font = e.Node.NodeFont ?? tree.Font ?? UITheme.BaseFont;
+                bool isSelected = (e.State & TreeNodeStates.Selected) != 0;
+                bool isFocused = tree.Focused;
+
+                bool hasBoundSuffix = e.Node.Tag is FolderTreeNodeInfo info
+                    && info.IsCustomBoundChannel
+                    && fullText.EndsWith(BoundSuffixWithPad, StringComparison.Ordinal);
+
+                string namePart = hasBoundSuffix
+                    ? fullText.Substring(0, fullText.Length - BoundSuffixWithPad.Length)
+                    : fullText;
+                string suffixPart = hasBoundSuffix ? BoundSuffixWithPad : string.Empty;
+
+                const TextFormatFlags flags = TextFormatFlags.NoPrefix
+                    | TextFormatFlags.NoPadding
+                    | TextFormatFlags.VerticalCenter
+                    | TextFormatFlags.SingleLine;
+
+                Size nameSize = TextRenderer.MeasureText(e.Graphics, namePart, font, Size.Empty, flags);
+                Size suffixSize = string.IsNullOrEmpty(suffixPart)
+                    ? Size.Empty
+                    : TextRenderer.MeasureText(e.Graphics, suffixPart, font, Size.Empty, flags);
+
+                const int leftPad = 2;
+                int drawWidth = Math.Max(e.Bounds.Width, leftPad + nameSize.Width + suffixSize.Width + 4);
+                Rectangle bgRect = new Rectangle(e.Bounds.X, e.Bounds.Y, drawWidth, e.Bounds.Height);
+
+                Color bgColor = isSelected
+                    ? (isFocused ? SystemColors.Highlight : SystemColors.Control)
+                    : (tree.BackColor.IsEmpty ? SystemColors.Window : tree.BackColor);
+
+                using (var bgBrush = new SolidBrush(bgColor))
+                {
+                    e.Graphics.FillRectangle(bgBrush, bgRect);
+                }
+
+                Color baseFore = e.Node.ForeColor.IsEmpty
+                    ? (tree.ForeColor.IsEmpty ? UITheme.TextMain : tree.ForeColor)
+                    : e.Node.ForeColor;
+                Color nameColor = (isSelected && isFocused) ? SystemColors.HighlightText : baseFore;
+                Color suffixColor = (isSelected && isFocused) ? SystemColors.HighlightText : UITheme.TextMuted;
+
+                Rectangle nameRect = new Rectangle(e.Bounds.X + leftPad, e.Bounds.Y, nameSize.Width + 2, e.Bounds.Height);
+                TextRenderer.DrawText(e.Graphics, namePart, font, nameRect, nameColor, flags);
+
+                if (!string.IsNullOrEmpty(suffixPart))
+                {
+                    Rectangle suffixRect = new Rectangle(e.Bounds.X + leftPad + nameSize.Width, e.Bounds.Y, suffixSize.Width + 4, e.Bounds.Height);
+                    TextRenderer.DrawText(e.Graphics, suffixPart, font, suffixRect, suffixColor, flags);
+                }
+
+                if ((e.State & TreeNodeStates.Focused) != 0 && isFocused)
+                {
+                    ControlPaint.DrawFocusRectangle(e.Graphics, bgRect, nameColor, bgColor);
+                }
+            };
+        }
+
         private static void PopulateFolderTree(
             TreeView tree,
             List<FolderTreeNodeInfo> nodes,
-            Func<FolderTreeNodeInfo, (string Label, Color? Color, bool IsBold)>? formatter = null,
+            Func<FolderTreeNodeInfo, (string Label, Color? Color)>? formatter = null,
             string? pathToSelect = null)
         {
             tree.BeginUpdate();
@@ -944,29 +1012,17 @@ namespace TGramFS.UI
                 {
                     string display = info.ParentId == null ? "/ (Корень диска)" : info.Name;
                     Color? color = null;
-                    bool isBold = false;
                     if (formatter != null)
                     {
-                        var (suffix, c, bold) = formatter(info);
+                        var (suffix, c) = formatter(info);
                         if (!string.IsNullOrEmpty(suffix))
                         {
                             display += "  " + suffix;
                         }
                         color = c;
-                        isBold = bold;
-                    }
-
-                    // Запас в 2 пробела для жирного NodeFont, чтобы WinForms не обрезал последний символ при расчете по базовому шрифту TreeView
-                    if (isBold)
-                    {
-                        display += "  ";
                     }
 
                     var tn = new TreeNode(display) { Tag = info };
-                    if (isBold)
-                    {
-                        tn.NodeFont = UITheme.BoldFont;
-                    }
                     if (color.HasValue)
                     {
                         tn.ForeColor = color.Value;
@@ -1133,7 +1189,7 @@ namespace TGramFS.UI
 
             private void InitializeDialog()
             {
-                string ruleName = _isPreviewRule ? "фото-превью" : "подписей в Telegram";
+                string ruleName = _isPreviewRule ? "фото-превью" : "подписи в Telegram";
                 string actionName = _targetMode == 1 ? "Разрешить" : "Добавить исключение";
                 Text = $"{actionName} — {ruleName}";
                 Icon = AppIconHelper.GetAppIcon();
@@ -1171,6 +1227,7 @@ namespace TGramFS.UI
                     HideSelection = false,
                     Font = UITheme.BaseFont
                 };
+                ConfigureBoundTagTreeDrawing(_tree);
                 _tree.AfterSelect += (s, e) =>
                 {
                     if (_suppressTreeSync) return;
@@ -1264,7 +1321,6 @@ namespace TGramFS.UI
                 var btnApply = UIFactory.CreateButton(
                     "Применить",
                     (s, e) => ApplyAndClose(),
-                    isPrimary: true,
                     width: 115,
                     registerScaler: RegisterDpiScaler);
 
@@ -1312,31 +1368,22 @@ namespace TGramFS.UI
                             int? explicitMode = _isPreviewRule ? info.PhotoPreviewMode : info.CaptionMode;
                             bool effective = _isPreviewRule ? info.EffectivePhotoPreview : info.EffectiveCaption;
 
-                            var tags = new List<string>();
                             Color? color = null;
-
                             if (explicitMode == 1)
                             {
-                                tags.Add("[Вкл]");
                                 color = UITheme.TextSuccess;
                             }
                             else if (explicitMode == 0)
                             {
-                                tags.Add("[Исключение]");
                                 color = UITheme.TextDanger;
                             }
                             else if (effective)
                             {
-                                tags.Add("(насл.: Вкл)");
                                 color = Color.FromArgb(40, 125, 85);
                             }
 
-                            if (info.IsCustomBoundChannel)
-                            {
-                                tags.Add("(привязано)");
-                            }
-
-                            return (string.Join(" ", tags), color, info.IsCustomBoundChannel);
+                            string suffix = info.IsCustomBoundChannel ? BoundSuffixTag : string.Empty;
+                            return (suffix, color);
                         },
                         selectPath);
                 }
@@ -1594,6 +1641,7 @@ namespace TGramFS.UI
                     HideSelection = false,
                     Font = UITheme.BaseFont
                 };
+                ConfigureBoundTagTreeDrawing(_tree);
                 _tree.AfterSelect += (s, e) =>
                 {
                     if (_suppressTreeSync) return;
@@ -1707,7 +1755,6 @@ namespace TGramFS.UI
                 _btnCreateBind = UIFactory.CreateButton(
                     "Привязать",
                     async (s, e) => await CreateAndBindAsync(),
-                    isPrimary: true,
                     width: 115,
                     registerScaler: RegisterDpiScaler);
 
@@ -1752,8 +1799,8 @@ namespace TGramFS.UI
                         _tree,
                         _folderItems,
                         info => info.IsCustomBoundChannel
-                            ? ("(привязано)", null, true)
-                            : (string.Empty, null, false),
+                            ? (BoundSuffixTag, null)
+                            : (string.Empty, null),
                         selectPath);
                 }
                 finally

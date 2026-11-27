@@ -1531,4 +1531,9 @@
   - В `FolderManagementForm`, `CreateOrBindFolderDialog`, `FolderRulePickerDialog` и `NewSubfolderDialog` (`PromptNewSubfolderName`) настроены `AutoScaleMode.None`, `ApplyDpiScale` / `UpdateDialogClientSize` (`100%/125%/150%`), адаптивный перенос подсказок/чекбоксов через `SizeChanged` и кнопки единого стандартного размера через `UIFactory.CreateButton`.
   - В диалогах `CreateOrBindFolderDialog` и `FolderRulePickerDialog` кнопка `Новая папка` перенесена в нижнюю панель слева рядом с `Привязать` / `Применить`, а `Отмена` вынесена максимально вправо.
   - В дереве папок привязанные к каналам папки выделяются жирным шрифтом с подписью `(привязано)`; в `CreateOrBindFolderDialog` убран слэш `/` при выборе корня и ведущий слэш при выборе папок (с подсказкой `PlaceholderText` и спокойным статус-текстом).
+- [x] **8.149. Раздельная отрисовка серого `[привязано]` в `TreeView`, цветовая индикация правил без текстовых меток и отказ от жирных кнопок (`DECISIONS_LOG #157`, `FolderManagementForm.cs`)**:
+  - Убран `isPrimary: true` со всех 4 кнопок `FolderManagementForm.cs` (`Создать / привязать папку...`, `Привязать`, `Применить`, `Создать`) — все кнопки приведены к единому обычному шрифту `UITheme.BaseFont`.
+  - В `ConfigureBoundTagTreeDrawing` подключена кастомная отрисовка `TreeViewDrawMode.OwnerDrawText`: имя папки рисуется основным цветом (`TextMain` / зелёный для включённых / красный для исключений), а суффикс `[привязано]` всегда рисуется отдельно приглушённым серым `UITheme.TextMuted`.
+  - В `FolderRulePickerDialog` убраны текстовые метки `[Вкл]`, `(насл.: Вкл)` и `[Исключение]` (оставлена чистая цветовая индикация) и исправлен падеж заголовка на `«... — подписи в Telegram»`.
+
 
