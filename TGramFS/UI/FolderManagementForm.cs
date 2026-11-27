@@ -174,7 +174,7 @@ namespace TGramFS.UI
                 out _btnPreviewRemoveExcluded));
             _tabControl.TabPages.Add(BuildRuleTab(
                 tabTitle: "Подписи в Telegram",
-                description: "По умолчанию текстовые подписи в Telegram отключены для всего диска (включая многотомные файлы).\nДобавьте папки, где нужны подписи со статусом и путём (#latest / #trash), и при необходимости задайте исключения.",
+                description: "По умолчанию текстовые подписи в Telegram отключены для всего диска (включая многотомные файлы).\nДобавьте папки, где нужны подписи к файлам (путь, ID и статус #latest / #trash), и при необходимости задайте исключения.",
                 isPreviewRule: false,
                 out _lvCaptionAllowed,
                 out _lvCaptionExcluded,
