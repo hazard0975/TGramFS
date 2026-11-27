@@ -1535,5 +1535,8 @@
   - Убран `isPrimary: true` со всех 4 кнопок `FolderManagementForm.cs` (`Создать / привязать папку...`, `Привязать`, `Применить`, `Создать`) — все кнопки приведены к единому обычному шрифту `UITheme.BaseFont`.
   - В `ConfigureBoundTagTreeDrawing` подключена кастомная отрисовка `TreeViewDrawMode.OwnerDrawText`: имя папки рисуется основным цветом (`TextMain` / зелёный для включённых / красный для исключений), а суффикс `[привязано]` всегда рисуется отдельно приглушённым серым `UITheme.TextMuted`.
   - В `FolderRulePickerDialog` убраны текстовые метки `[Вкл]`, `(насл.: Вкл)` и `[Исключение]` (оставлена чистая цветовая индикация) и исправлен падеж заголовка на `«... — подписи в Telegram»`.
+- [x] **8.150. Возврат жирного шрифта имён привязанных папок при обычном сером `[привязано]` (`DECISIONS_LOG #158`, `FolderManagementForm.cs`)**:
+  - В `PopulateFolderTree` для узлов с `IsCustomBoundChannel` выставлен `NodeFont = UITheme.BoldFont` для точного расчёта `e.Bounds` и прокрутки без обрезания.
+  - В `ConfigureBoundTagTreeDrawing` имя привязанной папки рисуется `UITheme.BoldFont` (с сохранением цвета статуса), а хвост `[привязано]` — обычным тонким `UITheme.BaseFont` в цвете `UITheme.TextMuted`.
 
 

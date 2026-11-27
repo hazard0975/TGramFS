@@ -938,12 +938,12 @@ namespace TGramFS.UI
                 e.DrawDefault = false;
 
                 string fullText = e.Node.Text ?? string.Empty;
-                Font font = e.Node.NodeFont ?? tree.Font ?? UITheme.BaseFont;
+                Font defaultFont = tree.Font ?? UITheme.BaseFont;
+                bool isBoundNode = e.Node.Tag is FolderTreeNodeInfo info && info.IsCustomBoundChannel;
                 bool isSelected = (e.State & TreeNodeStates.Selected) != 0;
                 bool isFocused = tree.Focused;
 
-                bool hasBoundSuffix = e.Node.Tag is FolderTreeNodeInfo info
-                    && info.IsCustomBoundChannel
+                bool hasBoundSuffix = isBoundNode
                     && fullText.EndsWith(BoundSuffixWithPad, StringComparison.Ordinal);
 
                 string namePart = hasBoundSuffix
@@ -951,15 +951,18 @@ namespace TGramFS.UI
                     : fullText;
                 string suffixPart = hasBoundSuffix ? BoundSuffixWithPad : string.Empty;
 
+                Font nameFont = isBoundNode ? UITheme.BoldFont : (e.Node.NodeFont ?? defaultFont);
+                Font suffixFont = defaultFont;
+
                 const TextFormatFlags flags = TextFormatFlags.NoPrefix
                     | TextFormatFlags.NoPadding
                     | TextFormatFlags.VerticalCenter
                     | TextFormatFlags.SingleLine;
 
-                Size nameSize = TextRenderer.MeasureText(e.Graphics, namePart, font, Size.Empty, flags);
+                Size nameSize = TextRenderer.MeasureText(e.Graphics, namePart, nameFont, Size.Empty, flags);
                 Size suffixSize = string.IsNullOrEmpty(suffixPart)
                     ? Size.Empty
-                    : TextRenderer.MeasureText(e.Graphics, suffixPart, font, Size.Empty, flags);
+                    : TextRenderer.MeasureText(e.Graphics, suffixPart, suffixFont, Size.Empty, flags);
 
                 const int leftPad = 2;
                 int drawWidth = Math.Max(e.Bounds.Width, leftPad + nameSize.Width + suffixSize.Width + 4);
@@ -981,12 +984,12 @@ namespace TGramFS.UI
                 Color suffixColor = (isSelected && isFocused) ? SystemColors.HighlightText : UITheme.TextMuted;
 
                 Rectangle nameRect = new Rectangle(e.Bounds.X + leftPad, e.Bounds.Y, nameSize.Width + 2, e.Bounds.Height);
-                TextRenderer.DrawText(e.Graphics, namePart, font, nameRect, nameColor, flags);
+                TextRenderer.DrawText(e.Graphics, namePart, nameFont, nameRect, nameColor, flags);
 
                 if (!string.IsNullOrEmpty(suffixPart))
                 {
                     Rectangle suffixRect = new Rectangle(e.Bounds.X + leftPad + nameSize.Width, e.Bounds.Y, suffixSize.Width + 4, e.Bounds.Height);
-                    TextRenderer.DrawText(e.Graphics, suffixPart, font, suffixRect, suffixColor, flags);
+                    TextRenderer.DrawText(e.Graphics, suffixPart, suffixFont, suffixRect, suffixColor, flags);
                 }
 
                 if ((e.State & TreeNodeStates.Focused) != 0 && isFocused)
@@ -1023,6 +1026,10 @@ namespace TGramFS.UI
                     }
 
                     var tn = new TreeNode(display) { Tag = info };
+                    if (info.IsCustomBoundChannel)
+                    {
+                        tn.NodeFont = UITheme.BoldFont;
+                    }
                     if (color.HasValue)
                     {
                         tn.ForeColor = color.Value;
