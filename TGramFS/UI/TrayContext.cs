@@ -178,6 +178,11 @@ namespace TGramFS.UI
                 _progressOverlay.UpdateUploadRatePacing(rateState);
             };
 
+            _telegramService.OnCaptionRateTierReached += (captionNotice) =>
+            {
+                _progressOverlay.ShowCaptionRateNotice(captionNotice);
+            };
+
             foreach (var activeFlood in _telegramService.GetActiveFloodBannerStates())
             {
                 int remainingSec = Math.Max(1, activeFlood.RemainingSeconds);

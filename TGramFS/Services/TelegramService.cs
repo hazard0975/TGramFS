@@ -54,6 +54,15 @@ namespace TGramFS.Services
         public int? SecondsUntilWindowDecay { get; init; }
     }
 
+    public sealed class CaptionRateNoticeState
+    {
+        public int RequestsInLastHour { get; init; }
+        public int HourlyLimit { get; init; }
+        public int DelayMs { get; init; }
+        public int PendingQueueCount { get; init; }
+        public int? SecondsUntilWindowDecay { get; init; }
+    }
+
     public class TelegramUserInfo
     {
         public long Id { get; set; }
@@ -620,6 +629,11 @@ namespace TGramFS.Services
         /// Событие превентивного замедления исходящих отправок при приближении к часовому лимиту (~2000 запросов/час).
         /// </summary>
         public event Action<UploadRateLimitState?>? OnUploadRatePacingChanged;
+
+        /// <summary>
+        /// Однократное/ступенчатое уведомление о переходе фоновой очереди подписей в режим часового замедления (> 1500/час).
+        /// </summary>
+        public event Action<CaptionRateNoticeState>? OnCaptionRateTierReached;
 
         private CancellationTokenSource? _reconnectWaitCts;
         private readonly object _reconnectWaitLock = new();
@@ -1321,7 +1335,26 @@ namespace TGramFS.Services
                         if (currentItem != null)
                         {
                             await EnsureCaptionFloodWaitDelayAsync(token);
-                            await EnsureCaptionPacingDelayAsync(token);
+                            int captionTierDelayMs = await EnsureCaptionPacingDelayAsync(token);
+                            if (captionTierDelayMs > _lastNotifiedCaptionTierDelayMs)
+                            {
+                                _lastNotifiedCaptionTierDelayMs = captionTierDelayMs;
+                                int captionHourCount = _captionHourlyWindow.GetStats(DateTime.UtcNow, out int? decaySec);
+                                int pendingCount = _repository.GetPendingCaptionCount();
+                                OnCaptionRateTierReached?.Invoke(new CaptionRateNoticeState
+                                {
+                                    RequestsInLastHour = captionHourCount,
+                                    HourlyLimit = HourlyRateReferenceLimit,
+                                    DelayMs = captionTierDelayMs,
+                                    PendingQueueCount = pendingCount,
+                                    SecondsUntilWindowDecay = decaySec
+                                });
+                            }
+                            else if (captionTierDelayMs < _lastNotifiedCaptionTierDelayMs)
+                            {
+                                _lastNotifiedCaptionTierDelayMs = captionTierDelayMs;
+                            }
+
                             long? targetChannelId = currentItem.ChannelId ?? _repository.GetChannelIdByTgMessageId(currentItem.TgMessageId);
                             await UpdateMessageCaptionAsync(currentItem.TgMessageId, currentItem.NewCaption, targetChannelId);
                             _repository.RemovePendingCaptionUpdate(currentItem.Id);
@@ -2799,7 +2832,7 @@ namespace TGramFS.Services
         private static int _captionBurstCount = 0;
         private static int _captionAdaptiveFloorDelayMs = 0;
 
-        public static async Task EnsureCaptionPacingDelayAsync(CancellationToken cancellationToken = default)
+        public static async Task<int> EnsureCaptionPacingDelayAsync(CancellationToken cancellationToken = default)
         {
             int globalDelayMs = Volatile.Read(ref _globalPacingDelayMs);
             int baseDelayMs = Math.Max(MinCaptionPacingDelayMs, globalDelayMs * 2);
@@ -2808,6 +2841,7 @@ namespace TGramFS.Services
             int cooldownAppliedBurst = 0;
             int tierTransitionDelayMs = 0;
             int tierTransitionCount = 0;
+            int hourlyPreventiveMs = 0;
             bool resetByIdle = false;
 
             await _captionPacingLock.WaitAsync(cancellationToken);
@@ -2847,7 +2881,8 @@ namespace TGramFS.Services
                 }
 
                 int captionHourCount = _captionHourlyWindow.GetStats(now, out _);
-                int hourlyPreventiveMs = ComputeHourlyPreventiveDelayMs(captionHourCount);
+                hourlyPreventiveMs = ComputeHourlyPreventiveDelayWithHysteresisMs(captionHourCount, _wasCaptionRateWarningActive);
+                _wasCaptionRateWarningActive = hourlyPreventiveMs > 0;
                 int effectiveDelayMs = Math.Max(Math.Max(tierDelayMs, _captionAdaptiveFloorDelayMs), hourlyPreventiveMs);
                 if (hourlyPreventiveMs > _lastLoggedCaptionPreventiveDelayMs)
                 {
@@ -2900,6 +2935,8 @@ namespace TGramFS.Services
             {
                 await WaitUntilUtcWakeableAsync(() => scheduledTime, null, cancellationToken);
             }
+
+            return hourlyPreventiveMs;
         }
 
         // Изолированный планировщик для фоновых операций (удаление, миграция каналов, форвард),
@@ -3116,6 +3153,7 @@ namespace TGramFS.Services
         private const int HourlyRateWindowMinutes = 60;
         private const int HourlyRateReferenceLimit = 2000;
         private const int HourlyPreventiveThreshold = 1500;
+        private const int HourlyPreventiveReleaseThreshold = 1470;
         private const string RateStateFileName = "rate_state.json";
         private static string RateStateFilePath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, RateStateFileName);
         private static readonly object _rateStateFileLock = new();
@@ -3125,7 +3163,9 @@ namespace TGramFS.Services
         private static int _unsavedRateEventsCount = 0;
         private static int _lastLoggedUploadPreventiveDelayMs = 0;
         private static int _lastLoggedCaptionPreventiveDelayMs = 0;
+        private static int _lastNotifiedCaptionTierDelayMs = 0;
         private static bool _wasUploadRateWarningActive = false;
+        private static bool _wasCaptionRateWarningActive = false;
 
         private sealed class HourlyRateWindow
         {
@@ -3229,6 +3269,14 @@ namespace TGramFS.Services
             if (requestsInLastHour <= 1900) return 8000;
             if (requestsInLastHour <= 1950) return 12000;
             return 20000;
+        }
+
+        private static int ComputeHourlyPreventiveDelayWithHysteresisMs(int requestsInLastHour, bool wasActive)
+        {
+            int directDelay = ComputeHourlyPreventiveDelayMs(requestsInLastHour);
+            if (directDelay > 0) return directDelay;
+            if (wasActive && requestsInLastHour > HourlyPreventiveReleaseThreshold) return 1500;
+            return 0;
         }
 
         private static void LoadPersistedRateState()
@@ -3374,7 +3422,7 @@ namespace TGramFS.Services
         {
             var now = DateTime.UtcNow;
             int countInHour = _sendHourlyWindow.GetStats(now, out int? secondsUntilDecay);
-            int delayMs = ComputeHourlyPreventiveDelayMs(countInHour);
+            int delayMs = ComputeHourlyPreventiveDelayWithHysteresisMs(countInHour, _wasUploadRateWarningActive);
 
             if (delayMs <= 0)
             {
@@ -3405,7 +3453,7 @@ namespace TGramFS.Services
             {
                 RequestsInLastHour = countInHour,
                 HourlyLimit = HourlyRateReferenceLimit,
-                PreventiveThreshold = HourlyPreventiveThreshold,
+                PreventiveThreshold = HourlyPreventiveReleaseThreshold,
                 DelayMs = delayMs,
                 IsWaitingNow = true,
                 FileName = fileName,
@@ -3424,7 +3472,7 @@ namespace TGramFS.Services
                 {
                     RequestsInLastHour = countInHour,
                     HourlyLimit = HourlyRateReferenceLimit,
-                    PreventiveThreshold = HourlyPreventiveThreshold,
+                    PreventiveThreshold = HourlyPreventiveReleaseThreshold,
                     DelayMs = delayMs,
                     IsWaitingNow = false,
                     FileName = fileName,
@@ -3434,7 +3482,7 @@ namespace TGramFS.Services
             }
 
             int refreshedCount = _sendHourlyWindow.GetStats(DateTime.UtcNow, out int? refreshedDecay);
-            int refreshedDelayMs = ComputeHourlyPreventiveDelayMs(refreshedCount);
+            int refreshedDelayMs = ComputeHourlyPreventiveDelayWithHysteresisMs(refreshedCount, _wasUploadRateWarningActive);
             if (refreshedDelayMs <= 0)
             {
                 _wasUploadRateWarningActive = false;
@@ -3447,7 +3495,7 @@ namespace TGramFS.Services
             {
                 RequestsInLastHour = refreshedCount,
                 HourlyLimit = HourlyRateReferenceLimit,
-                PreventiveThreshold = HourlyPreventiveThreshold,
+                PreventiveThreshold = HourlyPreventiveReleaseThreshold,
                 DelayMs = refreshedDelayMs,
                 IsWaitingNow = false,
                 FileName = fileName,

@@ -177,6 +177,10 @@ namespace TGramFS.UI
         private DateTime _rateWaitUntilUtc = DateTime.MinValue;
         private int _rateWaitInitialSeconds = 0;
 
+        private readonly System.Windows.Forms.Timer _captionNoticeTimer;
+        private CaptionRateNoticeState? _captionRateNotice;
+        private bool _isCaptionNoticeActive = false;
+
         private const int BaseWidth = 396;
         private const int BaseHeight = 96;
         private const int BasePaddingX = 12;
@@ -260,6 +264,24 @@ namespace TGramFS.UI
 
             _floodCountdownTimer = new System.Windows.Forms.Timer { Interval = 500 };
             _floodCountdownTimer.Tick += FloodCountdownTimer_Tick;
+
+            _captionNoticeTimer = new System.Windows.Forms.Timer { Interval = 3800 };
+            _captionNoticeTimer.Tick += (s, e) =>
+            {
+                _captionNoticeTimer.Stop();
+                _isCaptionNoticeActive = false;
+                _captionRateNotice = null;
+                if (!_isTransferring && !_isCompleted && !_isFloodRecovered && !_isRateWaitActive && _activeFloods.Count == 0 && Visible)
+                {
+                    _updateTimer.Stop();
+                    _hideCheckTimer.Stop();
+                    Hide();
+                }
+                else
+                {
+                    Invalidate();
+                }
+            };
         }
 
         protected override void OnPaintBackground(PaintEventArgs e)
@@ -505,6 +527,9 @@ namespace TGramFS.UI
 
             _isFloodRecovered = false;
             _isCompleted = false;
+            _isCaptionNoticeActive = false;
+            _captionRateNotice = null;
+            _captionNoticeTimer.Stop();
             _lastProgressUpdateTime = now;
             if (isUploadStopped || HasActiveUploadHardStop(now))
             {
@@ -586,6 +611,9 @@ namespace TGramFS.UI
                 _isCompleted = false;
                 _isMetadata = false;
                 _isFloodRecovered = false;
+                _isCaptionNoticeActive = false;
+                _captionRateNotice = null;
+                _captionNoticeTimer.Stop();
                 _bytesPerSecond = 0;
                 _lastProgressUpdateTime = now;
                 _completionTimer.Stop();
@@ -607,6 +635,51 @@ namespace TGramFS.UI
                 _rateWaitUntilUtc = DateTime.MinValue;
                 Invalidate();
             }
+        }
+
+        public void ShowCaptionRateNotice(CaptionRateNoticeState? notice)
+        {
+            if (_syncContext != null && SynchronizationContext.Current != _syncContext)
+            {
+                _syncContext.Post(_ => ShowCaptionRateNotice(notice), null);
+                return;
+            }
+
+            if (notice == null || notice.DelayMs <= 0)
+            {
+                return;
+            }
+
+            var now = DateTime.UtcNow;
+            if (PruneExpiredFloodSlots(now, out _, out _))
+            {
+                OnFloodCountdownExpired?.Invoke();
+            }
+
+            // Не перебиваем активную передачу, завершение, паузу отправки или любой FLOOD_WAIT
+            if (_isTransferring || _isCompleted || _isFloodRecovered || _isRateWaitActive || _activeFloods.Count > 0)
+            {
+                return;
+            }
+
+            _captionRateNotice = notice;
+            _isCaptionNoticeActive = true;
+            _lastProgressUpdateTime = now;
+
+            if (!TryShowOverlay())
+            {
+                _isCaptionNoticeActive = false;
+                _captionRateNotice = null;
+                return;
+            }
+
+            EnsureTopMost();
+            _captionNoticeTimer.Stop();
+            _captionNoticeTimer.Start();
+            _updateTimer.Start();
+            _hideCheckTimer.Start();
+            Invalidate();
+            Update();
         }
 
         private void FloodCountdownTimer_Tick(object? sender, EventArgs e)
@@ -755,6 +828,9 @@ namespace TGramFS.UI
             _isFloodRecovered = false;
             _isRateWaitActive = false;
             _rateWaitUntilUtc = DateTime.MinValue;
+            _isCaptionNoticeActive = false;
+            _captionRateNotice = null;
+            _captionNoticeTimer.Stop();
 
             _queueCount = queueCount;
 
@@ -873,6 +949,9 @@ namespace TGramFS.UI
 
             _direction = TransferDirection.Download;
             _isMetadata = true;
+            _isCaptionNoticeActive = false;
+            _captionRateNotice = null;
+            _captionNoticeTimer.Stop();
             _currentBytes = current;
             _totalBytes = total;
             _isTransferring = true;
@@ -907,6 +986,9 @@ namespace TGramFS.UI
             _isFinalizing = false;
             _isMetadata = true;
             _isCompleted = true;
+            _isCaptionNoticeActive = false;
+            _captionRateNotice = null;
+            _captionNoticeTimer.Stop();
             _currentFileName = fileName;
             _bytesPerSecond = 0;
 
@@ -970,6 +1052,9 @@ namespace TGramFS.UI
             _isFloodRecovered = false;
             _isRateWaitActive = false;
             _rateWaitUntilUtc = DateTime.MinValue;
+            _isCaptionNoticeActive = false;
+            _captionRateNotice = null;
+            _captionNoticeTimer.Stop();
 
             AppLogger.Info("TrayProgressOverlay", $"CompleteTransfer [{direction}] вызван для '{fileName}'. Запуск _completionTimer...");
             _currentFileName = fileName;
@@ -1037,6 +1122,9 @@ namespace TGramFS.UI
             _isFloodRecovered = false;
             _isRateWaitActive = false;
             _rateWaitUntilUtc = DateTime.MinValue;
+            _isCaptionNoticeActive = false;
+            _captionRateNotice = null;
+            _captionNoticeTimer.Stop();
             _currentFileName = string.Empty;
             _currentBytes = 0;
             _totalBytes = 0;
@@ -1149,6 +1237,11 @@ namespace TGramFS.UI
                 _isRateWaitActive = false;
             }
 
+            if (_isCaptionNoticeActive && !_isTransferring && !_isCompleted && !_isFloodRecovered)
+            {
+                return;
+            }
+
             // Защита от зависания окна при обрыве потока: при передаче данных таймаут 4 сек, при финализации в Telegram - до 12 сек
             var secondsSinceProgress = (DateTime.UtcNow - _lastProgressUpdateTime).TotalSeconds;
             double maxAllowedInactivity = _isFinalizing ? 12.0 : 4.0;
@@ -1207,7 +1300,15 @@ namespace TGramFS.UI
                                      !_isTransferring &&
                                      !_isCompleted &&
                                      !_isFloodRecovered;
+            bool isCaptionNoticeVisible = !isFloodBannerVisible &&
+                                          !isRateWaitVisible &&
+                                          _isCaptionNoticeActive &&
+                                          _captionRateNotice != null &&
+                                          !_isTransferring &&
+                                          !_isCompleted &&
+                                          !_isFloodRecovered;
             bool isUploadRateWarningActive = !isFloodBannerVisible &&
+                                             !isCaptionNoticeVisible &&
                                              !_isFloodRecovered &&
                                              _direction == TransferDirection.Upload &&
                                              _uploadRateWarning != null &&
@@ -1223,7 +1324,7 @@ namespace TGramFS.UI
                     ? Color.FromArgb(239, 68, 68)  // Red 500
                     : Color.FromArgb(245, 158, 11); // Amber 500
             }
-            else if (isRateWaitVisible || isUploadRateWarningActive)
+            else if (isRateWaitVisible || isCaptionNoticeVisible || isUploadRateWarningActive)
             {
                 borderColor = Color.FromArgb(245, 158, 11); // Amber 500
             }
@@ -1258,7 +1359,7 @@ namespace TGramFS.UI
                     ? Color.FromArgb(252, 165, 165) // Red 300
                     : Color.FromArgb(252, 211, 77); // Amber 300
             }
-            else if (isRateWaitVisible || isUploadRateWarningActive)
+            else if (isRateWaitVisible || isCaptionNoticeVisible || isUploadRateWarningActive)
             {
                 headerColor = Color.FromArgb(252, 211, 77); // Amber 300
             }
@@ -1298,6 +1399,10 @@ namespace TGramFS.UI
                     header = _queueCount > 1
                         ? $"ОТПРАВКА • ЗАМЕДЛЕНИЕ ({_uploadRateWarning.RequestsInLastHour}/{_uploadRateWarning.HourlyLimit} • в очереди: {_queueCount})"
                         : $"ОТПРАВКА • ЗАМЕДЛЕНИЕ ({_uploadRateWarning.RequestsInLastHour}/{_uploadRateWarning.HourlyLimit})";
+                }
+                else if (isCaptionNoticeVisible && _captionRateNotice != null)
+                {
+                    header = $"ПОДПИСИ • ЗАМЕДЛЕНИЕ ({_captionRateNotice.RequestsInLastHour}/{_captionRateNotice.HourlyLimit})";
                 }
                 else if (_isFloodRecovered)
                 {
@@ -1360,7 +1465,11 @@ namespace TGramFS.UI
             {
                 string displayName = isFloodBannerVisible && activeFloodSlot != null
                     ? (!string.IsNullOrEmpty(activeFloodSlot.FileName) ? activeFloodSlot.FileName : "Ограничение частоты запросов Telegram")
-                    : (string.IsNullOrEmpty(_currentFileName) ? "Готов к передаче" : _currentFileName);
+                    : (isCaptionNoticeVisible && _captionRateNotice != null
+                        ? (_captionRateNotice.PendingQueueCount > 0
+                            ? $"В очереди подписей: {_captionRateNotice.PendingQueueCount} шт."
+                            : "Фоновое обновление подписей")
+                        : (string.IsNullOrEmpty(_currentFileName) ? "Готов к передаче" : _currentFileName));
                 float textX = padX;
                 float textY = ScalePxF(BaseNameY, dpiScale);
 
@@ -1451,6 +1560,11 @@ namespace TGramFS.UI
                 int initialSec = Math.Max(1, _rateWaitInitialSeconds);
                 percent = (int)Math.Clamp(Math.Ceiling((rateRemainingSec / initialSec) * 100.0), 1, 100);
             }
+            else if (isCaptionNoticeVisible && _captionRateNotice != null)
+            {
+                int limit = Math.Max(1, _captionRateNotice.HourlyLimit);
+                percent = (int)Math.Clamp(Math.Round((_captionRateNotice.RequestsInLastHour * 100.0) / limit), 1, 100);
+            }
             else if (_isCompleted)
             {
                 percent = 100;
@@ -1493,7 +1607,7 @@ namespace TGramFS.UI
                             endColor = Color.FromArgb(250, 204, 21);   // Yellow 400
                         }
                     }
-                    else if (isRateWaitVisible)
+                    else if (isRateWaitVisible || isCaptionNoticeVisible)
                     {
                         startColor = Color.FromArgb(245, 158, 11); // Amber 500
                         endColor = Color.FromArgb(250, 204, 21);   // Yellow 400
@@ -1557,6 +1671,18 @@ namespace TGramFS.UI
                             : $" • Спад через {decaySec} сек";
                     }
                     stats = $"Пауза {secLeft} сек (много файлов за час){decayPart}";
+                }
+                else if (isCaptionNoticeVisible && _captionRateNotice != null)
+                {
+                    double delaySec = _captionRateNotice.DelayMs / 1000.0;
+                    string decayPart = string.Empty;
+                    if (_captionRateNotice.SecondsUntilWindowDecay is int decaySec && decaySec > 0)
+                    {
+                        decayPart = decaySec >= 60
+                            ? $" • Спад через {Math.Max(1, (int)Math.Ceiling(decaySec / 60.0))} мин"
+                            : $" • Спад через {decaySec} сек";
+                    }
+                    stats = $"Пауза {delaySec:0.#} сек между подписями{decayPart}";
                 }
                 else if (_isFloodRecovered)
                 {
@@ -1675,6 +1801,7 @@ namespace TGramFS.UI
                 _hideCheckTimer.Dispose();
                 _completionTimer.Dispose();
                 _floodCountdownTimer.Dispose();
+                _captionNoticeTimer.Dispose();
             }
             base.Dispose(disposing);
         }
