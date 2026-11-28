@@ -27,8 +27,10 @@ jobs:
         shell: bash
         run: |
           VERSION="1.0.${{ github.run_number }}"
+          SHORT_SHA="${GITHUB_SHA::7}"
           echo "APP_VERSION=$VERSION" >> $GITHUB_ENV
           echo "TAG_NAME=v$VERSION" >> $GITHUB_ENV
+          echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_ENV
 
       - name: Publish Self-Contained Executable
         run: |
@@ -56,7 +58,7 @@ jobs:
           tag_name: ${{ env.TAG_NAME }}
           name: "TGramFS ${{ env.TAG_NAME }}"
           body: |
-            ${{ github.sha }}: ${{ github.event.head_commit.message }}
+            ${{ env.SHORT_SHA }}: ${{ github.event.head_commit.message }}
             
           files: |
             TGramFS-${{ env.TAG_NAME }}-win-x64.zip

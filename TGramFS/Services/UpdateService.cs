@@ -4,6 +4,7 @@ using System.IO;
 using System.Net.Http;
 using System.Reflection;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using TGramFS.Config;
@@ -203,7 +204,7 @@ namespace TGramFS.Services
                     Version = cleanVersion,
                     TagName = tagName,
                     PublishedAt = publishedAt,
-                    ReleaseNotes = body,
+                    ReleaseNotes = NormalizeReleaseNotes(body),
                     DownloadUrl = downloadUrl,
                     AssetName = assetName,
                     SizeBytes = assetSize,
@@ -222,6 +223,28 @@ namespace TGramFS.Services
             {
                 _isChecking = false;
             }
+        }
+
+        public static string NormalizeReleaseNotes(string? rawNotes)
+        {
+            if (string.IsNullOrWhiteSpace(rawNotes))
+            {
+                return string.Empty;
+            }
+
+            string normalized = rawNotes
+                .Replace("\r\n", "\n")
+                .Replace("\r", "\n")
+                .Replace("\n", Environment.NewLine);
+
+            // Сокращаем полный 40-символьный хэш коммита в начале строки (для уже вышедших релизов) до 7 символов
+            normalized = Regex.Replace(
+                normalized,
+                @"^(?<sha>[0-9a-fA-F]{7})[0-9a-fA-F]{33}(?=:\s|\s|$)",
+                "${sha}",
+                RegexOptions.Multiline);
+
+            return normalized.Trim();
         }
 
         public async Task<string> DownloadUpdateAsync(UpdateInfo info, IProgress<UpdateDownloadProgress>? progress, CancellationToken ct = default)

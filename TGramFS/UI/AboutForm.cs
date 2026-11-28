@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -28,7 +29,9 @@ namespace TGramFS.UI
         private Button _btnCheckNow = null!;
         private Panel _pnlUpdateCard = null!;
         private Label _lblNewVersionTitle = null!;
-        private TextBox _txtReleaseNotes = null!;
+        private RichTextBox _txtReleaseNotes = null!;
+        private Font? _notesBoldFont;
+        private Font? _notesCodeFont;
         private Button _btnDownloadAndInstall = null!;
         private ProgressBar _progressBar = null!;
         private Label _lblProgress = null!;
@@ -300,13 +303,21 @@ namespace TGramFS.UI
             };
             updateCardLayout.Controls.Add(_lblNewVersionTitle, 0, 0);
 
-            _txtReleaseNotes = new TextBox
+            _notesBoldFont = new Font("Segoe UI", 8.5F, FontStyle.Bold, GraphicsUnit.Point);
+            _notesCodeFont = new Font("Consolas", 8.5F, FontStyle.Regular, GraphicsUnit.Point);
+
+            _txtReleaseNotes = new RichTextBox
             {
-                Multiline = true,
                 ReadOnly = true,
-                ScrollBars = ScrollBars.Vertical,
+                BorderStyle = BorderStyle.FixedSingle,
+                ScrollBars = RichTextBoxScrollBars.Vertical,
+                WordWrap = true,
+                DetectUrls = false,
+                ShortcutsEnabled = true,
+                TabStop = false,
                 Dock = DockStyle.Fill,
                 BackColor = Color.White,
+                ForeColor = UITheme.TextMain,
                 Font = UITheme.SmallFont,
                 Margin = new Padding(0, 0, 0, 6)
             };
@@ -502,7 +513,7 @@ namespace TGramFS.UI
             string dateStr = info.PublishedAt.HasValue ? info.PublishedAt.Value.ToString("dd.MM.yyyy") : "";
 
             _lblNewVersionTitle.Text = $"Найдена новая версия TGramFS {info.TagName}! (Релиз: {dateStr}, {sizeStr})";
-            _txtReleaseNotes.Text = string.IsNullOrWhiteSpace(info.ReleaseNotes) ? "Описание релиза отсутствует." : info.ReleaseNotes;
+            RenderFormattedReleaseNotes(info.ReleaseNotes);
 
             _progressBar.Visible = false;
             _lblProgress.Visible = false;
@@ -512,6 +523,114 @@ namespace TGramFS.UI
             _btnDownloadAndInstall.Text = "Скачать и обновить";
 
             _pnlUpdateCard.Visible = true;
+        }
+
+        private void RenderFormattedReleaseNotes(string? rawNotes)
+        {
+            _txtReleaseNotes.SuspendLayout();
+            try
+            {
+                _txtReleaseNotes.Clear();
+                string normalized = UpdateService.NormalizeReleaseNotes(rawNotes);
+                if (string.IsNullOrWhiteSpace(normalized))
+                {
+                    _txtReleaseNotes.SelectionFont = UITheme.SmallFont;
+                    _txtReleaseNotes.SelectionColor = UITheme.TextMuted;
+                    _txtReleaseNotes.AppendText("Описание релиза отсутствует.");
+                    return;
+                }
+
+                Color codeColor = Color.FromArgb(3, 105, 161);
+                Font boldFont = _notesBoldFont ?? UITheme.BoldFont;
+                Font codeFont = _notesCodeFont ?? UITheme.MonoFont;
+
+                string[] lines = normalized.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    if (i > 0)
+                    {
+                        _txtReleaseNotes.AppendText(Environment.NewLine);
+                    }
+
+                    string line = lines[i];
+                    if (line.Length == 0)
+                    {
+                        continue;
+                    }
+
+                    if (i == 0)
+                    {
+                        var shaMatch = Regex.Match(line, @"^([0-9a-fA-F]{7,12}:)\s*(.*)$");
+                        if (shaMatch.Success)
+                        {
+                            _txtReleaseNotes.SelectionFont = UITheme.SmallFont;
+                            _txtReleaseNotes.SelectionColor = UITheme.TextMuted;
+                            _txtReleaseNotes.AppendText(shaMatch.Groups[1].Value + " ");
+
+                            AppendLineWithInlineCode(shaMatch.Groups[2].Value, boldFont, UITheme.TextMain, codeFont, codeColor);
+                            continue;
+                        }
+
+                        if (!line.StartsWith("- ") && !line.StartsWith("* "))
+                        {
+                            AppendLineWithInlineCode(line, boldFont, UITheme.TextMain, codeFont, codeColor);
+                            continue;
+                        }
+                    }
+
+                    AppendLineWithInlineCode(line, UITheme.SmallFont, UITheme.TextMain, codeFont, codeColor);
+                }
+
+                _txtReleaseNotes.SelectionStart = 0;
+                _txtReleaseNotes.SelectionLength = 0;
+                _txtReleaseNotes.ScrollToCaret();
+            }
+            finally
+            {
+                _txtReleaseNotes.ResumeLayout();
+            }
+        }
+
+        private void AppendLineWithInlineCode(string text, Font defaultFont, Color defaultColor, Font codeFont, Color codeColor)
+        {
+            int pos = 0;
+            while (pos < text.Length)
+            {
+                int open = text.IndexOf('`', pos);
+                if (open < 0)
+                {
+                    _txtReleaseNotes.SelectionFont = defaultFont;
+                    _txtReleaseNotes.SelectionColor = defaultColor;
+                    _txtReleaseNotes.AppendText(text.Substring(pos));
+                    break;
+                }
+
+                int close = text.IndexOf('`', open + 1);
+                if (close < 0)
+                {
+                    _txtReleaseNotes.SelectionFont = defaultFont;
+                    _txtReleaseNotes.SelectionColor = defaultColor;
+                    _txtReleaseNotes.AppendText(text.Substring(pos));
+                    break;
+                }
+
+                if (open > pos)
+                {
+                    _txtReleaseNotes.SelectionFont = defaultFont;
+                    _txtReleaseNotes.SelectionColor = defaultColor;
+                    _txtReleaseNotes.AppendText(text.Substring(pos, open - pos));
+                }
+
+                string codeText = text.Substring(open + 1, close - open - 1);
+                if (codeText.Length > 0)
+                {
+                    _txtReleaseNotes.SelectionFont = codeFont;
+                    _txtReleaseNotes.SelectionColor = codeColor;
+                    _txtReleaseNotes.AppendText(codeText);
+                }
+
+                pos = close + 1;
+            }
         }
 
         private async Task StartDownloadAndInstallAsync()
@@ -648,6 +767,8 @@ namespace TGramFS.UI
             {
                 _downloadCts?.Cancel();
                 _downloadCts?.Dispose();
+                _notesBoldFont?.Dispose();
+                _notesCodeFont?.Dispose();
             }
             base.Dispose(disposing);
         }

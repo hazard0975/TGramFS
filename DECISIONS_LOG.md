@@ -4783,3 +4783,16 @@ _telegramService.UpdateSettings(_settings);
 ### Принятое решение:
 - В `UploadFileAsync` вызов `WaitForUploadPreventivePacingAsync` перенесён сразу после генерации `galleryPhotoBytes` (до старта сетевой передачи `_client.UploadFileAsync` / `UploadMultiPartFileAsync`).
 - В `WaitForUploadPreventivePacingAsync` добавлен параметр `sendMessageMultiplier` (`2`, если `galleryPhotoBytes != null && galleryPhotoBytes.Length > 0`, иначе `1`), умножающий текущую ступень ожидания перед файлом (с защитным потолком `40` сек), при сохранении сравнения лога и последующего статуса на базе `baseDelayMs` без спама в `app.log`.
+
+---
+
+## 163. Переносы строк, короткий `7`-символьный SHA и подсветка кода в описании релиза (`release.yml`, `UpdateService.cs`, `AboutForm.cs`)
+
+### Контекст и первопричина:
+1. GitHub API возвращает поле `body` с Unix-переносами `\n` (`LF`), а многострочный WinForms `TextBox` (`_txtReleaseNotes` в `AboutForm.cs`) переносит строки строго по `\r\n` (`CRLF`), из-за чего все строки списка коммита склеивались в одну сплошную строку (`limiting- Implement ...- Add ...`).
+2. Шаблон `.github/workflows/release.yml` записывал в `body` полный 40-символьный хэш `${{ github.sha }}`, а обратные кавычки Markdown (`` `...` ``) отображались в `TextBox` как сырые символы без выделения.
+
+### Принятое решение:
+1. **Короткий SHA в GitHub Releases (`.github/workflows/release.yml`)**: в шаге `Determine Version` добавлена переменная `SHORT_SHA="${GITHUB_SHA::7}"`, используемая в `body` нового релиза.
+2. **Нормализация переносов и старых хэшей (`UpdateService.NormalizeReleaseNotes`)**: `\n`/`\r` преобразуются в `Environment.NewLine` (`\r\n`), а `40`-символьные hex-хэши в начале строки автоматически сокращаются до `7` символов для уже вышедших релизов.
+3. **Форматирование через `RichTextBox` (`AboutForm.cs`)**: `_txtReleaseNotes` переведён на `RichTextBox` (`ReadOnly = true`, `WordWrap = true`, белый фон) с раздельным оформлением: короткий хэш выделяется приглушённым серым `UITheme.TextMuted`, заголовок коммита — полужирным, а фрагменты внутри `` `...` `` (со снятием кавычек) — цветом `#0369A1` и моноширинным шрифтом `Consolas`.

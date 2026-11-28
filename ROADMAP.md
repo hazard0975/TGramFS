@@ -1554,4 +1554,8 @@
   - Реализован гистерезис `ComputeHourlyPreventiveDelayWithHysteresisMs` (`HourlyPreventiveReleaseThreshold = 1470`) для контуров `SendMessage` и `EditMessage`: замедление включается после `1 500`, а отключается только при спаде ниже `1 470`, устраняя дребезг оверлея на границе часа при больших объёмах файлов.
 - [x] **8.154. Двукратная превентивная пауза при отправке фото с галерейным превью (`DECISIONS_LOG #162`, `TelegramService.cs`)**:
   - В `UploadFileAsync` вызов `WaitForUploadPreventivePacingAsync` перенесён после локальной генерации `galleryPhotoBytes` (до сетевой передачи в Telegram) с передачей множителя `sendMessageMultiplier = 2` при наличии превью (`2` вызова `SendMessageAsync`, защитный потолок паузы `40` сек).
+- [x] **8.155. Переносы строк, `7`-символьный SHA и подсветка кода в описании релиза (`DECISIONS_LOG #163`, `.github/workflows/release.yml`, `UpdateService.cs`, `AboutForm.cs`)**:
+  - В `.github/workflows/release.yml` полный SHA в теле релиза заменён на `SHORT_SHA` (`7` символов).
+  - В `UpdateService.NormalizeReleaseNotes` добавлена нормализация `\n` -> `\r\n` и визуальное укорачивание старых `40`-символьных hex-хэшей до `7` символов.
+  - В `AboutForm` поле `_txtReleaseNotes` переведено с `TextBox` на `RichTextBox`: короткий хэш выделяется серым, заголовок коммита — полужирным, а фрагменты в `` `...` `` выводятся синим моноширинным шрифтом `Consolas` без обратных кавычек.
 
