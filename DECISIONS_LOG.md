@@ -4772,3 +4772,14 @@ _telegramService.UpdateSettings(_settings);
 2. **Анти-дребезг гистерезис `1 500 / 1 470` (`ComputeHourlyPreventiveDelayWithHysteresisMs`)**:
    - Введён порог снятия `HourlyPreventiveReleaseThreshold = 1470`: для обоих контуров (`SendMessage` и `EditMessage`) замедление включается строго при `> 1 500` запросов за час, но удерживается на минимальной ступени (`1.5` сек) до падения счётчика до `<= 1 470`.
    - При длительных операциях скорость после `60`-й минуты восстанавливается плавно ступенями вниз (`20 -> 12 -> 8 -> 5 -> 3 -> 1.5 сек`), а резкий переход от `1.5 сек` к снятию замедления не мигает на границе `1 500`.
+
+---
+
+## 162. Двукратная превентивная пауза `WaitForUploadPreventivePacingAsync` при отправке фото с галерейным превью (`TelegramService.cs`)
+
+### Контекст и первопричина:
+При включённом режиме фото-превью (`galleryPhotoBytes != null`) метод `UploadFileAsync` отправляет в Telegram **2** сообщения `SendMessageAsync` (фото-превью галереи и reply-документ оригинала), оба учитываются в `_sendHourlyWindow`. Однако превентивная пауза `WaitForUploadPreventivePacingAsync` вызывалась 1 раз до генерации `galleryPhotoBytes` с одинарной задержкой (`1.5..20` сек), из-за чего при заливке мелких фото с превью ступени после `1 500` проходили вдвое быстрее (до `~2 000` запросов за `~45` мин).
+
+### Принятое решение:
+- В `UploadFileAsync` вызов `WaitForUploadPreventivePacingAsync` перенесён сразу после генерации `galleryPhotoBytes` (до старта сетевой передачи `_client.UploadFileAsync` / `UploadMultiPartFileAsync`).
+- В `WaitForUploadPreventivePacingAsync` добавлен параметр `sendMessageMultiplier` (`2`, если `galleryPhotoBytes != null && galleryPhotoBytes.Length > 0`, иначе `1`), умножающий текущую ступень ожидания перед файлом (с защитным потолком `40` сек), при сохранении сравнения лога и последующего статуса на базе `baseDelayMs` без спама в `app.log`.

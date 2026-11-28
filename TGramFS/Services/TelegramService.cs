@@ -3418,13 +3418,13 @@ namespace TGramFS.Services
             OnUploadRatePacingChanged?.Invoke(state);
         }
 
-        private async Task WaitForUploadPreventivePacingAsync(string fileName, CancellationToken cancellationToken)
+        private async Task WaitForUploadPreventivePacingAsync(string fileName, CancellationToken cancellationToken, int sendMessageMultiplier = 1)
         {
             var now = DateTime.UtcNow;
             int countInHour = _sendHourlyWindow.GetStats(now, out int? secondsUntilDecay);
-            int delayMs = ComputeHourlyPreventiveDelayWithHysteresisMs(countInHour, _wasUploadRateWarningActive);
+            int baseDelayMs = ComputeHourlyPreventiveDelayWithHysteresisMs(countInHour, _wasUploadRateWarningActive);
 
-            if (delayMs <= 0)
+            if (baseDelayMs <= 0)
             {
                 if (_lastLoggedUploadPreventiveDelayMs > 0)
                 {
@@ -3441,11 +3441,13 @@ namespace TGramFS.Services
             }
 
             _wasUploadRateWarningActive = true;
-            if (delayMs != _lastLoggedUploadPreventiveDelayMs)
+            int effectiveMultiplier = Math.Max(1, sendMessageMultiplier);
+            int delayMs = Math.Min(40000, baseDelayMs * effectiveMultiplier);
+            if (baseDelayMs != _lastLoggedUploadPreventiveDelayMs)
             {
-                _lastLoggedUploadPreventiveDelayMs = delayMs;
+                _lastLoggedUploadPreventiveDelayMs = baseDelayMs;
                 string decayHint = secondsUntilDecay.HasValue ? $", начало спада окна через ~{Math.Max(1, (int)Math.Ceiling(secondsUntilDecay.Value / 60.0))} мин" : string.Empty;
-                AppLogger.Warn("TelegramService", $"[Upload Rate Pacing] Достигнуто {countInHour}/{HourlyRateReferenceLimit} отправок SendMessage за час: включено превентивное замедление {delayMs / 1000.0:F1} сек на файл{decayHint}.");
+                AppLogger.Warn("TelegramService", $"[Upload Rate Pacing] Достигнуто {countInHour}/{HourlyRateReferenceLimit} отправок SendMessage за час: включено превентивное замедление {baseDelayMs / 1000.0:F1} сек на запрос{decayHint}.");
             }
 
             int waitSecondsCeil = Math.Max(1, (int)Math.Ceiling(delayMs / 1000.0));
@@ -3473,7 +3475,7 @@ namespace TGramFS.Services
                     RequestsInLastHour = countInHour,
                     HourlyLimit = HourlyRateReferenceLimit,
                     PreventiveThreshold = HourlyPreventiveReleaseThreshold,
-                    DelayMs = delayMs,
+                    DelayMs = baseDelayMs,
                     IsWaitingNow = false,
                     FileName = fileName,
                     SecondsUntilWindowDecay = secondsUntilDecay
@@ -4384,9 +4386,6 @@ namespace TGramFS.Services
                 }
 
                 ThrowIfUploadHardStopped(effectiveFileName);
-                await WaitForUploadPreventivePacingAsync(effectiveFileName, cancellationToken);
-                ThrowIfUploadHardStopped(effectiveFileName);
-                didAttemptNetworkUpload = true;
                 long fileLength = uploadStream.Length;
                 byte[]? galleryPhotoBytes = null;
                 if (isGallery && fileLength > 1)
@@ -4401,6 +4400,11 @@ namespace TGramFS.Services
                         uploadStream.Seek(0, SeekOrigin.Begin);
                     }
                 }
+
+                int sendMessageMultiplier = (galleryPhotoBytes != null && galleryPhotoBytes.Length > 0) ? 2 : 1;
+                await WaitForUploadPreventivePacingAsync(effectiveFileName, cancellationToken, sendMessageMultiplier);
+                ThrowIfUploadHardStopped(effectiveFileName);
+                didAttemptNetworkUpload = true;
 
                 long maxPartSize = GetMaxUploadPartSize();
                 if (fileLength > maxPartSize && !isGallery)

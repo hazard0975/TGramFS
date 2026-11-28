@@ -1552,4 +1552,6 @@
   - В `TelegramService.EnsureCaptionPacingDelayAsync` и `ProcessCaptionQueueAsync` добавлено событие `OnCaptionRateTierReached` (`CaptionRateNoticeState`): при превышении `1 500` и при переходе на каждую следующую ступень замедления (`1 600`, `1 700`, `1 800`, `1 900`, `1 950`) отправляется уведомление с объёмом очереди `pending_caption_updates` и временем спада окна.
   - В `TrayProgressOverlay.ShowCaptionRateNotice` (подписка в `TrayContext`) на `3.8` секунды выводится янтарная плашка `ПОДПИСИ • ЗАМЕДЛЕНИЕ (N/2000)` без перебивания активной передачи файлов, паузы отправки и `FLOOD_WAIT`.
   - Реализован гистерезис `ComputeHourlyPreventiveDelayWithHysteresisMs` (`HourlyPreventiveReleaseThreshold = 1470`) для контуров `SendMessage` и `EditMessage`: замедление включается после `1 500`, а отключается только при спаде ниже `1 470`, устраняя дребезг оверлея на границе часа при больших объёмах файлов.
+- [x] **8.154. Двукратная превентивная пауза при отправке фото с галерейным превью (`DECISIONS_LOG #162`, `TelegramService.cs`)**:
+  - В `UploadFileAsync` вызов `WaitForUploadPreventivePacingAsync` перенесён после локальной генерации `galleryPhotoBytes` (до сетевой передачи в Telegram) с передачей множителя `sendMessageMultiplier = 2` при наличии превью (`2` вызова `SendMessageAsync`, защитный потолок паузы `40` сек).
 
