@@ -173,6 +173,11 @@ namespace TGramFS.UI
                 _progressOverlay.ShowFloodWait(waitSeconds, isUploadStopped, fileName, isDownload, floodScope);
             };
 
+            _telegramService.OnUploadRatePacingChanged += (rateState) =>
+            {
+                _progressOverlay.UpdateUploadRatePacing(rateState);
+            };
+
             foreach (var activeFlood in _telegramService.GetActiveFloodBannerStates())
             {
                 int remainingSec = Math.Max(1, activeFlood.RemainingSeconds);
@@ -595,6 +600,7 @@ namespace TGramFS.UI
             _virtualDriveManager.Dispose();
             _webDavServer?.Stop();
             _updateService?.Dispose();
+            TelegramService.FlushPersistedRateState();
             AppLogger.Shutdown();
             Application.Exit();
         }

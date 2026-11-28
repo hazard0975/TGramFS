@@ -4732,3 +4732,26 @@ _telegramService.UpdateSettings(_settings);
    - Все `6` точек вызова `SendMessageAsync` в `UploadFileAsync` (аудио, видео, фото-превью, документ) и `UploadMultiPartFileAsync` (заглавная и дочерние части) объединены в едином методе `SendUploadMediaMessageWithRetryAsync`.
    - При `TL.RpcException` с `Code == 500` выполняется до `2` коротких повторов (`500` мс и `1000` мс) без повторного чтения исходного потока (`inputFile` уже загружен в MTProto) и с сохранением узкого окна `BeginUploadMessageRpc()`/`EndUploadMessageRpc()` строго вокруг самого вызова `SendMessageAsync` и прежнего авто-сброса хэша канала на `400 CHANNEL_INVALID/CHANNEL_PRIVATE`.
 
+---
+
+## 160. Единый часовой учёт запросов (`HourlyRateWindow`), превентивное замедление `> 1 500` с самоудаляющимся `rate_state.json` и янтарный HUD-индикатор (`TelegramService.cs`, `TrayProgressOverlay.cs`, `TrayContext.cs`)
+
+### Контекст и анализ:
+1. Сопоставление логов `#154` (`1 995` вызовов `Messages_EditMessage` за `12` мин -> `FLOOD_WAIT_2436`) и `#159` (`2 000` загрузок `SendMessageAsync` без подписей и превью за `17.6` мин `17:49:40 -> 18:07:18` -> `FLOOD_WAIT_2551`, суммарно ровно `60` мин) подтвердило наличие у Telegram часового (`60`-минутного) скользящего окна порядка `~2 000` запросов для каждого из этих двух раздельных лимитов.
+2. По факту `#151` квоты `SendMessageAsync` (файлы, фото-превью галереи, части многотомников, бэкапы) и `Messages_EditMessage` (очередь подписей `ProcessCaptionQueueAsync`) разделены, поэтому объединять нужно сам движок скользящего окна, сохраняя два независимых счётчика.
+3. Предыдущий счётчик `_captionBurstCount` со сбросом по простою `>= 5` мин не учитывал остановку и возобновление копирования в пределах одного часа, а паузы «вплоть до минут» на один файл опасны таймаутом IRP (`~60` сек) в `WinFspServer.Cleanup` и скрытием оверлея через `4` сек в `TrayProgressOverlay.HideCheckTimer_Tick`.
+
+### Принятое решение:
+1. **Единый движок скользящего часового окна (`TelegramService.HourlyRateWindow`)**:
+   - Реализован потокобезопасный `HourlyRateWindow` (`60` мин в `UTC`) с автоматическим вычищением устаревших меток и вычислением времени до начала спада окна (`SecondsUntilWindowDecay`).
+   - Выделены два независимых экземпляра: `_sendHourlyWindow` (учитывает каждый `SendMessageAsync` в `SendUploadMediaMessageWithRetryAsync` — включая фото-превью и части многотомников — и `UploadBackupDocumentAsync`) и `_captionHourlyWindow` (учитывает `Messages_EditMessage` в `UpdateMessageCaptionAsync`).
+2. **Единая ступенчатая шкала превентивного замедления (`ComputeHourlyPreventiveDelayMs`) без принудительного обрыва**:
+   - До `1 500` запросов за скользящий час превентивная задержка равна `0 мс` (для `SendMessage` сохранена максимальная скорость, для фоновых подписей сохранена базовая защита `>= 350 мс` от коротких флудов).
+   - Свыше `1 500` запросов за час включается безопасное для WinFsp ступенчатое замедление: `1 501–1 600` -> `1.5 сек`, `1 601–1 700` -> `3 сек`, `1 701–1 800` -> `5 сек`, `1 801–1 900` -> `8 сек`, `1 901–1 950` -> `12 сек`, `> 1 950` -> `20 сек`.
+   - Для отправки (`UploadFileAsync`, после отсечки `<= 1` байта probe-запросов, и для дочерних частей `i > 0` в `UploadMultiPartFileAsync`) пауза `WaitForUploadPreventivePacingAsync` выполняется внутри `_uploadSemaphore` **до** передачи байтов в `_client.UploadFileAsync`, с немедленной реакцией на отмену (`CancellationToken`). Для `ProcessCaptionQueueAsync` (`EnsureCaptionPacingDelayAsync`) берётся `Math.Max` между коротким троттлингом и `hourlyPreventiveMs`.
+3. **Самоудаляющийся `rate_state.json`**:
+   - Временные метки обоих окон сохраняются пачками (раз в `>= 5` сек или `>= 25` запросов, плюс принудительный сброс `FlushPersistedRateState` в `TelegramService.Dispose()` и `TrayContext.ExitApplication()`) в `rate_state.json` рядом с `flood_state.json` через временный файл `.tmp`.
+   - При запуске (`LoadPersistedRateState`) все метки старше `60` минут отбрасываются; при обнулении обоих окон файл автоматически удаляется с диска.
+4. **Принудительный янтарный HUD-индикатор (`TrayProgressOverlay`, `TrayContext`)**:
+   - Добавлено событие `TelegramService.OnUploadRatePacingChanged` (`UploadRateLimitState`) и метод `TrayProgressOverlay.UpdateUploadRatePacing`.
+   - При `> 1 500` отправок за час оверлей показывается принудительно (даже при выключенном `AutoShowOverlay`): во время паузы перед файлом отображается обратный отсчёт (`Пауза X сек • Спад через Y мин`, защищено от скрытия в `HideCheckTimer_Tick`), а во время самой передачи/завершения файла рамка и заголовок остаются янтарными (`ОТПРАВКА • ЗАМЕДЛЕНИЕ (N/2000)`), не перекрывая имя файла, прогресс-бар и скорость (при активном `FLOOD_WAIT` приоритет сохранён за плашкой флуда).

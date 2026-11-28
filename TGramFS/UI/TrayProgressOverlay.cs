@@ -172,6 +172,11 @@ namespace TGramFS.UI
         private DateTime _marqueeStartTime = DateTime.UtcNow;
         private string _marqueeLastFileName = string.Empty;
 
+        private UploadRateLimitState? _uploadRateWarning;
+        private bool _isRateWaitActive = false;
+        private DateTime _rateWaitUntilUtc = DateTime.MinValue;
+        private int _rateWaitInitialSeconds = 0;
+
         private const int BaseWidth = 396;
         private const int BaseHeight = 96;
         private const int BasePaddingX = 12;
@@ -530,6 +535,80 @@ namespace TGramFS.UI
             Update();
         }
 
+        public void UpdateUploadRatePacing(UploadRateLimitState? state)
+        {
+            if (_syncContext != null && SynchronizationContext.Current != _syncContext)
+            {
+                _syncContext.Post(_ => UpdateUploadRatePacing(state), null);
+                return;
+            }
+
+            if (state == null || state.DelayMs <= 0 || state.RequestsInLastHour <= state.PreventiveThreshold)
+            {
+                _uploadRateWarning = null;
+                _isRateWaitActive = false;
+                _rateWaitUntilUtc = DateTime.MinValue;
+                _rateWaitInitialSeconds = 0;
+
+                if (!_isTransferring && !_isCompleted && !_isFloodRecovered && _activeFloods.Count == 0 && Visible)
+                {
+                    _updateTimer.Stop();
+                    _hideCheckTimer.Stop();
+                    Hide();
+                }
+                else
+                {
+                    Invalidate();
+                }
+                return;
+            }
+
+            _uploadRateWarning = state;
+            var now = DateTime.UtcNow;
+
+            if (state.IsWaitingNow && state.WaitUntilUtc.HasValue)
+            {
+                if (HasActiveUploadHardStop(now))
+                {
+                    return;
+                }
+
+                _isRateWaitActive = true;
+                _rateWaitUntilUtc = state.WaitUntilUtc.Value;
+                _rateWaitInitialSeconds = Math.Max(1, state.InitialWaitSeconds);
+                _direction = TransferDirection.Upload;
+                if (!string.IsNullOrWhiteSpace(state.FileName))
+                {
+                    _currentFileName = state.FileName;
+                }
+                _isTransferring = false;
+                _isFinalizing = false;
+                _isCompleted = false;
+                _isMetadata = false;
+                _isFloodRecovered = false;
+                _bytesPerSecond = 0;
+                _lastProgressUpdateTime = now;
+                _completionTimer.Stop();
+
+                if (!TryShowOverlay())
+                {
+                    return;
+                }
+
+                EnsureTopMost();
+                _updateTimer.Start();
+                _hideCheckTimer.Start();
+                Invalidate();
+                Update();
+            }
+            else
+            {
+                _isRateWaitActive = false;
+                _rateWaitUntilUtc = DateTime.MinValue;
+                Invalidate();
+            }
+        }
+
         private void FloodCountdownTimer_Tick(object? sender, EventArgs e)
         {
             if (_activeFloods.Count == 0)
@@ -674,6 +753,8 @@ namespace TGramFS.UI
                 }
             }
             _isFloodRecovered = false;
+            _isRateWaitActive = false;
+            _rateWaitUntilUtc = DateTime.MinValue;
 
             _queueCount = queueCount;
 
@@ -749,10 +830,11 @@ namespace TGramFS.UI
                 }
             }
 
-            // Если окно скрыто — позиционируем и показываем (если включено в настройках и нет полноэкранного режима)
+            // Если окно скрыто — позиционируем и показываем (принудительно при активном замедлении отправки или если включено AutoShowOverlay)
+            bool hasUploadRateWarning = direction == TransferDirection.Upload && _uploadRateWarning != null && _uploadRateWarning.DelayMs > 0;
             if (!Visible)
             {
-                if (!AutoShowOverlay || !TryShowOverlay())
+                if ((!AutoShowOverlay && !hasUploadRateWarning) || !TryShowOverlay())
                 {
                     return;
                 }
@@ -886,6 +968,8 @@ namespace TGramFS.UI
                 }
             }
             _isFloodRecovered = false;
+            _isRateWaitActive = false;
+            _rateWaitUntilUtc = DateTime.MinValue;
 
             AppLogger.Info("TrayProgressOverlay", $"CompleteTransfer [{direction}] вызван для '{fileName}'. Запуск _completionTimer...");
             _currentFileName = fileName;
@@ -900,9 +984,10 @@ namespace TGramFS.UI
             }
             _bytesPerSecond = 0;
 
+            bool hasUploadRateWarning = direction == TransferDirection.Upload && _uploadRateWarning != null && _uploadRateWarning.DelayMs > 0;
             if (!Visible)
             {
-                if (!AutoShowOverlay || !TryShowOverlay())
+                if ((!AutoShowOverlay && !hasUploadRateWarning) || !TryShowOverlay())
                 {
                     _isCompleted = false;
                     _currentFileName = string.Empty;
@@ -914,6 +999,7 @@ namespace TGramFS.UI
             Update();
 
             _completionTimer.Stop();
+            _completionTimer.Interval = hasUploadRateWarning ? 2200 : 1400;
             _completionTimer.Start();
         }
 
@@ -949,6 +1035,8 @@ namespace TGramFS.UI
             _isFinalizing = false;
             _isMetadata = false;
             _isFloodRecovered = false;
+            _isRateWaitActive = false;
+            _rateWaitUntilUtc = DateTime.MinValue;
             _currentFileName = string.Empty;
             _currentBytes = 0;
             _totalBytes = 0;
@@ -1052,6 +1140,15 @@ namespace TGramFS.UI
                 return;
             }
 
+            if (_isRateWaitActive && !_isTransferring && !_isCompleted && !_isFloodRecovered)
+            {
+                if (DateTime.UtcNow <= _rateWaitUntilUtc.AddSeconds(10))
+                {
+                    return;
+                }
+                _isRateWaitActive = false;
+            }
+
             // Защита от зависания окна при обрыве потока: при передаче данных таймаут 4 сек, при финализации в Telegram - до 12 сек
             var secondsSinceProgress = (DateTime.UtcNow - _lastProgressUpdateTime).TotalSeconds;
             double maxAllowedInactivity = _isFinalizing ? 12.0 : 4.0;
@@ -1104,6 +1201,17 @@ namespace TGramFS.UI
                 ? GetCurrentDisplayedFloodSlot(out floodSlotIndex, out floodTotalCount)
                 : null;
             bool isFloodBannerVisible = activeFloodSlot != null;
+            bool isRateWaitVisible = !isFloodBannerVisible &&
+                                     _isRateWaitActive &&
+                                     _uploadRateWarning != null &&
+                                     !_isTransferring &&
+                                     !_isCompleted &&
+                                     !_isFloodRecovered;
+            bool isUploadRateWarningActive = !isFloodBannerVisible &&
+                                             !_isFloodRecovered &&
+                                             _direction == TransferDirection.Upload &&
+                                             _uploadRateWarning != null &&
+                                             _uploadRateWarning.DelayMs > 0;
 
             // 1. Скругленный контур и фон
             int cornerRadius = ScalePx(BaseCornerRadius, dpiScale);
@@ -1114,6 +1222,10 @@ namespace TGramFS.UI
                 borderColor = activeFloodSlot.IsUploadStopped
                     ? Color.FromArgb(239, 68, 68)  // Red 500
                     : Color.FromArgb(245, 158, 11); // Amber 500
+            }
+            else if (isRateWaitVisible || isUploadRateWarningActive)
+            {
+                borderColor = Color.FromArgb(245, 158, 11); // Amber 500
             }
             else if (_isFloodRecovered)
             {
@@ -1146,6 +1258,10 @@ namespace TGramFS.UI
                     ? Color.FromArgb(252, 165, 165) // Red 300
                     : Color.FromArgb(252, 211, 77); // Amber 300
             }
+            else if (isRateWaitVisible || isUploadRateWarningActive)
+            {
+                headerColor = Color.FromArgb(252, 211, 77); // Amber 300
+            }
             else if (_isFloodRecovered)
             {
                 headerColor = Color.FromArgb(74, 222, 128); // Green 400
@@ -1177,6 +1293,12 @@ namespace TGramFS.UI
                         header = $"{header} ({floodSlotIndex + 1}/{floodTotalCount})";
                     }
                 }
+                else if (isRateWaitVisible && _uploadRateWarning != null)
+                {
+                    header = _queueCount > 1
+                        ? $"ОТПРАВКА • ЗАМЕДЛЕНИЕ ({_uploadRateWarning.RequestsInLastHour}/{_uploadRateWarning.HourlyLimit} • в очереди: {_queueCount})"
+                        : $"ОТПРАВКА • ЗАМЕДЛЕНИЕ ({_uploadRateWarning.RequestsInLastHour}/{_uploadRateWarning.HourlyLimit})";
+                }
                 else if (_isFloodRecovered)
                 {
                     header = "ОГРАНИЧЕНИЕ TELEGRAM СНЯТО";
@@ -1187,6 +1309,10 @@ namespace TGramFS.UI
                     {
                         header = "МЕТАДАННЫЕ ПОЛУЧЕНЫ";
                     }
+                    else if (isUploadRateWarningActive && _uploadRateWarning != null)
+                    {
+                        header = $"ЗАГРУЗКА • ЗАМЕДЛЕНИЕ ({_uploadRateWarning.RequestsInLastHour}/{_uploadRateWarning.HourlyLimit})";
+                    }
                     else
                     {
                         header = _direction == TransferDirection.Download ? "СКАЧИВАНИЕ ЗАВЕРШЕНО" : "ЗАГРУЗКА ЗАВЕРШЕНА";
@@ -1196,7 +1322,9 @@ namespace TGramFS.UI
                 {
                     header = _direction == TransferDirection.Download 
                         ? $"СКАЧИВАНИЕ ИЗ TELEGRAM (в очереди: {_queueCount})" 
-                        : $"ОТПРАВКА В TELEGRAM (в очереди: {_queueCount})";
+                        : (isUploadRateWarningActive && _uploadRateWarning != null
+                            ? $"ОТПРАВКА • ЗАМЕДЛЕНИЕ ({_uploadRateWarning.RequestsInLastHour}/{_uploadRateWarning.HourlyLimit} • в очереди: {_queueCount})"
+                            : $"ОТПРАВКА В TELEGRAM (в очереди: {_queueCount})");
                 }
                 else if (_isMetadata)
                 {
@@ -1204,11 +1332,17 @@ namespace TGramFS.UI
                 }
                 else if (_isFinalizing)
                 {
-                    header = "СОХРАНЕНИЕ В ОБЛАКЕ";
+                    header = isUploadRateWarningActive && _uploadRateWarning != null
+                        ? $"СОХРАНЕНИЕ • ЗАМЕДЛЕНИЕ ({_uploadRateWarning.RequestsInLastHour}/{_uploadRateWarning.HourlyLimit})"
+                        : "СОХРАНЕНИЕ В ОБЛАКЕ";
                 }
                 else if (_isTransferring)
                 {
-                    header = _direction == TransferDirection.Download ? "СКАЧИВАНИЕ ИЗ TELEGRAM" : "ОТПРАВКА В TELEGRAM";
+                    header = _direction == TransferDirection.Download
+                        ? "СКАЧИВАНИЕ ИЗ TELEGRAM"
+                        : (isUploadRateWarningActive && _uploadRateWarning != null
+                            ? $"ОТПРАВКА • ЗАМЕДЛЕНИЕ ({_uploadRateWarning.RequestsInLastHour}/{_uploadRateWarning.HourlyLimit})"
+                            : "ОТПРАВКА В TELEGRAM");
                 }
                 else
                 {
@@ -1303,11 +1437,19 @@ namespace TGramFS.UI
             double floodRemainingSec = isFloodBannerVisible && activeFloodSlot != null
                 ? Math.Max(0, (activeFloodSlot.WaitUntilUtc - DateTime.UtcNow).TotalSeconds)
                 : 0;
+            double rateRemainingSec = isRateWaitVisible
+                ? Math.Max(0, (_rateWaitUntilUtc - DateTime.UtcNow).TotalSeconds)
+                : 0;
 
             if (isFloodBannerVisible && activeFloodSlot != null)
             {
                 int initialSec = Math.Max(1, activeFloodSlot.InitialSeconds);
                 percent = (int)Math.Clamp(Math.Ceiling((floodRemainingSec / initialSec) * 100.0), 1, 100);
+            }
+            else if (isRateWaitVisible)
+            {
+                int initialSec = Math.Max(1, _rateWaitInitialSeconds);
+                percent = (int)Math.Clamp(Math.Ceiling((rateRemainingSec / initialSec) * 100.0), 1, 100);
             }
             else if (_isCompleted)
             {
@@ -1350,6 +1492,11 @@ namespace TGramFS.UI
                             startColor = Color.FromArgb(245, 158, 11); // Amber 500
                             endColor = Color.FromArgb(250, 204, 21);   // Yellow 400
                         }
+                    }
+                    else if (isRateWaitVisible)
+                    {
+                        startColor = Color.FromArgb(245, 158, 11); // Amber 500
+                        endColor = Color.FromArgb(250, 204, 21);   // Yellow 400
                     }
                     else if (_isMetadata)
                     {
@@ -1399,6 +1546,18 @@ namespace TGramFS.UI
                             _ => $"Ожидание Telegram: {timerText} • Продолжится само"
                         };
                 }
+                else if (isRateWaitVisible && _uploadRateWarning != null)
+                {
+                    int secLeft = Math.Max(1, (int)Math.Ceiling(rateRemainingSec));
+                    string decayPart = string.Empty;
+                    if (_uploadRateWarning.SecondsUntilWindowDecay is int decaySec && decaySec > 0)
+                    {
+                        decayPart = decaySec >= 60
+                            ? $" • Спад через {Math.Max(1, (int)Math.Ceiling(decaySec / 60.0))} мин"
+                            : $" • Спад через {decaySec} сек";
+                    }
+                    stats = $"Пауза {secLeft} сек (много файлов за час){decayPart}";
+                }
                 else if (_isFloodRecovered)
                 {
                     stats = "Таймер FLOOD_WAIT истёк ✔";
@@ -1408,6 +1567,11 @@ namespace TGramFS.UI
                     if (_isMetadata)
                     {
                         stats = "Свойства файла успешно получены ✔";
+                    }
+                    else if (isUploadRateWarningActive && _uploadRateWarning != null)
+                    {
+                        double delaySec = _uploadRateWarning.DelayMs / 1000.0;
+                        stats = $"Сохранено ✔ • Пауза перед следующим: {delaySec:0.#} сек";
                     }
                     else
                     {

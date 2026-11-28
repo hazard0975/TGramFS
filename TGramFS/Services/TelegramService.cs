@@ -41,6 +41,19 @@ namespace TGramFS.Services
         Background = 4
     }
 
+    public sealed class UploadRateLimitState
+    {
+        public int RequestsInLastHour { get; init; }
+        public int HourlyLimit { get; init; }
+        public int PreventiveThreshold { get; init; }
+        public int DelayMs { get; init; }
+        public bool IsWaitingNow { get; init; }
+        public string FileName { get; init; } = string.Empty;
+        public DateTime? WaitUntilUtc { get; init; }
+        public int InitialWaitSeconds { get; init; }
+        public int? SecondsUntilWindowDecay { get; init; }
+    }
+
     public class TelegramUserInfo
     {
         public long Id { get; set; }
@@ -603,6 +616,11 @@ namespace TGramFS.Services
         /// </summary>
         public event Action<int, bool, string?, bool, FloodWaitScope>? OnFloodWaitDetected;
 
+        /// <summary>
+        /// Событие превентивного замедления исходящих отправок при приближении к часовому лимиту (~2000 запросов/час).
+        /// </summary>
+        public event Action<UploadRateLimitState?>? OnUploadRatePacingChanged;
+
         private CancellationTokenSource? _reconnectWaitCts;
         private readonly object _reconnectWaitLock = new();
         private DateTime _lastSuccessfulTrafficTime = DateTime.MinValue;
@@ -626,6 +644,7 @@ namespace TGramFS.Services
             StartDeletionQueueWorker();
             StartChannelMigrationQueueWorker();
             LoadPersistedFloodState();
+            LoadPersistedRateState();
         }
 
         private void WakeUpReconnectWait(string reason)
@@ -2827,7 +2846,19 @@ namespace TGramFS.Services
                     }
                 }
 
-                int effectiveDelayMs = Math.Max(tierDelayMs, _captionAdaptiveFloorDelayMs);
+                int captionHourCount = _captionHourlyWindow.GetStats(now, out _);
+                int hourlyPreventiveMs = ComputeHourlyPreventiveDelayMs(captionHourCount);
+                int effectiveDelayMs = Math.Max(Math.Max(tierDelayMs, _captionAdaptiveFloorDelayMs), hourlyPreventiveMs);
+                if (hourlyPreventiveMs > _lastLoggedCaptionPreventiveDelayMs)
+                {
+                    _lastLoggedCaptionPreventiveDelayMs = hourlyPreventiveMs;
+                    AppLogger.Info("TelegramService", $"[Caption Pacing] Часовое окно EditMessage достигло {captionHourCount}/{HourlyRateReferenceLimit}: включено превентивное замедление ({hourlyPreventiveMs} мс).");
+                }
+                else if (hourlyPreventiveMs == 0 && _lastLoggedCaptionPreventiveDelayMs > 0)
+                {
+                    _lastLoggedCaptionPreventiveDelayMs = 0;
+                    AppLogger.Info("TelegramService", $"[Caption Pacing] Часовое окно EditMessage снизилось ({captionHourCount}/{HourlyRateReferenceLimit}): превентивное замедление снято.");
+                }
 
                 if (_nextCaptionAllowedSendUtc < now)
                 {
@@ -3078,6 +3109,351 @@ namespace TGramFS.Services
         private static string FloodStateFilePath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, FloodStateFileName);
         private static readonly object _floodStateFileLock = new();
         private static readonly Dictionary<FloodWaitScope, ActiveFloodBannerState> _activeFloodBanners = new();
+
+        // Единый механизм скользящего часового окна (60 мин) для SendMessage и EditMessage.
+        // Первые 1500 запросов в час идут без превентивной задержки, далее ступенчато замедляются (1.5 -> 20 сек)
+        // без жёсткого обрыва WinFsp-операции. История хранится в самоудаляющемся rate_state.json.
+        private const int HourlyRateWindowMinutes = 60;
+        private const int HourlyRateReferenceLimit = 2000;
+        private const int HourlyPreventiveThreshold = 1500;
+        private const string RateStateFileName = "rate_state.json";
+        private static string RateStateFilePath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, RateStateFileName);
+        private static readonly object _rateStateFileLock = new();
+        private static readonly HourlyRateWindow _sendHourlyWindow = new(HourlyRateWindowMinutes);
+        private static readonly HourlyRateWindow _captionHourlyWindow = new(HourlyRateWindowMinutes);
+        private static DateTime _lastRateStatePersistUtc = DateTime.MinValue;
+        private static int _unsavedRateEventsCount = 0;
+        private static int _lastLoggedUploadPreventiveDelayMs = 0;
+        private static int _lastLoggedCaptionPreventiveDelayMs = 0;
+        private static bool _wasUploadRateWarningActive = false;
+
+        private sealed class HourlyRateWindow
+        {
+            private readonly object _lock = new();
+            private readonly Queue<DateTime> _timestampsUtc = new();
+            private readonly TimeSpan _window;
+
+            public HourlyRateWindow(int windowMinutes)
+            {
+                _window = TimeSpan.FromMinutes(windowMinutes);
+            }
+
+            private void PruneLocked(DateTime nowUtc)
+            {
+                DateTime cutoff = nowUtc - _window;
+                while (_timestampsUtc.Count > 0 && _timestampsUtc.Peek() <= cutoff)
+                {
+                    _timestampsUtc.Dequeue();
+                }
+            }
+
+            public int GetStats(DateTime nowUtc, out int? secondsUntilOldestExpires)
+            {
+                lock (_lock)
+                {
+                    PruneLocked(nowUtc);
+                    if (_timestampsUtc.Count == 0)
+                    {
+                        secondsUntilOldestExpires = null;
+                        return 0;
+                    }
+
+                    DateTime oldest = _timestampsUtc.Peek();
+                    secondsUntilOldestExpires = Math.Max(1, (int)Math.Ceiling((oldest.Add(_window) - nowUtc).TotalSeconds));
+                    return _timestampsUtc.Count;
+                }
+            }
+
+            public int Record(DateTime nowUtc)
+            {
+                lock (_lock)
+                {
+                    PruneLocked(nowUtc);
+                    _timestampsUtc.Enqueue(nowUtc);
+                    return _timestampsUtc.Count;
+                }
+            }
+
+            public List<DateTime> ExportSortedSnapshot(DateTime nowUtc)
+            {
+                lock (_lock)
+                {
+                    PruneLocked(nowUtc);
+                    return _timestampsUtc.ToList();
+                }
+            }
+
+            public int Load(IEnumerable<DateTime>? rawTimestamps, DateTime nowUtc)
+            {
+                lock (_lock)
+                {
+                    _timestampsUtc.Clear();
+                    if (rawTimestamps == null) return 0;
+
+                    DateTime cutoff = nowUtc - _window;
+                    DateTime futureAllowance = nowUtc.AddMinutes(1);
+                    var valid = new List<DateTime>();
+                    foreach (var raw in rawTimestamps)
+                    {
+                        DateTime utc = raw.Kind == DateTimeKind.Unspecified
+                            ? DateTime.SpecifyKind(raw, DateTimeKind.Utc)
+                            : raw.ToUniversalTime();
+                        if (utc > cutoff && utc <= futureAllowance)
+                        {
+                            valid.Add(utc);
+                        }
+                    }
+
+                    valid.Sort();
+                    foreach (var dt in valid)
+                    {
+                        _timestampsUtc.Enqueue(dt);
+                    }
+                    return _timestampsUtc.Count;
+                }
+            }
+        }
+
+        private sealed class PersistedRateStateFile
+        {
+            public List<DateTime>? SendTimestampsUtc { get; set; }
+            public List<DateTime>? CaptionTimestampsUtc { get; set; }
+        }
+
+        private static int ComputeHourlyPreventiveDelayMs(int requestsInLastHour)
+        {
+            if (requestsInLastHour <= HourlyPreventiveThreshold) return 0;
+            if (requestsInLastHour <= 1600) return 1500;
+            if (requestsInLastHour <= 1700) return 3000;
+            if (requestsInLastHour <= 1800) return 5000;
+            if (requestsInLastHour <= 1900) return 8000;
+            if (requestsInLastHour <= 1950) return 12000;
+            return 20000;
+        }
+
+        private static void LoadPersistedRateState()
+        {
+            lock (_rateStateFileLock)
+            {
+                string path = RateStateFilePath;
+                if (!File.Exists(path)) return;
+
+                try
+                {
+                    string json = File.ReadAllText(path);
+                    var model = JsonSerializer.Deserialize<PersistedRateStateFile>(json);
+                    if (model == null)
+                    {
+                        DeletePersistedRateStateNoLock();
+                        return;
+                    }
+
+                    var now = DateTime.UtcNow;
+                    int sendCount = _sendHourlyWindow.Load(model.SendTimestampsUtc, now);
+                    int captionCount = _captionHourlyWindow.Load(model.CaptionTimestampsUtc, now);
+
+                    if (sendCount == 0 && captionCount == 0)
+                    {
+                        DeletePersistedRateStateNoLock();
+                        return;
+                    }
+
+                    AppLogger.Info("TelegramService", $"[Rate Persist] Восстановлена история скользящего часа из {RateStateFileName}: SendMessage={sendCount}/{HourlyRateReferenceLimit}, EditMessage={captionCount}/{HourlyRateReferenceLimit}.");
+                    PersistRateStateNoLock(now);
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Debug("TelegramService", $"[Rate Persist] Повреждён или нечитаем {RateStateFileName}, файл удалён: {ex.Message}");
+                    DeletePersistedRateStateNoLock();
+                }
+            }
+        }
+
+        private static void DeletePersistedRateStateNoLock()
+        {
+            try
+            {
+                string path = RateStateFilePath;
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Debug("TelegramService", $"[Rate Persist] Не удалось удалить {RateStateFileName}: {ex.Message}");
+            }
+        }
+
+        private static void PersistRateStateNoLock(DateTime nowUtc)
+        {
+            var sendSnapshot = _sendHourlyWindow.ExportSortedSnapshot(nowUtc);
+            var captionSnapshot = _captionHourlyWindow.ExportSortedSnapshot(nowUtc);
+
+            if (sendSnapshot.Count == 0 && captionSnapshot.Count == 0)
+            {
+                DeletePersistedRateStateNoLock();
+                _lastRateStatePersistUtc = nowUtc;
+                _unsavedRateEventsCount = 0;
+                return;
+            }
+
+            try
+            {
+                var model = new PersistedRateStateFile
+                {
+                    SendTimestampsUtc = sendSnapshot,
+                    CaptionTimestampsUtc = captionSnapshot
+                };
+                string json = JsonSerializer.Serialize(model);
+                string tmpPath = RateStateFilePath + ".tmp";
+                File.WriteAllText(tmpPath, json);
+                File.Move(tmpPath, RateStateFilePath, overwrite: true);
+                _lastRateStatePersistUtc = nowUtc;
+                _unsavedRateEventsCount = 0;
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Debug("TelegramService", $"[Rate Persist] Не удалось сохранить {RateStateFileName}: {ex.Message}");
+            }
+        }
+
+        private static void PersistRateStateIfNeeded(bool force = false)
+        {
+            var now = DateTime.UtcNow;
+            if (!force)
+            {
+                int unsaved = Volatile.Read(ref _unsavedRateEventsCount);
+                if (unsaved <= 0) return;
+                if (unsaved < 25 && _lastRateStatePersistUtc != DateTime.MinValue && (now - _lastRateStatePersistUtc).TotalSeconds < 5.0)
+                {
+                    return;
+                }
+            }
+
+            lock (_rateStateFileLock)
+            {
+                if (!force)
+                {
+                    int unsaved = _unsavedRateEventsCount;
+                    if (unsaved <= 0) return;
+                    if (unsaved < 25 && _lastRateStatePersistUtc != DateTime.MinValue && (now - _lastRateStatePersistUtc).TotalSeconds < 5.0)
+                    {
+                        return;
+                    }
+                }
+                PersistRateStateNoLock(now);
+            }
+        }
+
+        public static void FlushPersistedRateState()
+        {
+            PersistRateStateIfNeeded(force: true);
+        }
+
+        private static void RecordSendHourlyRequest()
+        {
+            _sendHourlyWindow.Record(DateTime.UtcNow);
+            Interlocked.Increment(ref _unsavedRateEventsCount);
+            PersistRateStateIfNeeded(force: false);
+        }
+
+        private static void RecordCaptionHourlyRequest()
+        {
+            _captionHourlyWindow.Record(DateTime.UtcNow);
+            Interlocked.Increment(ref _unsavedRateEventsCount);
+            PersistRateStateIfNeeded(force: false);
+        }
+
+        private void NotifyUploadRatePacing(UploadRateLimitState? state)
+        {
+            OnUploadRatePacingChanged?.Invoke(state);
+        }
+
+        private async Task WaitForUploadPreventivePacingAsync(string fileName, CancellationToken cancellationToken)
+        {
+            var now = DateTime.UtcNow;
+            int countInHour = _sendHourlyWindow.GetStats(now, out int? secondsUntilDecay);
+            int delayMs = ComputeHourlyPreventiveDelayMs(countInHour);
+
+            if (delayMs <= 0)
+            {
+                if (_lastLoggedUploadPreventiveDelayMs > 0)
+                {
+                    _lastLoggedUploadPreventiveDelayMs = 0;
+                    AppLogger.Info("TelegramService", $"[Upload Rate Pacing] Часовое окно SendMessage снизилось ({countInHour}/{HourlyRateReferenceLimit}): превентивное замедление снято.");
+                }
+                if (_wasUploadRateWarningActive)
+                {
+                    _wasUploadRateWarningActive = false;
+                    NotifyUploadRatePacing(null);
+                }
+                PersistRateStateIfNeeded(force: false);
+                return;
+            }
+
+            _wasUploadRateWarningActive = true;
+            if (delayMs != _lastLoggedUploadPreventiveDelayMs)
+            {
+                _lastLoggedUploadPreventiveDelayMs = delayMs;
+                string decayHint = secondsUntilDecay.HasValue ? $", начало спада окна через ~{Math.Max(1, (int)Math.Ceiling(secondsUntilDecay.Value / 60.0))} мин" : string.Empty;
+                AppLogger.Warn("TelegramService", $"[Upload Rate Pacing] Достигнуто {countInHour}/{HourlyRateReferenceLimit} отправок SendMessage за час: включено превентивное замедление {delayMs / 1000.0:F1} сек на файл{decayHint}.");
+            }
+
+            int waitSecondsCeil = Math.Max(1, (int)Math.Ceiling(delayMs / 1000.0));
+            NotifyUploadRatePacing(new UploadRateLimitState
+            {
+                RequestsInLastHour = countInHour,
+                HourlyLimit = HourlyRateReferenceLimit,
+                PreventiveThreshold = HourlyPreventiveThreshold,
+                DelayMs = delayMs,
+                IsWaitingNow = true,
+                FileName = fileName,
+                WaitUntilUtc = now.AddMilliseconds(delayMs),
+                InitialWaitSeconds = waitSecondsCeil,
+                SecondsUntilWindowDecay = secondsUntilDecay
+            });
+
+            try
+            {
+                await Task.Delay(delayMs, cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                NotifyUploadRatePacing(new UploadRateLimitState
+                {
+                    RequestsInLastHour = countInHour,
+                    HourlyLimit = HourlyRateReferenceLimit,
+                    PreventiveThreshold = HourlyPreventiveThreshold,
+                    DelayMs = delayMs,
+                    IsWaitingNow = false,
+                    FileName = fileName,
+                    SecondsUntilWindowDecay = secondsUntilDecay
+                });
+                throw;
+            }
+
+            int refreshedCount = _sendHourlyWindow.GetStats(DateTime.UtcNow, out int? refreshedDecay);
+            int refreshedDelayMs = ComputeHourlyPreventiveDelayMs(refreshedCount);
+            if (refreshedDelayMs <= 0)
+            {
+                _wasUploadRateWarningActive = false;
+                _lastLoggedUploadPreventiveDelayMs = 0;
+                NotifyUploadRatePacing(null);
+                return;
+            }
+
+            NotifyUploadRatePacing(new UploadRateLimitState
+            {
+                RequestsInLastHour = refreshedCount,
+                HourlyLimit = HourlyRateReferenceLimit,
+                PreventiveThreshold = HourlyPreventiveThreshold,
+                DelayMs = refreshedDelayMs,
+                IsWaitingNow = false,
+                FileName = fileName,
+                SecondsUntilWindowDecay = refreshedDecay
+            });
+        }
 
         private sealed class PersistedFloodState
         {
@@ -3960,6 +4336,8 @@ namespace TGramFS.Services
                 }
 
                 ThrowIfUploadHardStopped(effectiveFileName);
+                await WaitForUploadPreventivePacingAsync(effectiveFileName, cancellationToken);
+                ThrowIfUploadHardStopped(effectiveFileName);
                 didAttemptNetworkUpload = true;
                 long fileLength = uploadStream.Length;
                 byte[]? galleryPhotoBytes = null;
@@ -4336,6 +4714,7 @@ namespace TGramFS.Services
                 try
                 {
                     BeginUploadMessageRpc();
+                    RecordSendHourlyRequest();
                     try
                     {
                         TL.Message sent = replyToMsgId > 0
@@ -4394,6 +4773,11 @@ namespace TGramFS.Services
                     cancellationToken.ThrowIfCancellationRequested();
                     ThrowIfUploadHardStopped(effectiveFileName);
                     await EnsureFloodWaitDelayAsync();
+                    if (i > 0)
+                    {
+                        await WaitForUploadPreventivePacingAsync(effectiveFileName, cancellationToken);
+                        ThrowIfUploadHardStopped(effectiveFileName);
+                    }
 
                     long currentPartLength = (i == partCount - 1)
                         ? (fileLength - ((long)i * maxPartSize))
@@ -4700,6 +5084,7 @@ namespace TGramFS.Services
                 {
                     try
                     {
+                        RecordSendHourlyRequest();
                         message = await _client.SendMessageAsync(peer, caption, mediaDoc);
                         break;
                     }
@@ -4843,6 +5228,7 @@ namespace TGramFS.Services
                 };
 
                 BeginCaptionRpc();
+                RecordCaptionHourlyRequest();
                 try
                 {
                     await _client.Invoke(editReq);
@@ -6329,6 +6715,7 @@ namespace TGramFS.Services
                 _client = null;
             }
             catch { }
+            FlushPersistedRateState();
             _floodLock?.Dispose();
             _uploadSemaphore?.Dispose();
             _channelDeleteSemaphore?.Dispose();
