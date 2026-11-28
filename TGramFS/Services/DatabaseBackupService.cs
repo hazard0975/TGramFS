@@ -48,6 +48,7 @@ namespace TGramFS.Services
         public string? PendingSyncNotification => _pendingSyncNotification;
         public string? PendingConflictNotification => _pendingConflictNotification;
         public DateTime? LastBackupTimeUtc => _lastBackupTimeUtc;
+        public string? LastBackupError { get; private set; }
 
         public void ClearPendingNotifications()
         {
@@ -217,10 +218,24 @@ namespace TGramFS.Services
             string? snapshotPath = null;
             try
             {
+                LastBackupError = null;
                 if (!_telegramService.IsAuthorized)
                 {
+                    LastBackupError = "Telegram не авторизован";
                     AppLogger.Warn("DatabaseBackup", "Клиент Telegram не авторизован. Выгрузка резервной копии отменена.");
-                    OnBackupFailed?.Invoke("Telegram не авторизован");
+                    OnBackupFailed?.Invoke(LastBackupError);
+                    return false;
+                }
+
+                if (_telegramService.TryGetUploadHardStop(out int hardStopRemainingSec, out DateTime hardStopUntilUtc, notifyBanner: false))
+                {
+                    LastBackupError = $"Выгрузка отложена из-за FLOOD_WAIT Telegram (осталось {hardStopRemainingSec} сек, до {hardStopUntilUtc.ToLocalTime():HH:mm:ss})";
+                    AppLogger.Warn("DatabaseBackup", $"Выгрузка резервной копии отложена без создания снимка и обращения к Telegram: активен FLOOD_WAIT отправки (осталось {hardStopRemainingSec} сек, до {hardStopUntilUtc.ToLocalTime():HH:mm:ss}).");
+                    OnBackupFailed?.Invoke(LastBackupError);
+                    if (!isGracefulExit && _hasUnsavedChanges)
+                    {
+                        ScheduleDelayedAutoBackup(hardStopRemainingSec + 5, triggerReason);
+                    }
                     return false;
                 }
 
@@ -335,8 +350,20 @@ namespace TGramFS.Services
                 OnBackupCompleted?.Invoke($"Успешно отправлено в Telegram ({sizeMb:F2} МБ)");
                 return true;
             }
+            catch (TL.RpcException rpcEx) when (rpcEx.Code == 420)
+            {
+                LastBackupError = $"Ограничение Telegram FLOOD_WAIT ({rpcEx.X} сек)";
+                AppLogger.Warn("DatabaseBackup", $"Выгрузка резервной копии приостановлена из-за FLOOD_WAIT_{rpcEx.X} ({rpcEx.X} сек).");
+                OnBackupFailed?.Invoke(LastBackupError);
+                if (!isGracefulExit && _hasUnsavedChanges)
+                {
+                    ScheduleDelayedAutoBackup(rpcEx.X + 5, triggerReason);
+                }
+                return false;
+            }
             catch (Exception ex)
             {
+                LastBackupError = ex.Message;
                 AppLogger.Error("DatabaseBackup", $"Ошибка при выполнении резервного копирования базы: {ex.Message}", ex);
                 OnBackupFailed?.Invoke(ex.Message);
                 return false;
@@ -345,6 +372,34 @@ namespace TGramFS.Services
             {
                 _backupLock.Release();
             }
+        }
+
+        private void ScheduleDelayedAutoBackup(int delaySeconds, string triggerReason)
+        {
+            if (_isDisposed) return;
+            var settings = _configManager.CurrentSettings?.Database?.Backup;
+            if (settings == null || !settings.EnableAutoBackup) return;
+
+            int safeDelaySec = Math.Max(10, delaySeconds);
+            lock (_backupLock)
+            {
+                if (_isDisposed) return;
+                _debounceTimer?.Dispose();
+                _debounceTimer = new Timer(async _ =>
+                {
+                    try
+                    {
+                        if (_isDisposed || !_hasUnsavedChanges) return;
+                        AppLogger.Info("DatabaseBackup", $"Запуск отложенного автоматического бэкапа после окончания FLOOD_WAIT ({triggerReason}).");
+                        await PerformBackupAsync(triggerReason);
+                    }
+                    catch (Exception ex)
+                    {
+                        AppLogger.Warn("DatabaseBackup", $"Ошибка выполнения отложенного автоматического бэкапа: {ex.Message}");
+                    }
+                }, null, TimeSpan.FromSeconds(safeDelaySec), Timeout.InfiniteTimeSpan);
+            }
+            AppLogger.Info("DatabaseBackup", $"Автоматический бэкап перенесён на {safeDelaySec} сек (до {DateTime.Now.AddSeconds(safeDelaySec):HH:mm:ss}) из-за FLOOD_WAIT.");
         }
 
         private void RotateLocalBackups(string backupDir, int keepCount)

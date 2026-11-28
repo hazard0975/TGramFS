@@ -870,6 +870,10 @@ namespace TGramFS.UI
                         {
                             MessageBox.Show($"Выгрузка заблокирована из-за конфликта версий:\n{_backupService.ConflictDetails}", "Конфликт синхронизации", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         }
+                        else if (!string.IsNullOrWhiteSpace(_backupService.LastBackupError))
+                        {
+                            MessageBox.Show($"Не удалось отправить бэкап:\n{_backupService.LastBackupError}", "Предупреждение", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        }
                         else
                         {
                             MessageBox.Show("Не удалось отправить бэкап. Проверьте авторизацию в Telegram (вкладка Telegram).", "Предупреждение", MessageBoxButtons.OK, MessageBoxIcon.Warning);

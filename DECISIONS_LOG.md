@@ -4705,3 +4705,30 @@ _telegramService.UpdateSettings(_settings);
 ### Принятое решение:
 1. **`PopulateFolderTree` (`FolderManagementForm.cs`)**: для узлов с `info.IsCustomBoundChannel` назначается `tn.NodeFont = UITheme.BoldFont`, чтобы сам WinForms `TreeView` корректно вычислял ширину `e.Bounds`, область клика и горизонтальную прокрутку под более широкий жирный шрифт без обрезания справа.
 2. **`ConfigureBoundTagTreeDrawing` (`FolderManagementForm.cs`)**: имя привязанной папки (`namePart`) измеряется и рисуется жирным шрифтом `UITheme.BoldFont` (с сохранением цветового статуса в окнах правил), а суффикс `  [привязано]` (`suffixPart`) — обычным тонким серым шрифтом (`tree.Font` / `UITheme.BaseFont`, `UITheme.TextMuted`).
+
+---
+
+## 159. Изоляция автобэкапа от `Upload HardStop` и контура `General`, фикс имени файла на плашках `FLOOD_WAIT` и ретраи `RPC_CALL_FAIL (500)` при финализации отправки (`TelegramService.cs`, `DatabaseBackupService.cs`, `TrayProgressOverlay.cs`, `TrayContext.cs`, `AuthSettingsForm.cs`)
+
+### Контекст и первопричины (по `log.MD` на 28 690 строк и `flood_state.json`):
+1. **Утечка автобэкапа в активный `Upload HardStop` и дубль `Scope = General` (`(2/2)`)**:
+   - При массовой загрузке без подписей и превью (`1 996` файлов за `17.6` мин) файл `th-TH.com_virtuemart.ini` получил `FLOOD_WAIT_2551` (`Scope = Upload`, `IsUploadStopped = true`).
+   - Спустя минуту сработал дебаунс автобэкапа `DatabaseBackupService.PerformBackupAsync` -> `TelegramService.UploadBackupDocumentAsync`, который проверял только `_sessionFloodWaitUntilUtc` (`EnsureFloodWaitDelayAsync`), не учитывал `_uploadHardStopUntilUtc`, не выставлял `BeginBackgroundRpc()`/`EndBackgroundRpc()` и не перехватывал `RpcException (420)`.
+   - В итоге автобэкап залил `base_*.db` и получил `FLOOD_WAIT_2490` на `SendMessageAsync`, а `HandleWTelegramLog` при всех нулевых счётчиках RPC отнёс его в контур `FloodWaitScope.General`, создав вторую запись в `flood_state.json` (`FileName: null`).
+2. **Два бага имени файла в `TrayProgressOverlay.ShowFloodWait`**:
+   - При `FileName == null` для `FloodWaitScope.General` (`isNonBlockingBackgroundScope == false`) подставлялось случайное устаревшее `_currentFileName` (например, `"index.html"` от ранее прочитанных метаданных), вместо нейтральной заглушки `"Ограничение частоты запросов Telegram"`.
+   - При повторных вызовах `ThrowIfUploadHardStopped` для следующих файлов (`th-TH.com_virtuemart.menu.ini`) `ShowFloodWait` безусловно перезаписывал `existingSlot.FileName` уже остановленного слота `Upload`, хотя `RecordFloodStateAndPersist` в `flood_state.json` сохранял исходного виновника (`th-TH.com_virtuemart.ini`).
+3. **Потеря файлов при кратковременных сбоях сервера Telegram `500 RPC_CALL_FAIL`**:
+   - В `log.MD` зафиксировано `4` случая `RpcError 500 RPC_CALL_FAIL` внутри `_client.SendMessageAsync` после уже успешно загруженного в MTProto потока (`inputFile`), из-за чего файлы отклонялись без повтора.
+
+### Принятое решение:
+1. **Защита и корректный контур для операций бэкапа (`TelegramService.cs`, `DatabaseBackupService.cs`, `TrayContext.cs`, `AuthSettingsForm.cs`)**:
+   - `DatabaseBackupService.PerformBackupAsync` до снятия локального снимка `VACUUM INTO` и запросов в Telegram проверяет `_telegramService.TryGetUploadHardStop(...)`: при активной блокировке выгрузка откладывается, `_hasUnsavedChanges` сохраняется, а автоматический бэкап переносится через `ScheduleDelayedAutoBackup` на время окончания `FLOOD_WAIT` (`+5` сек). Добавлено свойство `LastBackupError` с выводом реальной причины в `TrayContext` и `AuthSettingsForm`.
+   - В `TelegramService` методы `UploadBackupDocumentAsync` (с дополнительной предварительной проверкой `TryGetRemainingUploadHardStopSeconds` и до 2 ретраев `500` на `SendMessageAsync`), `GetLatestBackupDocumentAsync`, `DownloadBackupDocumentAsync` и создание канала в `GetBackupStoragePeerAsync` переведены на `EnsureBackgroundFloodWaitDelayAsync()`, счётчик `BeginBackgroundRpc()`/`EndBackgroundRpc()` и перехват `RpcException (420)` через `TriggerBackgroundFloodWait`.
+2. **Точное имя файла на баннерах `FLOOD_WAIT` (`TrayProgressOverlay.cs`)**:
+   - Убран фоллбэк на случайное `_currentFileName` для `General`/`Caption`/`Background` (и неактивных/чужих передач `Upload`/`Download`) — для них передаётся `string.Empty`, чтобы `OnPaint` отображал `"Ограничение частоты запросов Telegram"`.
+   - Обновление `existingSlot.FileName` разрешено только при пустом имени либо при реальном продлении/усилении блокировки (`upgradedToStop || candidateUntil > existingSlot.WaitUntilUtc.AddSeconds(2)`), что защищает имя первого файла-виновника от перезаписи при последующих срабатываниях `ThrowIfUploadHardStopped`.
+3. **Повторные попытки `SendUploadMediaMessageWithRetryAsync` при `500` (`TelegramService.cs`)**:
+   - Все `6` точек вызова `SendMessageAsync` в `UploadFileAsync` (аудио, видео, фото-превью, документ) и `UploadMultiPartFileAsync` (заглавная и дочерние части) объединены в едином методе `SendUploadMediaMessageWithRetryAsync`.
+   - При `TL.RpcException` с `Code == 500` выполняется до `2` коротких повторов (`500` мс и `1000` мс) без повторного чтения исходного потока (`inputFile` уже загружен в MTProto) и с сохранением узкого окна `BeginUploadMessageRpc()`/`EndUploadMessageRpc()` строго вокруг самого вызова `SendMessageAsync` и прежнего авто-сброса хэша канала на `400 CHANNEL_INVALID/CHANNEL_PRIVATE`.
+

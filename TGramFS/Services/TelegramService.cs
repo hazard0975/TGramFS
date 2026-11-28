@@ -4076,35 +4076,13 @@ namespace TGramFS.Services
                         mediaDoc.flags |= TL.InputMediaUploadedDocument.Flags.has_thumb;
                     }
 
-                    try
-                    {
-                        await EnsureUploadMessagePacingAsync(cancellationToken);
-                        BeginUploadMessageRpc();
-                        try
-                        {
-                            message = await _client.SendMessageAsync(peer, effectiveCaption, mediaDoc);
-                        }
-                        finally
-                        {
-                            EndUploadMessageRpc();
-                        }
-                    }
-                    catch (TL.RpcException rpcEx) when (rpcEx.Code == 400 && (rpcEx.Message.Contains("CHANNEL_INVALID") || rpcEx.Message.Contains("CHANNEL_PRIVATE")))
-                    {
-                        AppLogger.Warn("TelegramService", "Канал недоступен по сохраненному хэшу. Сброс хэша и повторный поиск...");
-                        InvalidateStoragePeer();
-                        peer = await GetStoragePeerAsync(targetChannelId);
-                        await EnsureUploadMessagePacingAsync(cancellationToken);
-                        BeginUploadMessageRpc();
-                        try
-                        {
-                            message = await _client.SendMessageAsync(peer, effectiveCaption, mediaDoc);
-                        }
-                        finally
-                        {
-                            EndUploadMessageRpc();
-                        }
-                    }
+                    (message, peer) = await SendUploadMediaMessageWithRetryAsync(
+                        peer,
+                        targetChannelId,
+                        effectiveCaption,
+                        mediaDoc,
+                        effectiveFileName,
+                        cancellationToken: cancellationToken);
                 }
                 else if (isVideo)
                 {
@@ -4150,35 +4128,13 @@ namespace TGramFS.Services
                         mediaDoc.flags |= TL.InputMediaUploadedDocument.Flags.has_thumb;
                     }
 
-                    try
-                    {
-                        await EnsureUploadMessagePacingAsync(cancellationToken);
-                        BeginUploadMessageRpc();
-                        try
-                        {
-                            message = await _client.SendMessageAsync(peer, effectiveCaption, mediaDoc);
-                        }
-                        finally
-                        {
-                            EndUploadMessageRpc();
-                        }
-                    }
-                    catch (TL.RpcException rpcEx) when (rpcEx.Code == 400 && (rpcEx.Message.Contains("CHANNEL_INVALID") || rpcEx.Message.Contains("CHANNEL_PRIVATE")))
-                    {
-                        AppLogger.Warn("TelegramService", "Канал недоступен по сохраненному хэшу. Сброс хэша и повторный поиск...");
-                        InvalidateStoragePeer();
-                        peer = await GetStoragePeerAsync(targetChannelId);
-                        await EnsureUploadMessagePacingAsync(cancellationToken);
-                        BeginUploadMessageRpc();
-                        try
-                        {
-                            message = await _client.SendMessageAsync(peer, effectiveCaption, mediaDoc);
-                        }
-                        finally
-                        {
-                            EndUploadMessageRpc();
-                        }
-                    }
+                    (message, peer) = await SendUploadMediaMessageWithRetryAsync(
+                        peer,
+                        targetChannelId,
+                        effectiveCaption,
+                        mediaDoc,
+                        effectiveFileName,
+                        cancellationToken: cancellationToken);
                 }
                 else
                 {
@@ -4191,35 +4147,14 @@ namespace TGramFS.Services
                             using var photoMs = new MemoryStream(galleryPhotoBytes, false);
                             var photoInput = await _client.UploadFileAsync(photoMs, previewFileName);
                             var photoMedia = new TL.InputMediaUploadedPhoto { file = photoInput };
-                            await EnsureUploadMessagePacingAsync(cancellationToken);
-                            BeginUploadMessageRpc();
-                            try
-                            {
-                                photoMessage = await _client.SendMessageAsync(peer, effectiveCaption, photoMedia);
-                            }
-                            finally
-                            {
-                                EndUploadMessageRpc();
-                            }
+                            (photoMessage, peer) = await SendUploadMediaMessageWithRetryAsync(
+                                peer,
+                                targetChannelId,
+                                effectiveCaption,
+                                photoMedia,
+                                previewFileName,
+                                cancellationToken: cancellationToken);
                             AppLogger.Info("TelegramService", $"Фото-превью для галереи успешно опубликовано в Telegram (Message ID: {photoMessage.ID}, имя: '{previewFileName}').");
-                        }
-                        catch (TL.RpcException rpcEx) when (rpcEx.Code == 400 && (rpcEx.Message.Contains("CHANNEL_INVALID") || rpcEx.Message.Contains("CHANNEL_PRIVATE")))
-                        {
-                            InvalidateStoragePeer();
-                            peer = await GetStoragePeerAsync(targetChannelId);
-                            using var photoMs = new MemoryStream(galleryPhotoBytes, false);
-                            var photoInput = await _client.UploadFileAsync(photoMs, previewFileName);
-                            var photoMedia = new TL.InputMediaUploadedPhoto { file = photoInput };
-                            await EnsureUploadMessagePacingAsync(cancellationToken);
-                            BeginUploadMessageRpc();
-                            try
-                            {
-                                photoMessage = await _client.SendMessageAsync(peer, effectiveCaption, photoMedia);
-                            }
-                            finally
-                            {
-                                EndUploadMessageRpc();
-                            }
                         }
                         catch (TL.RpcException rpcEx) when (rpcEx.Code == 420)
                         {
@@ -4262,35 +4197,14 @@ namespace TGramFS.Services
                     int replyToId = photoMessage != null ? photoMessage.ID : 0;
                     string docCaption = photoMessage != null ? string.Empty : effectiveCaption;
 
-                    try
-                    {
-                        await EnsureUploadMessagePacingAsync(cancellationToken);
-                        BeginUploadMessageRpc();
-                        try
-                        {
-                            message = await _client.SendMessageAsync(peer, docCaption, mediaDoc, reply_to_msg_id: replyToId);
-                        }
-                        finally
-                        {
-                            EndUploadMessageRpc();
-                        }
-                    }
-                    catch (TL.RpcException rpcEx) when (rpcEx.Code == 400 && (rpcEx.Message.Contains("CHANNEL_INVALID") || rpcEx.Message.Contains("CHANNEL_PRIVATE")))
-                    {
-                        AppLogger.Warn("TelegramService", "Канал недоступен по сохраненному хэшу. Сброс хэша и повторный поиск...");
-                        InvalidateStoragePeer();
-                        peer = await GetStoragePeerAsync(targetChannelId);
-                        await EnsureUploadMessagePacingAsync(cancellationToken);
-                        BeginUploadMessageRpc();
-                        try
-                        {
-                            message = await _client.SendMessageAsync(peer, docCaption, mediaDoc, reply_to_msg_id: replyToId);
-                        }
-                        finally
-                        {
-                            EndUploadMessageRpc();
-                        }
-                    }
+                    (message, peer) = await SendUploadMediaMessageWithRetryAsync(
+                        peer,
+                        targetChannelId,
+                        docCaption,
+                        mediaDoc,
+                        effectiveFileName,
+                        replyToMsgId: replyToId,
+                        cancellationToken: cancellationToken);
 
                     if (message != null)
                     {
@@ -4402,6 +4316,55 @@ namespace TGramFS.Services
             return (isPremium ? 4000L : 2000L) * 1048576L;
         }
 
+        private async Task<(TL.Message Message, TL.InputPeer Peer)> SendUploadMediaMessageWithRetryAsync(
+            TL.InputPeer peer,
+            long? targetChannelId,
+            string caption,
+            TL.InputMedia media,
+            string logFileName,
+            int replyToMsgId = 0,
+            CancellationToken cancellationToken = default)
+        {
+            const int maxServerRetries = 2;
+            TL.InputPeer currentPeer = peer;
+            bool peerRefreshed = false;
+
+            for (int serverRetry = 0; ; )
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                await EnsureUploadMessagePacingAsync(cancellationToken);
+                try
+                {
+                    BeginUploadMessageRpc();
+                    try
+                    {
+                        TL.Message sent = replyToMsgId > 0
+                            ? await _client!.SendMessageAsync(currentPeer, caption, media, reply_to_msg_id: replyToMsgId)
+                            : await _client!.SendMessageAsync(currentPeer, caption, media);
+                        return (sent, currentPeer);
+                    }
+                    finally
+                    {
+                        EndUploadMessageRpc();
+                    }
+                }
+                catch (TL.RpcException rpcEx) when (!peerRefreshed && rpcEx.Code == 400 && (rpcEx.Message.Contains("CHANNEL_INVALID") || rpcEx.Message.Contains("CHANNEL_PRIVATE")))
+                {
+                    peerRefreshed = true;
+                    AppLogger.Warn("TelegramService", "Канал недоступен по сохраненному хэшу. Сброс хэша и повторный поиск...");
+                    InvalidateStoragePeer();
+                    currentPeer = await GetStoragePeerAsync(targetChannelId);
+                }
+                catch (TL.RpcException rpcEx) when (rpcEx.Code == 500 && serverRetry < maxServerRetries)
+                {
+                    serverRetry++;
+                    int backoffMs = serverRetry == 1 ? 500 : 1000;
+                    AppLogger.Warn("TelegramService", $"[Upload Retry] Сервер Telegram вернул {rpcEx.Code} ({rpcEx.Message}) при отправке '{logFileName}'. Повторная попытка {serverRetry}/{maxServerRetries} через {backoffMs} мс...");
+                    await Task.Delay(backoffMs, cancellationToken);
+                }
+            }
+        }
+
         private async Task<FileUploadResult?> UploadMultiPartFileAsync(
             Stream uploadStream,
             string effectiveFileName,
@@ -4504,34 +4467,14 @@ namespace TGramFS.Services
                         partCaption = enableCaptions
                             ? NodeRepository.FormatTelegramCaption(masterCaptionPath, null, isLatest: true)
                             : string.Empty;
-                        try
-                        {
-                            await EnsureUploadMessagePacingAsync(cancellationToken);
-                            BeginUploadMessageRpc();
-                            try
-                            {
-                                message = await _client.SendMessageAsync(peer, partCaption, mediaDoc);
-                            }
-                            finally
-                            {
-                                EndUploadMessageRpc();
-                            }
-                        }
-                        catch (TL.RpcException rpcEx) when (rpcEx.Code == 400 && (rpcEx.Message.Contains("CHANNEL_INVALID") || rpcEx.Message.Contains("CHANNEL_PRIVATE")))
-                        {
-                            InvalidateStoragePeer();
-                            peer = await GetStoragePeerAsync(targetChannelId);
-                            await EnsureUploadMessagePacingAsync(cancellationToken);
-                            BeginUploadMessageRpc();
-                            try
-                            {
-                                message = await _client.SendMessageAsync(peer, partCaption, mediaDoc);
-                            }
-                            finally
-                            {
-                                EndUploadMessageRpc();
-                            }
-                        }
+
+                        (message, peer) = await SendUploadMediaMessageWithRetryAsync(
+                            peer,
+                            targetChannelId,
+                            partCaption,
+                            mediaDoc,
+                            partFileName,
+                            cancellationToken: cancellationToken);
 
                         masterMessageId = message.ID;
                         AppLogger.Info("TelegramService", $"[BigFile Chunking] Заглавная Часть 1/{partCount} успешно отправлена в канал (Message ID: {masterMessageId}).");
@@ -4546,34 +4489,15 @@ namespace TGramFS.Services
                     {
                         string childCaptionPath = $"{rawCaptionPath} [Часть {partDisplayNum} из {partCount}]";
                         partCaption = enableCaptions ? $"↳ {childCaptionPath}" : string.Empty;
-                        try
-                        {
-                            await EnsureUploadMessagePacingAsync(cancellationToken);
-                            BeginUploadMessageRpc();
-                            try
-                            {
-                                message = await _client.SendMessageAsync(peer, partCaption, mediaDoc, reply_to_msg_id: masterMessageId);
-                            }
-                            finally
-                            {
-                                EndUploadMessageRpc();
-                            }
-                        }
-                        catch (TL.RpcException rpcEx) when (rpcEx.Code == 400 && (rpcEx.Message.Contains("CHANNEL_INVALID") || rpcEx.Message.Contains("CHANNEL_PRIVATE")))
-                        {
-                            InvalidateStoragePeer();
-                            peer = await GetStoragePeerAsync(targetChannelId);
-                            await EnsureUploadMessagePacingAsync(cancellationToken);
-                            BeginUploadMessageRpc();
-                            try
-                            {
-                                message = await _client.SendMessageAsync(peer, partCaption, mediaDoc, reply_to_msg_id: masterMessageId);
-                            }
-                            finally
-                            {
-                                EndUploadMessageRpc();
-                            }
-                        }
+
+                        (message, peer) = await SendUploadMediaMessageWithRetryAsync(
+                            peer,
+                            targetChannelId,
+                            partCaption,
+                            mediaDoc,
+                            partFileName,
+                            replyToMsgId: masterMessageId,
+                            cancellationToken: cancellationToken);
 
                         AppLogger.Info("TelegramService", $"[BigFile Chunking] Дочерняя Часть {partDisplayNum}/{partCount} успешно отправлена в канал (Message ID: {message.ID}, ReplyTo: {masterMessageId}).");
 
@@ -4705,7 +4629,16 @@ namespace TGramFS.Services
                 about = "Автоматические резервные копии базы данных TGramFS Drive"
             };
 
-            var createdUpdates = await _client.Invoke(createReq);
+            TL.UpdatesBase createdUpdates;
+            BeginBackgroundRpc();
+            try
+            {
+                createdUpdates = await _client.Invoke(createReq);
+            }
+            finally
+            {
+                EndBackgroundRpc();
+            }
             if (createdUpdates is TL.Updates updates)
             {
                 foreach (var chat in updates.chats.Values)
@@ -4736,26 +4669,63 @@ namespace TGramFS.Services
             string caption,
             string? backupChannelTitle = null)
         {
-            await EnsureFloodWaitDelayAsync();
+            if (TryGetRemainingUploadHardStopSeconds(out int hardStopRemainingSec, out DateTime hardStopUntilUtc))
+            {
+                AppLogger.Warn("TelegramService", $"[Backup] Выгрузка резервной копии '{fileName}' отложена без обращения к Telegram: активен FLOOD_WAIT отправки (осталось {hardStopRemainingSec} сек, до {hardStopUntilUtc.ToLocalTime():HH:mm:ss}).");
+                throw new InvalidOperationException($"Выгрузка бэкапа отложена из-за FLOOD_WAIT Telegram (осталось {hardStopRemainingSec} сек, до {hardStopUntilUtc.ToLocalTime():HH:mm:ss}).");
+            }
+
+            await EnsureBackgroundFloodWaitDelayAsync();
             if (_client == null || !IsAuthorized)
             {
                 throw new InvalidOperationException("Клиент Telegram не подключен или не авторизован.");
             }
 
-            var peer = await GetBackupStoragePeerAsync(backupChannelTitle);
-            long resolvedChannelId = peer is TL.InputPeerChannel ipc ? ipc.channel_id : 0;
+            BeginBackgroundRpc();
+            try
+            {
+                var peer = await GetBackupStoragePeerAsync(backupChannelTitle);
+                long resolvedChannelId = peer is TL.InputPeerChannel ipc ? ipc.channel_id : 0;
 
-            AppLogger.Info("TelegramService", $"Загрузка резервной копии '{fileName}' в Telegram (канал ID: {resolvedChannelId})...");
+                AppLogger.Info("TelegramService", $"Загрузка резервной копии '{fileName}' в Telegram (канал ID: {resolvedChannelId})...");
 
-            var inputFile = await _client.UploadFileAsync(fileStream, fileName);
-            var fileNameAttr = new TL.DocumentAttributeFilename { file_name = fileName };
-            var attributes = new TL.DocumentAttribute[] { fileNameAttr };
-            var mediaDoc = new TL.InputMediaUploadedDocument(inputFile, "application/x-sqlite3", attributes);
+                var inputFile = await _client.UploadFileAsync(fileStream, fileName);
+                var fileNameAttr = new TL.DocumentAttributeFilename { file_name = fileName };
+                var attributes = new TL.DocumentAttribute[] { fileNameAttr };
+                var mediaDoc = new TL.InputMediaUploadedDocument(inputFile, "application/x-sqlite3", attributes);
 
-            var message = await _client.SendMessageAsync(peer, caption, mediaDoc);
-            AppLogger.Info("TelegramService", $"Резервная копия '{fileName}' успешно загружена в Telegram. Message ID: {message.ID}");
+                TL.Message message;
+                const int maxServerRetries = 2;
+                for (int serverRetry = 0; ; )
+                {
+                    try
+                    {
+                        message = await _client.SendMessageAsync(peer, caption, mediaDoc);
+                        break;
+                    }
+                    catch (TL.RpcException rpcEx) when (rpcEx.Code == 500 && serverRetry < maxServerRetries)
+                    {
+                        serverRetry++;
+                        int backoffMs = serverRetry == 1 ? 500 : 1000;
+                        AppLogger.Warn("TelegramService", $"[Backup Retry] Сервер Telegram вернул {rpcEx.Code} ({rpcEx.Message}) при отправке '{fileName}'. Повторная попытка {serverRetry}/{maxServerRetries} через {backoffMs} мс...");
+                        await Task.Delay(backoffMs);
+                    }
+                }
 
-            return (message.ID, resolvedChannelId);
+                AppLogger.Info("TelegramService", $"Резервная копия '{fileName}' успешно загружена в Telegram. Message ID: {message.ID}");
+
+                return (message.ID, resolvedChannelId);
+            }
+            catch (TL.RpcException rpcEx) when (rpcEx.Code == 420)
+            {
+                TriggerBackgroundFloodWait(rpcEx.X, $"резервное копирование '{fileName}'");
+                AppLogger.Warn("TelegramService", $"[Backup] Получен FLOOD_WAIT_{rpcEx.X} ({rpcEx.X} сек) при отправке резервной копии '{fileName}'.");
+                throw;
+            }
+            finally
+            {
+                EndBackgroundRpc();
+            }
         }
 
         /// <summary>
@@ -4763,50 +4733,63 @@ namespace TGramFS.Services
         /// </summary>
         public async Task<(int MessageId, TL.Document Document, string Caption, DateTime Date, long Size, string FileName)?> GetLatestBackupDocumentAsync(string? backupChannelTitle = null)
         {
-            await EnsureFloodWaitDelayAsync();
+            await EnsureBackgroundFloodWaitDelayAsync();
             if (_client == null || !IsAuthorized)
             {
                 AppLogger.Warn("TelegramService", "Поиск бэкапа отменен: клиент Telegram не подключен или не авторизован.");
                 throw new InvalidOperationException("Клиент Telegram не подключен или не авторизован.");
             }
 
-            AppLogger.Info("TelegramService", "Запрос к Telegram: поиск последней резервной копии базы данных...");
-            var peer = await GetBackupStoragePeerAsync(backupChannelTitle);
-            long resolvedChannelId = peer is TL.InputPeerChannel ipc ? ipc.channel_id : 0;
-
-            var messagesBase = await _client.Messages_GetHistory(peer, limit: 20);
-            TL.MessageBase[] messages = messagesBase switch
+            BeginBackgroundRpc();
+            try
             {
-                TL.Messages_ChannelMessages cm => cm.messages,
-                TL.Messages_Messages mm => mm.messages,
-                _ => Array.Empty<TL.MessageBase>()
-            };
+                AppLogger.Info("TelegramService", "Запрос к Telegram: поиск последней резервной копии базы данных...");
+                var peer = await GetBackupStoragePeerAsync(backupChannelTitle);
+                long resolvedChannelId = peer is TL.InputPeerChannel ipc ? ipc.channel_id : 0;
 
-            AppLogger.Debug("TelegramService", $"Получено сообщений из канала бэкапов (ID: {resolvedChannelId}): {messages.Length}. Проверка файлов...");
-
-            foreach (var msgBase in messages)
-            {
-                if (msgBase is TL.Message msg && msg.media is TL.MessageMediaDocument mediaDoc && mediaDoc.document is TL.Document doc)
+                var messagesBase = await _client.Messages_GetHistory(peer, limit: 20);
+                TL.MessageBase[] messages = messagesBase switch
                 {
-                    string fileName = "";
-                    var fnAttr = doc.attributes?.OfType<TL.DocumentAttributeFilename>().FirstOrDefault();
-                    if (fnAttr != null)
-                    {
-                        fileName = fnAttr.file_name;
-                    }
+                    TL.Messages_ChannelMessages cm => cm.messages,
+                    TL.Messages_Messages mm => mm.messages,
+                    _ => Array.Empty<TL.MessageBase>()
+                };
 
-                    bool isDbBackup = !string.IsNullOrEmpty(fileName) && fileName.StartsWith("base_") && fileName.EndsWith(".db");
+                AppLogger.Debug("TelegramService", $"Получено сообщений из канала бэкапов (ID: {resolvedChannelId}): {messages.Length}. Проверка файлов...");
 
-                    if (isDbBackup)
+                foreach (var msgBase in messages)
+                {
+                    if (msgBase is TL.Message msg && msg.media is TL.MessageMediaDocument mediaDoc && mediaDoc.document is TL.Document doc)
                     {
-                        AppLogger.Info("TelegramService", $"Найден файл бэкапа базы в Telegram: Message #{msg.ID}, '{fileName}', {doc.size / 1024.0:F1} КБ, дата: {msg.Date.ToLocalTime():yyyy-MM-dd HH:mm:ss}");
-                        return (msg.ID, doc, msg.message ?? "", msg.Date, doc.size, fileName);
+                        string fileName = "";
+                        var fnAttr = doc.attributes?.OfType<TL.DocumentAttributeFilename>().FirstOrDefault();
+                        if (fnAttr != null)
+                        {
+                            fileName = fnAttr.file_name;
+                        }
+
+                        bool isDbBackup = !string.IsNullOrEmpty(fileName) && fileName.StartsWith("base_") && fileName.EndsWith(".db");
+
+                        if (isDbBackup)
+                        {
+                            AppLogger.Info("TelegramService", $"Найден файл бэкапа базы в Telegram: Message #{msg.ID}, '{fileName}', {doc.size / 1024.0:F1} КБ, дата: {msg.Date.ToLocalTime():yyyy-MM-dd HH:mm:ss}");
+                            return (msg.ID, doc, msg.message ?? "", msg.Date, doc.size, fileName);
+                        }
                     }
                 }
-            }
 
-            AppLogger.Info("TelegramService", "В последних 20 сообщениях канала бэкапов файл резервной копии (base_*.db) не найден.");
-            return null;
+                AppLogger.Info("TelegramService", "В последних 20 сообщениях канала бэкапов файл резервной копии (base_*.db) не найден.");
+                return null;
+            }
+            catch (TL.RpcException rpcEx) when (rpcEx.Code == 420)
+            {
+                TriggerBackgroundFloodWait(rpcEx.X, "поиск резервной копии");
+                throw;
+            }
+            finally
+            {
+                EndBackgroundRpc();
+            }
         }
 
         /// <summary>
@@ -4814,18 +4797,31 @@ namespace TGramFS.Services
         /// </summary>
         public async Task DownloadBackupDocumentAsync(TL.Document document, Stream outputStream, Action<long, long>? progressCallback = null)
         {
-            await EnsureFloodWaitDelayAsync();
+            await EnsureBackgroundFloodWaitDelayAsync();
             if (_client == null || !IsAuthorized)
             {
                 throw new InvalidOperationException("Клиент Telegram не подключен или не авторизован.");
             }
 
-            AppLogger.Info("TelegramService", $"Скачивание резервной копии базы данных ({document.size / (1024.0 * 1024.0):F2} МБ)...");
-            await _client.DownloadFileAsync(document, outputStream, progress: (current, total) =>
+            BeginBackgroundRpc();
+            try
             {
-                progressCallback?.Invoke(current, total);
-            });
-            AppLogger.Info("TelegramService", "Скачивание резервной копии базы данных успешно завершено.");
+                AppLogger.Info("TelegramService", $"Скачивание резервной копии базы данных ({document.size / (1024.0 * 1024.0):F2} МБ)...");
+                await _client.DownloadFileAsync(document, outputStream, progress: (current, total) =>
+                {
+                    progressCallback?.Invoke(current, total);
+                });
+                AppLogger.Info("TelegramService", "Скачивание резервной копии базы данных успешно завершено.");
+            }
+            catch (TL.RpcException rpcEx) when (rpcEx.Code == 420)
+            {
+                TriggerBackgroundFloodWait(rpcEx.X, "скачивание резервной копии");
+                throw;
+            }
+            finally
+            {
+                EndBackgroundRpc();
+            }
         }
 
         /// <summary>

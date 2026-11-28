@@ -257,9 +257,14 @@ namespace TGramFS.UI
                     }
                     else
                     {
+                        _progressOverlay.CancelTransfer("Резервная копия базы...", TransferDirection.Upload);
                         if (_backupService.HasConflict)
                         {
                             _notifyIcon.ShowBalloonTip(4500, "Конфликт синхронизации", "Выгрузка бэкапа заблокирована: в Telegram есть более свежая копия от другого ПК! Откройте настройки для проверки.", ToolTipIcon.Warning);
+                        }
+                        else if (!string.IsNullOrWhiteSpace(_backupService.LastBackupError))
+                        {
+                            _notifyIcon.ShowBalloonTip(3500, "Бэкап базы данных", _backupService.LastBackupError, ToolTipIcon.Warning);
                         }
                         else
                         {

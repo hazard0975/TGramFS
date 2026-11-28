@@ -1538,5 +1538,8 @@
 - [x] **8.150. Возврат жирного шрифта имён привязанных папок при обычном сером `[привязано]` (`DECISIONS_LOG #158`, `FolderManagementForm.cs`)**:
   - В `PopulateFolderTree` для узлов с `IsCustomBoundChannel` выставлен `NodeFont = UITheme.BoldFont` для точного расчёта `e.Bounds` и прокрутки без обрезания.
   - В `ConfigureBoundTagTreeDrawing` имя привязанной папки рисуется `UITheme.BoldFont` (с сохранением цвета статуса), а хвост `[привязано]` — обычным тонким `UITheme.BaseFont` в цвете `UITheme.TextMuted`.
-
-
+- [x] **8.151. Изоляция бэкапов от `Upload HardStop` и `General`-дублей, фикс имён на плашках `FLOOD_WAIT` и ретраи `500 RPC_CALL_FAIL` при отправке (`DECISIONS_LOG #159`, `TelegramService.cs`, `DatabaseBackupService.cs`, `TrayProgressOverlay.cs`, `TrayContext.cs`, `AuthSettingsForm.cs`)**:
+  - В `DatabaseBackupService.PerformBackupAsync` добавлена предварительная проверка `TryGetUploadHardStop` до создания снимка и RPC с переносом автобэкапа через `ScheduleDelayedAutoBackup` и выводом `LastBackupError` в `TrayContext`/`AuthSettingsForm`.
+  - В `TelegramService` все сетевые операции бэкапа (`UploadBackupDocumentAsync` с блокировкой при активном `Upload HardStop`, `GetLatestBackupDocumentAsync`, `DownloadBackupDocumentAsync`, `GetBackupStoragePeerAsync`) переведены на `EnsureBackgroundFloodWaitDelayAsync()`, `BeginBackgroundRpc()`/`EndBackgroundRpc()` и `TriggerBackgroundFloodWait`.
+  - В `TrayProgressOverlay.ShowFloodWait` убран фоллбэк на устаревшее `_currentFileName` для `General`/`Background`/`Caption` и запрещена перезапись `FileName` активного слота последующими срабатываниями `ThrowIfUploadHardStopped`.
+  - В `TelegramService.SendUploadMediaMessageWithRetryAsync` объединены все вызовы `SendMessageAsync` в `UploadFileAsync` и `UploadMultiPartFileAsync` с поддержкой до `2` повторов (`500` мс / `1000` мс) при `RpcException (500)`.

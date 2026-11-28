@@ -431,6 +431,17 @@ namespace TGramFS.UI
             int incomingPriority = GetFloodPriority(floodScope, isUploadStopped);
             bool isNewScope = !_activeFloods.TryGetValue(floodScope, out var existingSlot) || existingSlot.WaitUntilUtc <= now;
 
+            string? fallbackMatchingTransferName =
+                !isNonBlockingBackgroundScope &&
+                (floodScope == FloodWaitScope.Upload || floodScope == FloodWaitScope.Download) &&
+                _isTransferring &&
+                !_isCompleted &&
+                !_isFloodRecovered &&
+                ((floodScope == FloodWaitScope.Upload && _direction == TransferDirection.Upload) ||
+                 (floodScope == FloodWaitScope.Download && _direction == TransferDirection.Download))
+                    ? _currentFileName
+                    : string.Empty;
+
             if (isNewScope || existingSlot == null)
             {
                 existingSlot = new ActiveFloodSlot
@@ -443,13 +454,14 @@ namespace TGramFS.UI
                     InitialSeconds = Math.Max(waitSeconds, initialSeconds ?? waitSeconds),
                     FileName = !string.IsNullOrWhiteSpace(fileName)
                         ? fileName
-                        : (isNonBlockingBackgroundScope ? string.Empty : _currentFileName)
+                        : fallbackMatchingTransferName
                 };
                 _activeFloods[floodScope] = existingSlot;
             }
             else
             {
                 bool upgradedToStop = isUploadStopped && !existingSlot.IsUploadStopped;
+                bool extendsSignificantly = upgradedToStop || candidateUntil > existingSlot.WaitUntilUtc.AddSeconds(2);
                 if (upgradedToStop || candidateUntil > existingSlot.WaitUntilUtc.AddSeconds(1))
                 {
                     if (candidateUntil > existingSlot.WaitUntilUtc)
@@ -466,7 +478,7 @@ namespace TGramFS.UI
                 existingSlot.IsUploadStopped = existingSlot.IsUploadStopped || isUploadStopped;
                 existingSlot.IsDownload = effectiveDownload && !existingSlot.IsUploadStopped;
                 existingSlot.ShownAtUtc = now;
-                if (!string.IsNullOrWhiteSpace(fileName))
+                if (!string.IsNullOrWhiteSpace(fileName) && (extendsSignificantly || string.IsNullOrWhiteSpace(existingSlot.FileName)))
                 {
                     existingSlot.FileName = fileName;
                 }
